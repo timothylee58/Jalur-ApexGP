@@ -25,7 +25,11 @@ deactivate
 
 echo "==> Frontend: npm dependencies"
 cd "$REPO_ROOT/frontend"
-npm install
+if [ -f package-lock.json ]; then
+  npm ci
+else
+  npm install
+fi
 [ -f .env.local ] || cp .env.example .env.local
 
 echo "==> Install complete"
