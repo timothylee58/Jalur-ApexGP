@@ -77,7 +77,7 @@ export default function PredictPage() {
           <PredictionCard prediction={data.conservative} session={data.session} />
           <PredictionCard prediction={data.aggressive} session={data.session} />
           <ShareReadButton data={data} />
-          <GuidePanel session={session} />
+          <GuidePanel session={session} rainProbability={data.weather.rainProbability} />
         </div>
       ) : null}
 
