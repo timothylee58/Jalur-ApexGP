@@ -1,0 +1,23 @@
+name: Daily Prediction Log
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  log-predictions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python ml/log_daily_run.py
+        env:
+          MLFLOW_TRACKING_URI: file:./ml/mlruns
+          OPEN_METEO_BASE_URL: https://api.open-meteo.com/v1

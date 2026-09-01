@@ -1,0 +1,1 @@
+export { AboutNote } from "./About";
