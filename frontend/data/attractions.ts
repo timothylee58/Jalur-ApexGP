@@ -1,10 +1,12 @@
 export type ProximityBand = "near-circuit" | "selangor" | "kl-city";
+export type VenueSetting = "indoor" | "outdoor" | "mixed";
 
 export interface Attraction {
   id: string;
   name: string;
   category: string;
   proximity: ProximityBand;
+  setting: VenueSetting;
   driveTimeMinutes: number;
   description: string;
   imageQuery: string;
@@ -17,6 +19,7 @@ export const attractions: Attraction[] = [
     name: "Bagan Lalang Beach (Sepang Gold Coast)",
     category: "Beach",
     proximity: "near-circuit",
+    setting: "outdoor",
     driveTimeMinutes: 15,
     description:
       "Post-FP2 wind-down — seafood by the water, 15 min from the circuit, before the overnight reset.",
@@ -27,6 +30,7 @@ export const attractions: Attraction[] = [
     name: "Mitsui Outlet Park KLIA Sepang",
     category: "Shopping",
     proximity: "near-circuit",
+    setting: "indoor",
     driveTimeMinutes: 10,
     description:
       "Between-session pit stop — air-con, food court, 10 min from the paddock if the heat is brutal.",
@@ -37,9 +41,10 @@ export const attractions: Attraction[] = [
     name: "Cyberjaya Lake Gardens",
     category: "Park",
     proximity: "near-circuit",
+    setting: "outdoor",
     driveTimeMinutes: 20,
     description:
-      "A green space in Malaysia's tech hub district, close to Sepang, good for a quiet morning walk before race day.",
+      "Quiet lakeside walk before race day — 20 min from the circuit, best in the morning before the heat.",
     imageQuery: "Cyberjaya Lake Gardens Malaysia",
   },
   {
@@ -47,9 +52,10 @@ export const attractions: Attraction[] = [
     name: "Batu Caves",
     category: "Landmark",
     proximity: "selangor",
+    setting: "mixed",
     driveTimeMinutes: 60,
     description:
-      "Limestone caves and a Hindu temple complex north of KL, one of the most recognisable landmarks in the Klang Valley.",
+      "Overnight Selangor run — cave climb and temple steps; plan 60 min each way from Sepang.",
     imageQuery: "Batu Caves Selangor Malaysia",
   },
   {
@@ -57,9 +63,10 @@ export const attractions: Attraction[] = [
     name: "Sunway Lagoon",
     category: "Theme Park",
     proximity: "selangor",
+    setting: "mixed",
     driveTimeMinutes: 50,
     description:
-      "A multi-park theme park with water, amusement, and wildlife zones — a full-day option if you're extending the trip beyond race weekend.",
+      "Full-day theme park if you're extending the trip — water zones indoors when afternoon storms roll in.",
     imageQuery: "Sunway Lagoon theme park Malaysia",
   },
   {
@@ -67,9 +74,10 @@ export const attractions: Attraction[] = [
     name: "Kuala Selangor Fireflies",
     category: "Nature",
     proximity: "selangor",
+    setting: "outdoor",
     driveTimeMinutes: 75,
     description:
-      "River tours at dusk to see firefly colonies along the Selangor riverbank — a distinctive evening activity outside the city.",
+      "Evening river tour after Quali — book the dusk slot; weather-dependent, skip if storms are forecast.",
     imageQuery: "Kuala Selangor fireflies river tour",
   },
   {
@@ -77,9 +85,10 @@ export const attractions: Attraction[] = [
     name: "Petronas Twin Towers & KLCC Park",
     category: "Landmark",
     proximity: "kl-city",
+    setting: "indoor",
     driveTimeMinutes: 65,
     description:
-      "Kuala Lumpur's defining skyline landmark, with a park, mall, and observation deck — the standard first stop for visitors basing themselves in KL.",
+      "Quali→Race overnight — mall, park, and observation deck; good rain-day KL anchor.",
     imageQuery: "Petronas Twin Towers Kuala Lumpur",
   },
 ];

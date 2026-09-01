@@ -2,9 +2,7 @@ import type { Session } from "@/types";
 
 interface ScheduledSession {
   session: Session;
-  /** ISO 8601 start in MYT */
   start: string;
-  /** ISO 8601 end in MYT */
   end: string;
 }
 
@@ -17,17 +15,33 @@ const SEPANG_2026: ScheduledSession[] = [
   { session: "Race", start: "2026-04-13T15:00:00+08:00", end: "2026-04-13T17:00:00+08:00" },
 ];
 
+const SESSION_ORDER: Session[] = ["FP1", "FP2", "FP3", "Quali", "Race"];
+
+const PARK_BUFFER_MINUTES = 10;
+
+export interface GapWindow {
+  afterSession: Session;
+  nextSession: Session;
+  endMs: number;
+  nextStartMs: number;
+  budgetMinutes: number | null;
+}
+
+function slot(session: Session): ScheduledSession | undefined {
+  return SEPANG_2026.find((item) => item.session === session);
+}
+
 export function getLiveOrNextSession(now = new Date()): Session {
   const ms = now.getTime();
 
-  for (const slot of SEPANG_2026) {
-    const start = new Date(slot.start).getTime();
-    const end = new Date(slot.end).getTime();
-    if (ms >= start && ms <= end) return slot.session;
+  for (const item of SEPANG_2026) {
+    const start = new Date(item.start).getTime();
+    const end = new Date(item.end).getTime();
+    if (ms >= start && ms <= end) return item.session;
   }
 
-  for (const slot of SEPANG_2026) {
-    if (new Date(slot.start).getTime() > ms) return slot.session;
+  for (const item of SEPANG_2026) {
+    if (new Date(item.start).getTime() > ms) return item.session;
   }
 
   return "Race";
@@ -38,4 +52,33 @@ export function isRaceWeekend(now = new Date()): boolean {
   const last = new Date(SEPANG_2026[SEPANG_2026.length - 1].end).getTime();
   const ms = now.getTime();
   return ms >= first - 86_400_000 && ms <= last + 86_400_000;
+}
+
+export function getGapWindow(afterSession: Session): GapWindow | null {
+  const index = SESSION_ORDER.indexOf(afterSession);
+  if (index < 0 || index >= SESSION_ORDER.length - 1) return null;
+
+  const current = slot(afterSession);
+  const nextSession = SESSION_ORDER[index + 1];
+  const next = slot(nextSession);
+  if (!current || !next) return null;
+
+  const endMs = new Date(current.end).getTime();
+  const nextStartMs = new Date(next.start).getTime();
+  const gapMs = nextStartMs - endMs;
+  const sameDay = new Date(endMs).toDateString() === new Date(nextStartMs).toDateString();
+  const budgetMinutes = sameDay && gapMs > 0 ? Math.floor(gapMs / 60_000) : null;
+
+  return {
+    afterSession,
+    nextSession,
+    endMs,
+    nextStartMs,
+    budgetMinutes,
+  };
+}
+
+export function getLeaveByDeadline(nextStartMs: number, driveMinutes: number): Date | null {
+  const leaveMs = nextStartMs - (driveMinutes + PARK_BUFFER_MINUTES) * 60_000;
+  return new Date(leaveMs);
 }
