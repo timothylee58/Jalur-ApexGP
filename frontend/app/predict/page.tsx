@@ -1,57 +1,33 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { GuidePanel } from "@/components/guide/GuidePanel";
-import { ConfidenceDeltaHeadline } from "@/components/predict/ConfidenceDeltaHeadline";
-import { MonsoonStrip } from "@/components/predict/MonsoonStrip";
 import { PredictionCard } from "@/components/predict/PredictionCard";
-import { ShareReadButton } from "@/components/predict/ShareReadButton";
 import { usePrediction } from "@/hooks/usePrediction";
-import { getLiveOrNextSession } from "@/lib/sepangSchedule";
-import { isSession } from "@/lib/utils";
 import { SESSIONS, type Session } from "@/types";
 
 export default function PredictPage() {
-  const [session, setSession] = useState<Session>(() => getLiveOrNextSession());
+  const [session, setSession] = useState<Session>("FP1");
   const { data, loading, error } = usePrediction(session);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get("session");
-    if (isSession(raw)) setSession(raw);
-  }, []);
-
-  function handleSessionChange(value: string) {
-    if (isSession(value)) setSession(value);
-  }
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-lg uppercase tracking-wide text-paper">
-          <Link href="/">Jalur APEXGP</Link>
+          Jalur APEXGP
         </h1>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/tickets"
-            className="font-mono text-[11px] uppercase tracking-wide text-paper-dim"
-          >
-            Stands
-          </Link>
-          <select
-            value={session}
-            onChange={(event) => handleSessionChange(event.target.value)}
-            className="cursor-pointer appearance-none rounded-full bg-amber px-3 py-1.5 font-mono text-xs text-asphalt"
-          >
-            {SESSIONS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select
+          value={session}
+          onChange={(event) => setSession(event.target.value as Session)}
+          className="cursor-pointer appearance-none rounded-full bg-amber px-3 py-1.5 font-mono text-xs text-asphalt"
+        >
+          {SESSIONS.map((item) => (
+            <option key={item} value={item}>
+              {item}
+            </option>
+          ))}
+        </select>
       </div>
 
       {loading ? (
@@ -68,6 +44,7 @@ export default function PredictPage() {
 
       {data ? (
         <div className="space-y-3">
+<<<<<<< HEAD
           <ConfidenceDeltaHeadline data={data} />
           <MonsoonStrip weather={data.weather} />
           <p className="font-mono text-xs text-paper-dim">
@@ -78,6 +55,11 @@ export default function PredictPage() {
           <PredictionCard prediction={data.aggressive} session={data.session} />
           <ShareReadButton data={data} />
           <GuidePanel session={session} rainProbability={data.weather.rainProbability} />
+=======
+          <PredictionCard prediction={data.conservative} />
+          <PredictionCard prediction={data.aggressive} />
+          <GuidePanel session={session} />
+>>>>>>> d3a68f2 (refactor: simplify predict page to mobile desk layout)
         </div>
       ) : null}
 
