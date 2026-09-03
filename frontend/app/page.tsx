@@ -29,6 +29,11 @@ export default function HomePage() {
               Seat orientation (no prices)
             </Link>
           </div>
+          <p className="mt-6 max-w-xl text-[11px] leading-relaxed text-paper-dim/70">
+            Unofficial fan project — not affiliated with, endorsed by, or an
+            official partner of Formula 1, the FIA, or Sepang International
+            Circuit.
+          </p>
         </div>
       </div>
       <div className="h-[120vh]" aria-hidden />
