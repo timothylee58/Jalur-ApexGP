@@ -59,6 +59,8 @@ export function GuidePanel({ session, rainProbability }: GuidePanelProps) {
 
       {selected.length > 0 ? (
         <div
+          role="status"
+          aria-live="polite"
           className={`rounded-lg border px-4 py-3 ${
             itinerary.fits ? "border-paper/10 bg-asphalt" : "border-brick/40 bg-brick/5"
           }`}

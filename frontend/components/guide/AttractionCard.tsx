@@ -39,9 +39,19 @@ export function AttractionCard({
         selected ? "border-amber" : "border-paper/10"
       }`}
     >
-      <button type="button" onClick={onToggle} className="w-full text-left">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full text-left"
+        aria-pressed={selected}
+        aria-label={`${selected ? "Remove" : "Add"} ${attraction.name} ${
+          selected ? "from" : "to"
+        } itinerary`}
+      >
         <div
           className="h-28 bg-paper/5 bg-cover bg-center"
+          role="img"
+          aria-label={attraction.imageUrl ? `${attraction.name} photo` : undefined}
           style={
             attraction.imageUrl
               ? { backgroundImage: `url(${attraction.imageUrl})` }

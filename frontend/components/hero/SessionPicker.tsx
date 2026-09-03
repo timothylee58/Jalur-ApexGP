@@ -26,6 +26,7 @@ export function SessionPicker({ className, selected }: SessionPickerProps) {
           variant={selected === session ? "default" : "outline"}
           className="min-h-10 flex-1 sm:flex-none"
           onClick={() => handleSelect(session)}
+          aria-pressed={selected === session}
         >
           {session}
         </Button>
