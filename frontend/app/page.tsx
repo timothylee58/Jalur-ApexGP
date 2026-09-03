@@ -22,6 +22,9 @@ export default function HomePage() {
           </p>
           <SessionPicker className="mt-8" />
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
+            <Link href="/circuit" className="hover:text-paper">
+              Corner-by-corner 3D
+            </Link>
             <Link href="/lore" className="hover:text-paper">
               Circuit lore (1999 → 2026)
             </Link>
