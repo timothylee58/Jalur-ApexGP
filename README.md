@@ -73,14 +73,33 @@ repo — no other platform involved.
 **Frontend** (Next.js)
 - New Vercel project, root directory `frontend/`, framework preset
   Next.js (auto-detected).
-- Env: `NEXT_PUBLIC_API_URL` = the backend project's deployed URL.
+- Env: `NEXT_PUBLIC_API_URL` = the backend project's deployed URL **with an
+  `/api` suffix** (e.g. `https://jalur-apexgp-backend.vercel.app/api`) — see
+  below for why.
 
 **Backend** (FastAPI, as a Vercel Python serverless function)
-- A second Vercel project, root directory `backend/`. `backend/vercel.json`
-  rewrites every request to `backend/api/index.py`, which exposes the
-  existing FastAPI `app` as the ASGI entrypoint Vercel's Python runtime
-  wraps — the app's own routes (`/predict`, `/health`) keep their real
-  paths, nothing in `frontend/lib/api.ts` needs to change.
+- A second Vercel project, root directory `backend/`, framework preset
+  `fastapi` (auto-detected — confirmed via the Vercel API on this project).
+  `backend/api/index.py` exposes the existing FastAPI `app` as the ASGI
+  entrypoint Vercel's Python runtime wraps; `pyproject.toml`'s
+  `[tool.vercel] entrypoint` pins it explicitly so Vercel's auto-detection
+  doesn't also pick `app/main.py` as a second candidate entrypoint (it
+  otherwise would — that scan independently checks `app/` and `src/`
+  subdirectories for recognized filenames, and this repo's `app/main.py`
+  matches by coincidence of Python package naming, not because it's meant
+  to be its own function).
+- Routes are mounted under `/api` (`/api/predict`, `/api/health`) — this
+  matches Vercel's own zero-config FastAPI convention, which routes
+  `/api/*` straight to the function with no rewrite needed. An earlier
+  version of this project used a catch-all `vercel.json` rewrite instead;
+  that broke every route in production. Vercel's own build log explained
+  why in plain text: *"Internal rewrites in backend framework projects now
+  route requests using the rewritten destination path"* — meaning the app
+  received every request as literally `/api/index`, matching none of its
+  real routes, 404ing universally. Confirmed live against the deployed
+  backend (every path, including `/`, returned an identical FastAPI-shaped
+  404) before switching to the prefix approach and removing `vercel.json`
+  entirely.
 - `requirements.txt` uses `mlflow-skinny` rather than full `mlflow` — the
   full package pulls pandas/pyarrow/sklearn and comfortably risks Vercel's
   function size limit; skinny is client-only (no local UI/server) and is
