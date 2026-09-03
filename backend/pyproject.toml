@@ -16,6 +16,16 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest==8.3.5", "pytest-asyncio==0.25.3"]
 
+[tool.vercel]
+# Pins the exact entrypoint rather than relying on Vercel's zero-config
+# auto-detection, which independently scans app/ and src/ subdirectories
+# for recognized filenames (including main.py) — and this repo's
+# app/main.py is exactly that pattern, purely by coincidence of Python
+# package naming, not because it's meant to be its own deployed function.
+# Without this, that scan is a real ambiguity against the intentional
+# api/index.py entrypoint, not a hypothetical one.
+entrypoint = "api.index:app"
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]

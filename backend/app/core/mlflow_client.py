@@ -33,7 +33,9 @@ except ImportError:
     MlflowClient = None
 
 
-def _run_bounded(fn: Callable[[], T], *, label: str) -> T | None:
+def _run_bounded(
+    fn: Callable[[], T], *, label: str, timeout: float = MLFLOW_CALL_TIMEOUT_SECONDS
+) -> T | None:
     """Run fn() in a daemon thread with a hard wall-clock timeout.
 
     Plain threading.Thread(daemon=True), not ThreadPoolExecutor: an
@@ -59,9 +61,9 @@ def _run_bounded(fn: Callable[[], T], *, label: str) -> T | None:
     thread = threading.Thread(target=_target, daemon=True)
     thread.start()
     try:
-        ok, value = result_queue.get(timeout=MLFLOW_CALL_TIMEOUT_SECONDS)
+        ok, value = result_queue.get(timeout=timeout)
     except queue.Empty:
-        logger.warning("MLflow %s timed out after %ss; continuing without it", label, MLFLOW_CALL_TIMEOUT_SECONDS)
+        logger.warning("MLflow %s timed out after %ss; continuing without it", label, timeout)
         return None
     if ok:
         return value  # type: ignore[return-value]
@@ -92,11 +94,20 @@ def _log_prediction(prediction: PredictionResponse) -> None:
         mlflow.log_metric("pit_start_aggressive", prediction.aggressive.pit_window.start_lap)
 
 
-def log_prediction(prediction: PredictionResponse) -> None:
+def log_prediction(
+    prediction: PredictionResponse, *, timeout: float = MLFLOW_CALL_TIMEOUT_SECONDS
+) -> None:
+    """timeout defaults to the request-path bound (4s) — right for the
+    /predict caller, which has a real user waiting on the response. The
+    daily cron (ml/log_daily_run.py) has no such caller and nothing else to
+    do, so it passes a longer timeout: a merely-slow-but-reachable backend
+    would otherwise get cut off at 4s and silently fail every session while
+    the workflow still exits green, which defeats the entire point of that
+    cron (seeding same-day trend history)."""
     if mlflow is None:
         logger.info("MLflow not installed; skipping run log")
         return
-    _run_bounded(lambda: _log_prediction(prediction), label="run log")
+    _run_bounded(lambda: _log_prediction(prediction), label="run log", timeout=timeout)
 
 
 def _get_confidence_trend(session: Session, current: PredictionResponse) -> ConfidenceTrend | None:
