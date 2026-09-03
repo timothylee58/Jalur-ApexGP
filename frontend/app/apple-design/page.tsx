@@ -1,0 +1,40 @@
+import { AboutNote } from "@/components/shared/AboutNote";
+import { ScrollFrameSequence } from "@/components/shared/ScrollFrameSequence";
+import { SiteHeader } from "@/components/site-chrome";
+
+const FRAME_COUNT = 48;
+
+export default function AppleDesignPage() {
+  return (
+    <>
+      <SiteHeader />
+      <main className="relative">
+        <div className="sticky top-0 z-10 h-[100dvh]">
+          <ScrollFrameSequence framesPath="/apple-design-frames" frameCount={FRAME_COUNT} />
+          <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-4 pb-20 pt-24 sm:px-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-pit-lime sm:text-xs">
+              Scroll-frame showcase
+            </p>
+            <h1 className="mt-3 max-w-2xl font-display text-5xl uppercase tracking-wide sm:text-6xl md:text-7xl">
+              Product reveal
+            </h1>
+            <p className="mt-4 max-w-xl text-sm text-paper-dim md:text-base">
+              A second scroll-scrubbed frame sequence, reusing the same
+              mechanism as the landing page&apos;s circuit flyover — built
+              as a standalone demo of the technique. No footage is loaded
+              here yet; see{" "}
+              <code className="text-paper">
+                public/apple-design-frames/README.md
+              </code>{" "}
+              for how to add a license-clear clip.
+            </p>
+          </div>
+        </div>
+        <div className="h-[120vh]" aria-hidden />
+        <div className="relative z-20 mx-auto max-w-md px-4 pb-10">
+          <AboutNote />
+        </div>
+      </main>
+    </>
+  );
+}
