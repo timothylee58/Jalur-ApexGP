@@ -19,13 +19,20 @@ logger = logging.getLogger("log_daily_run")
 
 SESSIONS: tuple[Session, ...] = ("FP1", "FP2", "FP3", "Quali", "Race")
 
+# log_prediction's default timeout (4s) protects /predict's response latency
+# for a real user waiting on it — this cron has no such caller and nothing
+# else to do, so a merely-slow-but-reachable backend shouldn't get cut off
+# at the same short bound and silently fail every session while this
+# workflow still exits green.
+DAILY_LOG_TIMEOUT_SECONDS = 20.0
+
 
 async def run() -> None:
     weather_service = WeatherService()
     weather = await weather_service.get_snapshot()
     for session in SESSIONS:
         prediction = build_prediction(session, weather)
-        log_prediction(prediction)
+        log_prediction(prediction, timeout=DAILY_LOG_TIMEOUT_SECONDS)
         logger.info("logged %s rain=%.0f%%", session, weather.rain_probability)
 
 
