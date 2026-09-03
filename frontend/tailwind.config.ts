@@ -32,12 +32,14 @@ const config: Config = {
           asphalt: "#14181c",
           amber: "#f5a623",
           lime: "#c8ff00",
+          teal: "#2ec4b6",
         },
         paper: {
           DEFAULT: "#f4efe6",
           dim: "#a39b8f",
         },
         amber: "#f5a623",
+        teal: "#2ec4b6",
         asphalt: {
           DEFAULT: "#14181c",
           line: "#2a3036",

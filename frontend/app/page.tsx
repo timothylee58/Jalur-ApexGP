@@ -21,12 +21,19 @@ export default function HomePage() {
             tourism guide.
           </p>
           <SessionPicker className="mt-8" />
-          <Link
-            href="/tickets"
-            className="mt-4 inline-block font-mono text-xs uppercase tracking-wide text-paper-dim"
-          >
-            Seat orientation (no prices)
-          </Link>
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
+            <Link href="/lore" className="hover:text-paper">
+              Circuit lore (1999 → 2026)
+            </Link>
+            <Link href="/tickets" className="hover:text-paper">
+              Seat orientation (no prices)
+            </Link>
+          </div>
+          <p className="mt-6 max-w-xl text-[11px] leading-relaxed text-paper-dim/70">
+            Unofficial fan project — not affiliated with, endorsed by, or an
+            official partner of Formula 1, the FIA, or Sepang International
+            Circuit.
+          </p>
         </div>
       </div>
       <div className="h-[120vh]" aria-hidden />
