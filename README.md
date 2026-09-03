@@ -39,9 +39,12 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 
 - `AttractionCard` renders an image band, but no entry in
   `data/attractions.ts` sets `imageUrl` — every guide card currently shows
-  an empty placeholder. Either source images or drop the band.
-- Circuit hero frames are not extracted yet (see
-  `scripts/extract-frames.py`).
+  an empty placeholder. `scripts/fetch-attraction-images.ts` exists and is
+  idempotent, but hasn't been run yet — needs `UNSPLASH_ACCESS_KEY` and
+  outbound access to `api.unsplash.com`.
+- Circuit hero frames are not extracted yet, so `CircuitFrameSequence`
+  renders its solid-color fallback instead of real footage. See
+  `scripts/extract-frames.py` — needs a locally downloaded source video.
 - `eslint.config.mjs` imports `eslint-config-next/core-web-vitals` without
   the `.js` extension, so `next build` skips linting with a resolution
   error.
