@@ -112,7 +112,7 @@ export function CircuitFrameSequence() {
   return (
     <div
       ref={mountRef}
-      className="pointer-events-none absolute inset-0 z-0 opacity-80"
+      className="pointer-events-none absolute inset-0 z-0 opacity-90"
       aria-hidden
     />
   );
