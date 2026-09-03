@@ -22,8 +22,12 @@ export function LoreTimeline() {
           <motion.li
             key={entry.id}
             className="relative pb-10 last:pb-0"
-            initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-            whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+            // useReducedMotion() is null until its effect resolves (including
+            // during SSR); only opt into the hidden->reveal animation once it
+            // confirms the user is NOT reduced-motion, so an unresolved or true
+            // reading always renders visible instead of stuck at opacity 0.
+            initial={reduceMotion === false ? { opacity: 0, y: 24 } : false}
+            whileInView={reduceMotion === false ? { opacity: 1, y: 0 } : undefined}
             viewport={{ once: true, amount: 0.2 }}
             transition={{ duration: 0.45, delay: Math.min(index * 0.06, 0.2), ease: "easeOut" }}
           >

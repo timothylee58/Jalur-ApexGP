@@ -27,11 +27,10 @@ function PredictView() {
   const [session, setSession] = useState<Session | null>(paramSession);
 
   useEffect(() => {
-    if (paramSession) {
-      setSession(paramSession);
-      return;
-    }
-    setSession((current) => current ?? getLiveOrNextSession());
+    // A missing/invalid param always resolves fresh — otherwise navigating to a
+    // bare /predict after a session is already picked would silently keep the
+    // stale session instead of falling back to the live/next one.
+    setSession(paramSession ?? getLiveOrNextSession());
   }, [paramSession]);
 
   const { data, loading, error } = usePrediction(session);
