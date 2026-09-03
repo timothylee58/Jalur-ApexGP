@@ -19,5 +19,15 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python ml/log_daily_run.py
         env:
-          MLFLOW_TRACKING_URI: file:./ml/mlruns
+          # Must point at the same durable backend the deployed app uses
+          # (see backend/.env.example) — a bare "file:" store here would
+          # write into the CI runner's throwaway filesystem and vanish the
+          # moment this job ends, making the run pointless for same-day
+          # trend history. Set these as repo secrets once you have a
+          # Databricks CE workspace: Settings → Secrets and variables →
+          # Actions.
+          MLFLOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI }}
+          MLFLOW_EXPERIMENT_NAME: ${{ secrets.MLFLOW_EXPERIMENT_NAME }}
+          DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
           OPEN_METEO_BASE_URL: https://api.open-meteo.com/v1
