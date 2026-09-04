@@ -34,6 +34,10 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   drive-time itinerary builder and per-stop "leave by" countdown.
 - **Ticket orientation** (`/tickets`) — grandstand names and seating
   categories, no pricing, no sales.
+- **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
+  (22 drivers, 11 teams, career stats through the 2025 season close) and a
+  second "Sepang history" set tied to three moments in `/lore`. Initials-only
+  markers, no photos or team liveries — see `docs/BRAND.md`.
 
 ## Brand
 
