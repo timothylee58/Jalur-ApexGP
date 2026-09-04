@@ -35,6 +35,12 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 - **Ticket orientation** (`/tickets`) — grandstand names and seating
   categories, no pricing, no sales.
 
+## Brand
+
+Design tokens, voice/tone rules, and component patterns are documented in
+[`docs/BRAND.md`](./docs/BRAND.md) — written against what's actually in
+`frontend/tailwind.config.ts`, kept in sync rather than aspirational.
+
 ## Known gaps (next session priorities)
 
 - `AttractionCard` renders an image band, but no entry in
