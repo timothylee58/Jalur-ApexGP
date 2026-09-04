@@ -21,9 +21,10 @@ export default function AppleDesignPage() {
             <p className="mt-4 max-w-xl text-sm text-paper-dim md:text-base">
               A second scroll-scrubbed frame sequence, reusing the same
               mechanism as the landing page&apos;s circuit flyover — built
-              as a standalone demo of the technique. This clip is treated,
-              not real broadcast footage — grayscale and mosaic-downsampled
-              so no sponsor marks or team livery colors are legible; see{" "}
+              as a standalone demo of the technique. Full detail early in
+              the scroll; grayscale and mosaic-downsampled later, where the
+              source clip shows a sponsor mark no official broadcast footage
+              would be needed for; see{" "}
               <code className="text-paper">docs/BRAND.md</code>.
             </p>
           </div>
