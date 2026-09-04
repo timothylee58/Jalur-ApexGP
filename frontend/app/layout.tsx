@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
+import { BgmPlayer } from "@/components/shared/BgmPlayer";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,6 +36,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} ${display.variable} bg-asphalt font-sans text-paper`}
       >
         {children}
+        <BgmPlayer />
       </body>
     </html>
   );
