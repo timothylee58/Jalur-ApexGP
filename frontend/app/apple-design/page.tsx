@@ -21,12 +21,10 @@ export default function AppleDesignPage() {
             <p className="mt-4 max-w-xl text-sm text-paper-dim md:text-base">
               A second scroll-scrubbed frame sequence, reusing the same
               mechanism as the landing page&apos;s circuit flyover — built
-              as a standalone demo of the technique. No footage is loaded
-              here yet; see{" "}
-              <code className="text-paper">
-                public/apple-design-frames/README.md
-              </code>{" "}
-              for how to add a license-clear clip.
+              as a standalone demo of the technique. This clip is treated,
+              not real broadcast footage — grayscale and mosaic-downsampled
+              so no sponsor marks or team livery colors are legible; see{" "}
+              <code className="text-paper">docs/BRAND.md</code>.
             </p>
           </div>
         </div>

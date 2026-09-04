@@ -91,6 +91,13 @@ export function ScrollFrameSequence({
       hasFrames = true;
       first.minFilter = THREE.LinearFilter;
       first.magFilter = THREE.LinearFilter;
+      // The loaded WebP frames are sRGB-encoded photos; three.js textures
+      // default to NoColorSpace, which skips the sRGB decode and shifts
+      // colors (most visible as a purple/magenta cast on dark tones) once
+      // real frames are actually loaded — invisible before now because
+      // every prior use of this component only ever hit the solid-color
+      // fallback.
+      first.colorSpace = THREE.SRGBColorSpace;
       textures[0] = first;
       applyTexture(0);
       renderer.render(scene, camera);
@@ -99,6 +106,7 @@ export function ScrollFrameSequence({
         loader.load(frameSrc(i), (texture) => {
           texture.minFilter = THREE.LinearFilter;
           texture.magFilter = THREE.LinearFilter;
+          texture.colorSpace = THREE.SRGBColorSpace;
           textures[i] = texture;
         });
       }

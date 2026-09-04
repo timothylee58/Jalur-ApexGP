@@ -1,15 +1,21 @@
-# Scroll-frame sequence goes here
+# Scroll-frame sequence
 
-Place extracted frames here as zero-padded WebP files:
-0001.webp … 0048.webp
+48 zero-padded WebP frames (0001.webp … 0048.webp), currently populated
+from a user-supplied clip — treated with `scripts/extract-frames.py
+--stylize` (grayscale + coarse mosaic) because the source showed real
+sponsor decals and team livery colors, both ruled out by `docs/BRAND.md`.
+Verified frame-by-frame that the treatment destroys decal legibility
+rather than just softening it.
 
-Generate with `scripts/extract-frames.py` once you have source footage you
-have rights to use — see that script's own docstring for the command, and
-`public/circuit-frames/README.md` for sourcing guidance (the same rules
-apply here: royalty-free/CC-licensed footage or your own, not an
-arbitrary copyrighted clip reproduced frame-by-frame).
+To replace with different footage:
 
-`--out frontend/public/apple-design-frames` targets this directory; adjust
-`--count` to match `FRAME_COUNT` in
-`frontend/components/apple-design/AppleDesignFrameSequence` usage (or just
-keep the default 48 on both ends).
+```
+python scripts/extract-frames.py path/to/source.mp4 \
+  --out frontend/public/apple-design-frames --stylize
+```
+
+Drop `--stylize` only for footage you know is already free of sponsor
+marks, team liveries, or other branding — see `docs/BRAND.md` before
+skipping it. `--count` defaults to 48, matching `FRAME_COUNT` in
+`frontend/app/apple-design/page.tsx`; change both together if you need a
+different count.
