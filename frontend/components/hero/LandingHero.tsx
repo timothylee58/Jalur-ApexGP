@@ -72,6 +72,9 @@ export function LandingHero() {
           <Link href="/circuit" className="hover:text-paper">
             Corner-by-corner 3D
           </Link>
+          <Link href="/apple-design" className="hover:text-paper">
+            Product reveal
+          </Link>
           <Link href="/lore" className="hover:text-paper">
             Circuit lore (1999 → 2026)
           </Link>

@@ -18,9 +18,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(predict_router)
+# /api prefix matches Vercel's zero-config FastAPI routing convention
+# (confirmed active on this project — its framework is auto-detected as
+# "fastapi") rather than fighting it with a custom vercel.json rewrite.
+# That rewrite existed here before and actively broke every route in
+# production: Vercel's build log states plainly that "internal rewrites in
+# backend framework projects now route requests using the rewritten
+# destination path" — meaning the app received every request as literally
+# "/api/index", matching neither /predict nor /health, 404ing universally.
+# Confirmed live against the deployed backend before this fix. Local dev
+# also uses this prefix (baked into the app itself, not deploy-specific) —
+# see frontend/.env.example for the matching NEXT_PUBLIC_API_URL value.
+app.include_router(predict_router, prefix="/api")
 
 
-@app.get("/health")
+@app.get("/api/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}

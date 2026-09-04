@@ -1,12 +1,10 @@
 import { AboutNote } from "@/components/shared/About";
-import { AmbientAudio } from "@/components/hero/AmbientAudio";
 import { CircuitModelPreview } from "@/components/hero/CircuitModelPreview";
 import { LandingHero } from "@/components/hero/LandingHero";
 
 export default function HomePage() {
   return (
     <main className="relative">
-      <AmbientAudio />
       <LandingHero />
       <div className="h-[120vh]" aria-hidden />
       <CircuitModelPreview />
