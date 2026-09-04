@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 
-// Source clip showed a real circuit, a real team's livery colors, and
-// legible sponsor decals (Pirelli, Orlen) — every one of those is ruled out
-// by docs/BRAND.md ("no team liveries, no sponsor logos, anywhere"; hero
-// footage is "originally captured/extracted... never official broadcast
-// footage"). Desaturated and downsampled to a coarse mosaic before
-// upscaling — verified frame-by-frame that this destroys every decal's
-// legibility, not just softens it, while still reading as a car in motion.
-// GIFs can't be paused once playing, so this only plays the loop once
+// Source clip (a regenerated take, closer to brand but still not clean)
+// paints a fake sponsor decal ("FORLEN" + an F1 logo mark) onto the rear
+// wing, legible from ~5.5s to the end — same AI-hallucinated-branding
+// problem docs/BRAND.md rules out, just smaller than the first take's. The
+// first ~5.5s never shows it (wide/side/wheel shots), so instead of
+// mosaic-ing the whole clip, only the risky window gets the coarse
+// downsample-then-upscale treatment (verified against the worst-case —
+// closest, sharpest — frame that legibility is destroyed, not softened);
+// the clean window stays full detail, blended between the two with a
+// short crossfade rather than a hard cut. GIFs can't be paused once playing, so this only plays the loop once
 // prefers-reduced-motion is confirmed off; a static poster frame covers
 // both SSR and the reduced-motion case. Checked via matchMedia in an effect
 // rather than framer-motion's useReducedMotion(): that hook's SSR value and
@@ -46,7 +48,7 @@ export function CircuitMotionPreview() {
           src={showMotion ? "/hero/circuit-motion.gif" : "/hero/circuit-motion-poster.webp"}
           alt="Stylized, desaturated mosaic loop of a car braking and cornering — treated so no sponsor marks or team colors are legible"
           width={480}
-          height={276}
+          height={270}
           className="w-full"
         />
       </div>
