@@ -24,6 +24,14 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   and team livery colors; treated (grayscale, coarse-mosaic downsample) to
   destroy every decal's legibility and strip the livery's color identity
   before it went anywhere near the page — see `docs/BRAND.md`.
+- **Product reveal** (`/apple-design`) — the same scroll-scrubbed
+  frame-sequence mechanism as the landing page hero, now actually populated
+  (48 frames, same source clip and treatment as the lap preview above, via
+  `scripts/extract-frames.py --stylize`). Fixed a real bug this surfaced:
+  `ScrollFrameSequence` never set a texture's `colorSpace`, which shifted
+  colors once real (not fallback-color) frames finally loaded through it —
+  fixed at the shared component, so it also applies to `CircuitFrameSequence`
+  whenever the landing-page hero gets its own frames.
 - **Predict flow** (`/predict`) — session picker, dual strategy cards with
   distinct conservative/aggressive accents, confidence bars, pit-window lap
   band, reasoning + key risk, a confidence-delta headline backed by the
@@ -59,8 +67,11 @@ Design tokens, voice/tone rules, and component patterns are documented in
   idempotent, but hasn't been run yet — needs `UNSPLASH_ACCESS_KEY` and
   outbound access to `api.unsplash.com`.
 - Circuit hero frames are not extracted yet, so `CircuitFrameSequence`
-  renders its solid-color fallback instead of real footage. See
-  `scripts/extract-frames.py` — needs a locally downloaded source video.
+  (the landing page's own flyover, distinct from `/apple-design`'s now-populated
+  sequence) still renders its solid-color fallback instead of real footage.
+  See `scripts/extract-frames.py` — needs a locally downloaded source video,
+  and `--stylize` if it shows any sponsor marks or team livery (see
+  `docs/BRAND.md`).
 - `eslint.config.mjs` imports `eslint-config-next/core-web-vitals` without
   the `.js` extension, so `next build` skips linting with a resolution
   error.
