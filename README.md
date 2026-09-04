@@ -18,6 +18,12 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 
 ## Features
 
+- **Landing page lap preview** — a stylized, desaturated mosaic loop of a
+  car in motion at the circuit, sitting between the hero and the 3D track
+  model. Sourced from a user-supplied clip that showed real sponsor decals
+  and team livery colors; treated (grayscale, coarse-mosaic downsample) to
+  destroy every decal's legibility and strip the livery's color identity
+  before it went anywhere near the page — see `docs/BRAND.md`.
 - **Predict flow** (`/predict`) — session picker, dual strategy cards with
   distinct conservative/aggressive accents, confidence bars, pit-window lap
   band, reasoning + key risk, a confidence-delta headline backed by the
