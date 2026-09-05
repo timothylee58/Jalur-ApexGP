@@ -114,14 +114,14 @@ export function CircuitModelPreview() {
   }, []);
 
   return (
-    <section className="relative z-20 mx-auto max-w-5xl px-4 py-12 sm:px-6">
+    <section className="relative z-20 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14 md:py-16">
       <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-paper-dim">
         Track model
       </p>
-      <h2 className="mt-2 font-display text-3xl uppercase tracking-wide text-paper">
+      <h2 className="mt-2 font-display text-[clamp(1.75rem,5vw,2.5rem)] uppercase tracking-wide text-paper">
         Orbit Sepang
       </h2>
-      <p className="mt-2 max-w-xl text-sm text-paper-dim">
+      <p className="mt-2 max-w-xl text-sm leading-relaxed text-paper-dim md:text-base">
         Drop a compressed <code className="text-amber">.glb</code> at{" "}
         <code className="text-amber">public/models/sepang.glb</code> to replace
         this slot. Until then, the procedural corner explorer stays live.
@@ -129,7 +129,7 @@ export function CircuitModelPreview() {
 
       <div
         ref={mountRef}
-        className="relative mt-6 h-64 overflow-hidden rounded-lg border border-paper/10 bg-asphalt sm:h-80"
+        className="relative mt-6 aspect-[16/10] min-h-56 w-full overflow-hidden rounded-lg border border-paper/10 bg-asphalt sm:min-h-72 md:min-h-80"
       >
         {status === "missing" ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">

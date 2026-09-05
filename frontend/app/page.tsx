@@ -9,8 +9,10 @@ export default function HomePage() {
       <LandingHero />
       <CircuitMotionPreview />
       <CircuitModelPreview />
-      <div className="relative z-20 mx-auto max-w-md px-4 pb-10">
-        <AboutNote />
+      <div className="relative z-20 mx-auto w-full max-w-5xl px-4 pb-10 sm:px-6 sm:pb-14">
+        <div className="max-w-xl">
+          <AboutNote />
+        </div>
       </div>
     </main>
   );

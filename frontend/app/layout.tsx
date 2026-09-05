@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { BgmPlayer } from "@/components/shared/BgmPlayer";
 import "./globals.css";
@@ -18,6 +18,12 @@ const display = Bebas_Neue({
   variable: "--font-display",
   subsets: ["latin"],
 });
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: "Jalur APEXGP — Sepang race engineer",

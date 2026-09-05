@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { HeroOverlay } from "@/components/hero/HeroOverlay";
 import { ScrollFrameSequence } from "@/components/shared/ScrollFrameSequence";
 
 const FRAME_COUNT = 48;
@@ -23,7 +24,7 @@ export function CircuitMotionPreview() {
 
   return (
     <div ref={rangeRef}>
-      <div className="sticky top-0 z-10 h-[100dvh] overflow-hidden">
+      <div className="sticky top-0 z-10 h-[100dvh] min-h-[100svh] overflow-hidden">
         <ScrollFrameSequence
           framesPath="/lap-preview-frames"
           frameCount={FRAME_COUNT}
@@ -33,21 +34,21 @@ export function CircuitMotionPreview() {
           className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-asphalt via-asphalt/55 to-transparent"
           aria-hidden
         />
-        <div className="relative z-10 mx-auto flex h-full max-w-5xl flex-col justify-end px-4 pb-20 pt-24 sm:px-6">
+        <HeroOverlay className="absolute inset-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-pit-lime sm:text-xs">
             Lap preview
           </p>
-          <h2 className="mt-3 max-w-2xl font-display text-5xl uppercase tracking-wide sm:text-6xl md:text-7xl">
+          <h2 className="mt-2 max-w-2xl font-display text-[clamp(2.5rem,min(10vw,14vh),4.5rem)] uppercase leading-[0.95] tracking-wide sm:mt-3">
             The lap
           </h2>
-          <p className="mt-4 max-w-xl text-sm text-paper-dim md:text-base">
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-paper-dim sm:mt-4 md:text-base [@media(max-height:640px)]:mt-2 [@media(max-height:640px)]:text-xs">
             A generic single-seater in motion at the circuit — not real
             broadcast footage, and no team livery or sponsor marks to strip
             out this time.
           </p>
-        </div>
+        </HeroOverlay>
       </div>
-      <div className="h-[120vh]" aria-hidden />
+      <div className="h-[70vh] sm:h-[100vh] md:h-[120vh]" aria-hidden />
     </div>
   );
 }
