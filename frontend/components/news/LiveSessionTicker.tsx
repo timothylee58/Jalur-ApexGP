@@ -50,9 +50,9 @@ function computeState(): LiveTickerState {
 }
 
 /**
- * Session-clock ticker for the fixed April 2026 Sepang weekend
+ * Session-clock ticker for the Jolpica-sourced Oct 2026 Sepang weekend
  * (`lib/sepangSchedule.ts`). Only ever shows the "live" branch while `now`
- * genuinely falls inside one of that weekend's hardcoded windows — for the
+ * genuinely falls inside one of that weekend's windows — for the
  * overwhelming majority of real visits (any date outside those three days,
  * this app's own "today" included) it shows the honest fallback instead of
  * pretending a fixed demo date is still happening.
@@ -87,7 +87,8 @@ export function LiveSessionTicker() {
 
   return (
     <p className="font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-      Sepang weekend (fixed Apr 11–13, 2026) isn&apos;t live right now — next up: {state.nextSession}
+      Sepang weekend (Jolpica: Oct 2–4, 2026) isn&apos;t live right now — next up:{" "}
+      {state.nextSession}
     </p>
   );
 }

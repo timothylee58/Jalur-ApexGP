@@ -6,13 +6,21 @@ interface ScheduledSession {
   end: string;
 }
 
-/** 2026 Sepang GP weekend — hardcoded MYT, no live calendar API. */
+/**
+ * 2026 Sepang weekend — session starts from
+ * [Jolpica/Ergast](https://api.jolpi.ca/ergast/f1/2026/circuits/sepang/races/)
+ * (round 16, "Bahrain Grand Prix in Malaysia"), converted to MYT (+08).
+ * End times aren't in the feed (Ergast only publishes starts), so practice
+ * and Quali are treated as 60 minutes and the race as 120 — same duration
+ * convention the old hand-written April stub used. Re-fetch via
+ * `GET /api/schedule` if you need to confirm the upstream hasn't moved.
+ */
 const SEPANG_2026: ScheduledSession[] = [
-  { session: "FP1", start: "2026-04-11T11:30:00+08:00", end: "2026-04-11T12:30:00+08:00" },
-  { session: "FP2", start: "2026-04-11T15:00:00+08:00", end: "2026-04-11T16:00:00+08:00" },
-  { session: "FP3", start: "2026-04-12T11:30:00+08:00", end: "2026-04-12T12:30:00+08:00" },
-  { session: "Quali", start: "2026-04-12T15:00:00+08:00", end: "2026-04-12T16:00:00+08:00" },
-  { session: "Race", start: "2026-04-13T15:00:00+08:00", end: "2026-04-13T17:00:00+08:00" },
+  { session: "FP1", start: "2026-10-02T12:30:00+08:00", end: "2026-10-02T13:30:00+08:00" },
+  { session: "FP2", start: "2026-10-02T16:00:00+08:00", end: "2026-10-02T17:00:00+08:00" },
+  { session: "FP3", start: "2026-10-03T12:30:00+08:00", end: "2026-10-03T13:30:00+08:00" },
+  { session: "Quali", start: "2026-10-03T16:00:00+08:00", end: "2026-10-03T17:00:00+08:00" },
+  { session: "Race", start: "2026-10-04T15:00:00+08:00", end: "2026-10-04T17:00:00+08:00" },
 ];
 
 const SESSION_ORDER: Session[] = ["FP1", "FP2", "FP3", "Quali", "Race"];
@@ -53,12 +61,13 @@ export interface LiveSessionWindow {
   endMs: number;
 }
 
-/** Non-null only while `now` actually falls inside one of the hardcoded
- * SEPANG_2026 windows — real, not synthesized. Since that weekend is a
- * fixed April 2026 date, this returns null for the overwhelming majority of
- * real visits (any date outside those three days), same honesty tradeoff
- * `getLiveOrNextSession`'s "Race" fallback already makes. Callers should
- * treat null as the expected default, not an error case. */
+/** Non-null only while `now` actually falls inside one of the Sepang
+ * weekend windows — real, not synthesized. That weekend is a fixed
+ * October 2026 date (Jolpica round 16), so this returns null for the
+ * overwhelming majority of real visits (any date outside those three
+ * days), same honesty tradeoff `getLiveOrNextSession`'s "Race" fallback
+ * already makes. Callers should treat null as the expected default, not
+ * an error case. */
 export function getLiveSessionWindow(now = new Date()): LiveSessionWindow | null {
   const ms = now.getTime();
   for (const item of SEPANG_2026) {

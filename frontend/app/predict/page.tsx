@@ -10,6 +10,7 @@ import { PredictionCard } from "@/components/predict/PredictionCard";
 import { ShareReadButton } from "@/components/predict/ShareReadButton";
 import { SiteHeader } from "@/components/site-chrome";
 import { usePrediction } from "@/hooks/usePrediction";
+import { WATCH_THIS_WEEKEND } from "@/data/news";
 import { getLiveOrNextSession } from "@/lib/sepangSchedule";
 import { SESSIONS, type Session } from "@/types";
 
@@ -53,6 +54,14 @@ function PredictView() {
           <p className="font-display text-2xl uppercase tracking-wide text-paper">
             {session ?? "—"}
           </p>
+          <a
+            href={WATCH_THIS_WEEKEND.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block font-mono text-[10px] uppercase tracking-wide text-amber hover:text-paper"
+          >
+            Watch this weekend →
+          </a>
         </div>
         <label className="flex flex-col items-end gap-1">
           <span className="sr-only">Choose session</span>

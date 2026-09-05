@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { motion } from "framer-motion";
 import { CircuitFrameSequence } from "@/components/hero/CircuitFrameSequence";
 import { SessionPicker } from "@/components/hero/SessionPicker";
+import { WATCH_THIS_WEEKEND } from "@/data/news";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -89,6 +90,14 @@ export function LandingHero() {
             <Link href="/tickets" className="hover:text-paper">
               Seat orientation (no prices)
             </Link>
+            <a
+              href={WATCH_THIS_WEEKEND.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber hover:text-paper"
+            >
+              Watch this weekend →
+            </a>
           </motion.div>
           <motion.p
             custom={0.62}
