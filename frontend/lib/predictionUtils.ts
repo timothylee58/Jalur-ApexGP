@@ -1,4 +1,5 @@
-import type { PredictionResponse, StrategyPrediction } from "@/types";
+import type { Compound, PredictionResponse, StrategyPrediction, WhatIf } from "@/types";
+import { COMPOUNDS } from "@/types";
 
 export function confidenceDelta(data: PredictionResponse): {
   leader: "conservative" | "aggressive" | "even";
@@ -50,9 +51,29 @@ export function buildShareUrl(data: PredictionResponse, origin: string): string 
     cc: String(Math.round(data.conservative.confidence)),
     ac: String(Math.round(data.aggressive.confidence)),
     rain: String(Math.round(data.weather.rainProbability)),
+    temp: String(Math.round(data.weather.tempC)),
     cond: data.weather.condition,
     ct: data.conservative.tyreSequence.join("-"),
     at: data.aggressive.tyreSequence.join("-"),
   });
+  if (data.inputs?.safetyCar) params.set("sc", "1");
+  if (data.inputs?.tyreChoice) params.set("ty", data.inputs.tyreChoice);
   return `${origin}/predict?${params.toString()}`;
+}
+
+/** Hydrate the what-if simulator state from a shared link's query params so a
+ * shared scenario reproduces the same read on open. */
+export function parseWhatIfParams(params: URLSearchParams): WhatIf {
+  const whatIf: WhatIf = {};
+  const rain = params.get("rain");
+  const temp = params.get("temp");
+  const sc = params.get("sc");
+  const ty = params.get("ty");
+
+  if (rain !== null && Number.isFinite(Number(rain))) whatIf.rainProbability = Number(rain);
+  if (temp !== null && Number.isFinite(Number(temp))) whatIf.tempC = Number(temp);
+  if (sc === "1") whatIf.safetyCar = true;
+  if (ty !== null && COMPOUNDS.includes(ty as Compound)) whatIf.tyreChoice = ty as Compound;
+
+  return whatIf;
 }
