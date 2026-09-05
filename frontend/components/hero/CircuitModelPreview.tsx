@@ -122,9 +122,10 @@ export function CircuitModelPreview() {
         Orbit Sepang
       </h2>
       <p className="mt-2 max-w-xl text-sm text-paper-dim">
-        Drop a compressed <code className="text-amber">.glb</code> at{" "}
-        <code className="text-amber">public/models/sepang.glb</code> to replace
-        this slot. Until then, the procedural corner explorer stays live.
+        A 3D model of Sepang generated from the circuit&apos;s own apex +
+        elevation data (<code className="text-amber">scripts/generate_circuit_models.py</code>),
+        so the shape and its ~22&nbsp;m elevation change are real — vertical is
+        exaggerated for readability. Drag to orbit.
       </p>
 
       <div

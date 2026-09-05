@@ -1,9 +1,15 @@
 # 3D models
 
-`sepang.glb` (served at `/models/sepang.glb`) and `car.glb` are currently
-both **procedurally generated** by `scripts/generate_circuit_models.py`
-(box/cylinder primitives and a spline-swept ribbon, no scanned or reference
-geometry — regenerate with `python scripts/generate_circuit_models.py`).
+`sepang.glb` (served at `/models/sepang.glb`) and `car.glb` are
+**procedurally generated** by `scripts/generate_circuit_models.py`
+(regenerate with `python scripts/generate_circuit_models.py`).
+`sepang.glb` is a spline-swept track ribbon projected from the circuit's
+own 18-point apex + elevation data (the same centreline as
+`scripts/blender/sepang_circuit_scene.py` and
+`frontend/data/sepangCircuit.ts`), so its shape and ~22&nbsp;m elevation
+change are real (vertical exaggerated ~6× for readability), not a
+traced-by-eye loop. `car.glb` is box/cylinder primitives, no scanned or
+reference geometry.
 `sepang.glb` powers the landing page's "Orbit Sepang" stage
 (`CircuitModelPreview.tsx`, which auto-detects it and otherwise links to
 the procedural `/circuit` explorer); `car.glb` runs a lap of that

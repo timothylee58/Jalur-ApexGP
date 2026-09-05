@@ -1,11 +1,20 @@
 export type Session = "FP1" | "FP2" | "FP3" | "Quali" | "Race";
 export type StrategyVariant = "conservative" | "aggressive";
+export type Compound = "Soft" | "Medium" | "Hard" | "Intermediate" | "Wet";
 
 export const SESSIONS: Session[] = ["FP1", "FP2", "FP3", "Quali", "Race"];
+export const COMPOUNDS: Compound[] = ["Soft", "Medium", "Hard", "Intermediate", "Wet"];
 
 export interface PitWindow {
   startLap: number;
   endLap: number;
+}
+
+export interface Stint {
+  compound: string;
+  startLap: number;
+  endLap: number;
+  laps: number;
 }
 
 export interface StrategyPrediction {
@@ -13,8 +22,11 @@ export interface StrategyPrediction {
   tyreSequence: string[];
   confidence: number;
   pitWindow: PitWindow;
+  stints?: Stint[];
+  stopCount?: number;
   reasoning: string;
   keyRisk: string;
+  referencedCorners?: string[];
 }
 
 export interface HourlyRainPoint {
@@ -37,10 +49,31 @@ export interface ConfidenceTrend {
   label: string;
 }
 
+export interface SimInputs {
+  rainProbability: number;
+  tempC: number;
+  safetyCar: boolean;
+  tyreChoice?: string | null;
+  rainOverridden?: boolean;
+  tempOverridden?: boolean;
+}
+
 export interface PredictionResponse {
   session: Session;
   conservative: StrategyPrediction;
   aggressive: StrategyPrediction;
   weather: WeatherSnapshot;
+  raceLaps?: number;
+  inputs?: SimInputs | null;
+  modelKind?: string;
   confidenceTrend?: ConfidenceTrend | null;
+}
+
+/** What-if overrides sent to the simulator. Any field left undefined falls back
+ * to the live/climatology weather blend on the backend. */
+export interface WhatIf {
+  rainProbability?: number;
+  tempC?: number;
+  safetyCar?: boolean;
+  tyreChoice?: Compound | null;
 }

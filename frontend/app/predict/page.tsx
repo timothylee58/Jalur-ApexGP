@@ -1,13 +1,5 @@
-"use client";
-
-import { Suspense, useCallback, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { AboutNote } from "@/components/shared/AboutNote";
-import { GuidePanel } from "@/components/guide/GuidePanel";
-import { ConfidenceDeltaHeadline } from "@/components/predict/ConfidenceDeltaHeadline";
-import { MonsoonStrip } from "@/components/predict/MonsoonStrip";
-import { PredictionCard } from "@/components/predict/PredictionCard";
-import { ShareReadButton } from "@/components/predict/ShareReadButton";
+import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { SiteHeader } from "@/components/site-chrome";
 import { usePrediction } from "@/hooks/usePrediction";
 import { WATCH_THIS_WEEKEND } from "@/data/news";
@@ -17,32 +9,16 @@ import { SESSIONS, type Session } from "@/types";
 function parseSession(value: string | null): Session | null {
   return SESSIONS.includes(value as Session) ? (value as Session) : null;
 }
+import { PredictClient } from "@/app/predict/PredictClient";
 
-function PredictView() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const paramSession = parseSession(searchParams.get("session"));
+type SearchParams = Record<string, string | string[] | undefined>;
 
-  // Null until resolved: the time-based default is computed after mount so the
-  // server-rendered markup and the first client render agree.
-  const [session, setSession] = useState<Session | null>(paramSession);
+const OG_KEYS = ["session", "cc", "ac", "rain", "temp", "cond", "ct", "at", "sc", "ty"] as const;
 
-  useEffect(() => {
-    // A missing/invalid param always resolves fresh — otherwise navigating to a
-    // bare /predict after a session is already picked would silently keep the
-    // stale session instead of falling back to the live/next one.
-    setSession(paramSession ?? getLiveOrNextSession());
-  }, [paramSession]);
-
-  const { data, loading, error } = usePrediction(session);
-
-  const handleSelect = useCallback(
-    (next: Session) => {
-      setSession(next);
-      router.replace(`/predict?session=${next}`, { scroll: false });
-    },
-    [router],
-  );
+function first(value: string | string[] | undefined): string | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
   return (
     <main className="mx-auto max-w-md px-4 py-6">
@@ -78,48 +54,58 @@ function PredictView() {
           </select>
         </label>
       </div>
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}): Promise<Metadata> {
+  const sp = await searchParams;
+  const session = first(sp.session) ?? "Race";
+  const cc = first(sp.cc);
+  const ac = first(sp.ac);
 
-      {loading ? (
-        <p className="py-10 text-center font-mono text-sm text-paper-dim">
-          Reading the weather…
-        </p>
-      ) : null}
+  const query = new URLSearchParams();
+  for (const key of OG_KEYS) {
+    const value = first(sp[key]);
+    if (value !== null) query.set(key, value);
+  }
 
-      {error ? (
-        <p className="py-10 text-center font-mono text-sm text-brick">
-          Couldn&apos;t load this session. Try again.
-        </p>
-      ) : null}
+  // Absolute base from the incoming request so the og:image resolves on any host.
+  const head = await headers();
+  const host = head.get("x-forwarded-host") ?? head.get("host") ?? "localhost:3000";
+  const proto = head.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  const ogUrl = `${proto}://${host}/og?${query.toString()}`;
 
-      {data && session ? (
-        <div className="space-y-3">
-          <ConfidenceDeltaHeadline data={data} />
-          <MonsoonStrip weather={data.weather} />
-          <PredictionCard prediction={data.conservative} session={session} />
-          <PredictionCard prediction={data.aggressive} session={session} />
-          <ShareReadButton data={data} />
-          <GuidePanel session={session} rainProbability={data.weather.rainProbability} />
-        </div>
-      ) : null}
+  const shared = cc !== null && ac !== null;
+  const title = shared
+    ? `${session} strategy read — Jalur APEXGP`
+    : "Jalur APEXGP — Sepang strategy simulator";
+  const description = shared
+    ? `Conservative ${cc}% vs aggressive ${ac}% for the Sepang ${session}. Run your own what-if scenario.`
+    : "Pick a Sepang session and simulate conservative vs aggressive strategy from a live weather + tyre-life model.";
 
-      <AboutNote />
-    </main>
-  );
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: ogUrl, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogUrl],
+    },
+  };
 }
 
 export default function PredictPage() {
   return (
     <>
       <SiteHeader />
-      <Suspense
-        fallback={
-          <p className="py-10 text-center font-mono text-sm text-paper-dim">
-            Reading the weather…
-          </p>
-        }
-      >
-        <PredictView />
-      </Suspense>
+      <PredictClient />
     </>
   );
 }

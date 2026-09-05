@@ -1,14 +1,22 @@
-import type { PredictionResponse, Session } from "@/types";
-import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
+import type { PredictionResponse, Session, WhatIf } from "@/types";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-export async function fetchPrediction(session: Session): Promise<PredictionResponse> {
+export async function fetchPrediction(
+  session: Session,
+  whatIf: WhatIf = {},
+): Promise<PredictionResponse> {
+  const body: Record<string, unknown> = { session };
+  if (whatIf.rainProbability !== undefined) body.rain_probability = whatIf.rainProbability;
+  if (whatIf.tempC !== undefined) body.temp_c = whatIf.tempC;
+  if (whatIf.safetyCar) body.safety_car = whatIf.safetyCar;
+  if (whatIf.tyreChoice) body.tyre_choice = whatIf.tyreChoice;
+
   const res = await fetch(`${API_URL}/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 

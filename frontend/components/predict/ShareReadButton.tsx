@@ -22,13 +22,28 @@ export function ShareReadButton({ data }: ShareReadButtonProps) {
     }
   }
 
+  function openCard() {
+    // Same params as the share link, rendered as an image via the /og route.
+    const shareUrl = buildShareUrl(data, window.location.origin);
+    window.open(shareUrl.replace("/predict?", "/og?"), "_blank", "noopener,noreferrer");
+  }
+
   return (
-    <button
-      type="button"
-      onClick={handleShare}
-      className="w-full rounded-full border border-paper/20 py-2 font-mono text-[11px] uppercase tracking-wide text-paper-dim hover:border-amber hover:text-amber"
-    >
-      {copied ? "Link copied — no account needed" : "Share this read (URL only, no DB)"}
-    </button>
+    <div className="flex gap-2">
+      <button
+        type="button"
+        onClick={handleShare}
+        className="flex-1 rounded-full border border-paper/20 py-2 font-mono text-[11px] uppercase tracking-wide text-paper-dim hover:border-amber hover:text-amber"
+      >
+        {copied ? "Link copied" : "Share this read"}
+      </button>
+      <button
+        type="button"
+        onClick={openCard}
+        className="rounded-full border border-paper/20 px-4 py-2 font-mono text-[11px] uppercase tracking-wide text-paper-dim hover:border-amber hover:text-amber"
+      >
+        Card
+      </button>
+    </div>
   );
 }
