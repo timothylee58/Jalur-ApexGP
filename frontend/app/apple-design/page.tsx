@@ -39,6 +39,9 @@ export default function AppleDesignPage() {
               <Link href="/telemetry" className="hover:text-paper">
                 Real telemetry →
               </Link>
+              <Link href="/drive" className="hover:text-paper">
+                Drive the lap →
+              </Link>
             </div>
           </div>
         </div>

@@ -11,6 +11,7 @@ const NAV = [
   { href: "/fan", label: "Fan" },
   { href: "/news", label: "News" },
   { href: "/telemetry", label: "Telemetry" },
+  { href: "/drive", label: "Drive" },
   { href: "/apple-design", label: "Reveal" },
   { href: "/lore", label: "Lore" },
   { href: "/tickets", label: "Seats" },
