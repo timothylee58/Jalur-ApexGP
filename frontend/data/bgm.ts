@@ -10,5 +10,5 @@
  *    copy just the <ID> segment (before any "?") into `playlistId` below.
  */
 export const bgm = {
-  playlistId: "REPLACE_WITH_PLAYLIST_ID",
+  playlistId: "https://open.spotify.com/playlist/3lxQkKfmR7kehvSmI8Fnpp?si=8MGjvFBGTMyW9VwWmeCI6Q",
 };
