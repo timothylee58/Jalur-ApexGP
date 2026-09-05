@@ -25,11 +25,15 @@ export function SiteHeader() {
         aria-label="Primary"
         className="mx-auto flex max-w-md items-center gap-3 px-4 py-3 sm:max-w-5xl sm:gap-4 sm:px-6"
       >
-        <Link
-          href="/"
-          className="shrink-0 font-display text-lg uppercase tracking-wide text-paper"
-        >
-          Jalur APEXGP
+        <Link href="/" className="shrink-0">
+          <img
+            src="/brand/jalur-apexgp.png"
+            alt="Jalur APEXGP"
+            width={460}
+            height={180}
+            className="h-6 w-auto object-contain"
+            decoding="async"
+          />
         </Link>
         {/* min-w-0 is load-bearing on a flex child: without it this can't
             shrink below its content width, so overflow-x-auto never
