@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchPrediction } from "@/lib/api";
-import type { PredictionResponse, Session } from "@/types";
+import type { PredictionResponse, Session, WhatIf } from "@/types";
 
 interface PredictionState {
   loading: boolean;
@@ -10,11 +10,20 @@ interface PredictionState {
   data: PredictionResponse | null;
 }
 
-export function usePrediction(session: Session | null) {
+export function usePrediction(session: Session | null, whatIf: WhatIf = {}) {
   const [state, setState] = useState<PredictionState>({
     loading: Boolean(session),
     error: false,
     data: null,
+  });
+
+  // Serialize the what-if inputs so the effect only re-fires when a value
+  // actually changes, not on every render's fresh object identity.
+  const whatIfKey = JSON.stringify({
+    r: whatIf.rainProbability ?? null,
+    t: whatIf.tempC ?? null,
+    sc: whatIf.safetyCar ?? false,
+    ty: whatIf.tyreChoice ?? null,
   });
 
   useEffect(() => {
@@ -24,9 +33,9 @@ export function usePrediction(session: Session | null) {
     }
 
     let isCancelled = false;
-    setState({ loading: true, error: false, data: null });
+    setState((prev) => ({ loading: true, error: false, data: prev.data }));
 
-    fetchPrediction(session)
+    fetchPrediction(session, whatIf)
       .then((data) => {
         if (!isCancelled) setState({ loading: false, error: false, data });
       })
@@ -37,7 +46,8 @@ export function usePrediction(session: Session | null) {
     return () => {
       isCancelled = true;
     };
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, whatIfKey]);
 
   return state;
 }

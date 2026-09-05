@@ -1,20 +1,24 @@
 # Jalur APEXGP
 
-AI-style race engineer simulator for the Sepang F1 race weekend.
+A race-engineer **strategy simulator** for the Sepang F1 race weekend.
 Pick a session (FP1 / FP2 / FP3 / Quali / Race) and get two strategy reads —
-conservative vs aggressive — with confidence scores and a suggested pit window,
-built on a live weather blend (Open-Meteo) and tracked with MLflow.
-
-A secondary panel maps the gap after that session to originally written
-Sepang / Selangor / KL attraction notes, grouped by drive time from the circuit.
+conservative vs aggressive — with confidence scores, a lap-by-lap stint plan,
+and a pit window derived from modelled tyre life, built on a live weather blend
+(Open-Meteo). Then run your own **what-if** scenarios (rain, track temp, safety
+car, forced starting compound) and the model recomputes live.
 
 ## Architecture
 
-Next.js (Vercel) → FastAPI (Railway) → Open-Meteo + deterministic strategy
+Next.js (Vercel) → FastAPI (Vercel) → Open-Meteo + deterministic strategy
 blend → MLflow run logging. No database, no auth — stateless, public, read-only.
 
-**Note on "AI":** the strategy engine is a climatology / live-data blend, not a
-trained ML model. MLflow is used for experiment lifecycle tracking.
+**Honest framing (no "AI"):** this is a deterministic, rules-based *simulator*,
+not a trained predictor. It blends live Open-Meteo weather with Sepang
+climatology, then runs a transparent tyre/compound heuristic and a lap-by-lap
+stint model to derive pit windows. The response is labelled
+`modelKind: "deterministic-simulator"` so the UI never oversells it. MLflow logs
+only the unmodified live read (what-if scenarios are exploratory and are not
+logged), and the API echoes the effective `inputs` a read ran on.
 
 ## Features
 
@@ -33,10 +37,14 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   graphic, which docs/BRAND.md explicitly rules out and no amount of
   mosaic-ing fixes (the whole clip is FOM's copyrighted broadcast, not an
   incidental decal).
-- **Circuit hero flyover** (landing page background) and **Product reveal**
-  (`/apple-design`) — the same scroll-scrubbed frame-sequence mechanism,
-  both populated (48 frames each) with a time-windowed sharp/mosaic
-  treatment for a source clip with a sponsor mark partway through. Two real
+- **Static circuit map hero** (landing page background) — the landing hero now
+  renders the static SVG Sepang map (projected from the project's own apex data
+  in `data/sepangCircuit.ts`), replacing the retired scroll-scrubbed flyover,
+  which depended on 48 WebP frames that were never committed. The **Product
+  reveal** (`/apple-design`) still uses the scroll-scrubbed frame-sequence
+  mechanism (`ScrollFrameSequence`), populated with a time-windowed
+  sharp/mosaic treatment for a source clip with a sponsor mark partway through.
+  Two real
   bugs surfaced and fixed at the shared `ScrollFrameSequence` component
   itself (so every section built on it benefits): it never set a loaded
   texture's `colorSpace`, shifting colors once real frames replaced the
@@ -47,22 +55,41 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   progress against each section's own sticky-plus-spacer wrapper instead
   (`rangeRef`), verified by scrolling both the landing page (two stacked
   sequences) and `/apple-design` (one, plus content below it) end-to-end.
-- **Predict flow** (`/predict`) — session picker, dual strategy cards with
-  distinct conservative/aggressive accents, confidence bars, pit-window lap
-  band, reasoning + key risk, a confidence-delta headline backed by the
-  MLflow same-day trend lookup, a monsoon hourly-rain strip, and a
-  URL-only share button.
+- **Strategy simulator** (`/predict`) — session picker, dual strategy cards
+  with distinct conservative/aggressive accents, confidence bars, a lap-by-lap
+  stint plan, a pit-window band derived from modelled tyre life, reasoning +
+  key risk, a confidence-delta headline backed by the MLflow same-day trend
+  lookup, and a monsoon hourly-rain strip. Additions in this pass:
+  - **What-if controls** — rain %, track temp, safety-car toggle, and a forced
+    starting compound. Every knob flows through the same backend rules and
+    re-runs the read live (a deliberately bad choice — e.g. slicks in a
+    downpour — reads as clearly less confident).
+  - **Lap/stint model** — the pit window is no longer a fixed fraction of the
+    session; the first stint runs to its compound's modelled life (shortened by
+    track heat, pulled earlier by a safety car). Softer opening tyres therefore
+    pit earlier than durable ones.
+  - **Beginner glossary** — the strategy copy auto-annotates jargon (undercut,
+    deg, DRS, pit window, offset…); tap any dotted term for a plain-English,
+    Sepang-flavoured explainer.
+  - **Static circuit map** — an SVG of the Sepang layout (projected from the
+    project's own apex data) highlights exactly the corners the current
+    reasoning names (backend returns `referencedCorners`).
+  - **Shareable strategy card** — the share link encodes the full scenario and
+    the page renders a per-scenario `og:image` (via the `/og` route), so a
+    shared read previews as a real card; a "Card" button opens the image
+    directly.
+- **Trip planning** — a single outbound link to
+  [Tourism Malaysia](https://www.malaysia.travel/) on `/predict`, replacing the
+  old in-app tourism/itinerary panel (a different user's job than race strategy).
 - **Deep links** — `/predict?session=FP2` preselects that session; with no
   param the page falls back to `getLiveOrNextSession()` against the 2026
   weekend schedule rather than a hardcoded FP1.
 - **Circuit lore** (`/lore`) — scroll-revealed timeline of four Sepang
   moments (1999 opening, 2009 monsoon red flag, 2017 farewell, 2026
   return), each tied to why it shapes a strategy read.
-- **Session-gap guide** — attractions filtered by the real gap after each
-  session, reordered toward indoor picks when rain risk is high, with a
-  drive-time itinerary builder and per-stop "leave by" countdown.
-- **Ticket orientation** (`/tickets`) — grandstand names and seating
-  categories, no pricing, no sales.
+- **Tickets** (`/tickets`) — reduced to a single outbound link to the official
+  [Sepang International Circuit](https://www.sepangcircuit.com/home) site;
+  pricing/seating change yearly and belong at the source, not duplicated here.
 - **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
   (22 drivers, 11 teams, career stats through the 2025 season close) and a
   second "Sepang history" set tied to three moments in `/lore`. Initials-only
@@ -88,9 +115,13 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   under Lifestyle & Culture.
 - **3D models** — `/models/sepang.glb` (the landing page's "Orbit Sepang"
   stage) and `/models/car.glb` (an animated lap on `/circuit`'s traced
-  curve) are procedurally generated by `scripts/generate_circuit_models.py`
-  — box/cylinder primitives and a spline-swept ribbon, no scanned
-  geometry. The car is deliberately unbranded (no livery, no sponsor
+  curve) are procedurally generated by `scripts/generate_circuit_models.py`.
+  `sepang.glb` is now a spline-swept ribbon **projected from the circuit's
+  real 18-point apex + elevation data** (the same centreline as
+  `scripts/blender/sepang_circuit_scene.py` and `data/sepangCircuit.ts`), so
+  the layout shape and its ~22 m elevation change are real (vertical
+  exaggerated ~6× for readability); `car.glb` stays box/cylinder primitives,
+  no scanned geometry. The car is deliberately unbranded (no livery, no sponsor
   marks, no race number). Surfaced a real gotcha worth knowing if you ever
   touch that script: trimesh's GLB exporter silently omits the `NORMAL`
   accessor by default, even with vertex normals explicitly set on the
@@ -141,19 +172,17 @@ Design tokens, voice/tone rules, and component patterns are documented in
 
 ## Known gaps (next session priorities)
 
-- `AttractionCard` renders an image band, but no entry in
-  `data/attractions.ts` sets `imageUrl` — every guide card currently shows
-  an empty placeholder. `scripts/fetch-attraction-images.ts` exists and is
-  idempotent, but hasn't been run yet — needs `UNSPLASH_ACCESS_KEY` and
-  outbound access to `api.unsplash.com`.
 - `eslint.config.mjs` imports `eslint-config-next/core-web-vitals` without
   the `.js` extension, so `next build` skips linting with a resolution
   error.
+- The `og:image` scenario card is rendered from a shared link's query params,
+  not from a fresh backend read — a shared card reflects the numbers captured
+  at share time (which is the intent, but worth knowing).
 
 ## Out of scope (v2+)
 
-Live telemetry, user accounts, historical archive / quiz, social card export,
-and live tourism.gov.my booking APIs.
+User accounts, a results-based accuracy/scoring loop against real session
+outcomes, and a full 15-corner interactive circuit map.
 
 ## Local dev
 
