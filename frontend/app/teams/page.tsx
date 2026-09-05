@@ -17,12 +17,16 @@ export default function TeamsPage() {
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
           Base, power unit, and constructors&apos; title count for the 2026
-          grid&apos;s eleven teams — same neutral card for all of them, no
-          livery colors, see{" "}
+          grid&apos;s eleven teams — neutral engineer sheets here; colored
+          fan cards live on{" "}
+          <Link href="/fan" className="text-amber hover:underline">
+            /fan
+          </Link>
+          . Seat-level career numbers stay on{" "}
           <Link href="/drivers" className="text-amber hover:underline">
             /drivers
-          </Link>{" "}
-          for each seat&apos;s own career numbers.
+          </Link>
+          .
         </p>
 
         <div className="mt-6 space-y-4">

@@ -115,10 +115,11 @@ logged), and the API echoes the effective `inputs` a read ran on.
   constructors) is fetched live from Jolpica/Ergast rather than hand-copied.
 - **Teams** (`/teams`) — all 11 constructors (base, 2026 power unit,
   constructors' titles, roster, and the same Zandvoort recap from the
-  team's side), one neutral card style for every team rather than color-
-  coding by team — a fixed team→color mapping reads as a livery reference
-  once you know which team is which, exactly what `docs/BRAND.md` rules
-  out.
+  team's side) as neutral engineer sheets.
+- **Fan cards** (`/fan`) — collectible-style constructor cards with team
+  accent colors, flip-to-recap, and a browser-local “my team” pick. Unofficial
+  fan surface; not licensed merch. Brand rules in `docs/BRAND.md` allow
+  constructor accents on fan surfaces.
 - **News** (`/news`) — curated links to real F1 reporting, filterable by
   category. Titles, sources, and this app's own one-line framing only —
   never reproduced article text, per `docs/BRAND.md`. A live-session

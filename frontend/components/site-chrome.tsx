@@ -8,6 +8,7 @@ const NAV = [
   { href: "/circuit", label: "Circuit" },
   { href: "/drivers", label: "Drivers" },
   { href: "/teams", label: "Teams" },
+  { href: "/fan", label: "Fan" },
   { href: "/news", label: "News" },
   { href: "/telemetry", label: "Telemetry" },
   { href: "/apple-design", label: "Reveal" },
