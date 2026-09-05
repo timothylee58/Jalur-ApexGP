@@ -1,4 +1,5 @@
 import { AboutNote } from "@/components/shared/AboutNote";
+import { TransitAccessPanel } from "@/components/tickets/TransitAccessPanel";
 import { SiteHeader } from "@/components/site-chrome";
 import { SeatFinder } from "@/components/tickets/SeatFinder";
 
@@ -25,7 +26,27 @@ export default function TicketsPage() {
           stand below to see what it looks over, then continue to the organiser to book.
         </p>
 
-        <SeatFinder />
+        <a
+          href={SEPANG_TICKETS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-5 block rounded-lg border border-amber/40 bg-amber/5 px-4 py-4 text-center hover:border-amber"
+        >
+          <span className="font-display text-lg uppercase tracking-wide text-amber">
+            Sepang International Circuit →
+          </span>
+          <span className="mt-1 block font-mono text-[11px] text-paper-dim">
+            sepangcircuit.com — official tickets &amp; seating
+          </span>
+        </a>
+
+        <TransitAccessPanel />
+
+        <p className="mt-6 text-[11px] leading-relaxed text-paper-dim/70">
+          Jalur APEXGP is an independent fan project — not affiliated with, endorsed by, or an
+          official partner of Formula 1, the FIA, or Sepang International Circuit. No tickets are
+          sold here.
+        </p>
 
         <AboutNote />
       </main>

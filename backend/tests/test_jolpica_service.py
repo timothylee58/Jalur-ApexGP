@@ -192,3 +192,83 @@ async def test_standings_parses_drivers_and_constructors(monkeypatch: pytest.Mon
     assert standings.drivers[0].points == 423.0
     assert standings.constructors[0].constructor_id == "mclaren"
     assert standings.constructors[0].points == 833.0
+
+
+@pytest.mark.asyncio
+async def test_standings_cache_respects_ttl(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        path = request.url.path
+        if path.endswith("/driverstandings/"):
+            return httpx.Response(
+                200,
+                json={
+                    "MRData": {
+                        "StandingsTable": {
+                            "StandingsLists": [
+                                {
+                                    "season": "2026",
+                                    "round": "5",
+                                    "DriverStandings": [
+                                        {
+                                            "position": "1",
+                                            "points": "100",
+                                            "wins": "2",
+                                            "Driver": {
+                                                "driverId": "norris",
+                                                "givenName": "Lando",
+                                                "familyName": "Norris",
+                                            },
+                                            "Constructors": [{"name": "McLaren"}],
+                                        }
+                                    ],
+                                }
+                            ]
+                        }
+                    }
+                },
+            )
+        return httpx.Response(
+            200,
+            json={
+                "MRData": {
+                    "StandingsTable": {
+                        "StandingsLists": [
+                            {
+                                "season": "2026",
+                                "round": "5",
+                                "ConstructorStandings": [
+                                    {
+                                        "position": "1",
+                                        "points": "180",
+                                        "wins": "3",
+                                        "Constructor": {"constructorId": "mclaren", "name": "McLaren"},
+                                    }
+                                ],
+                            }
+                        ]
+                    }
+                }
+            },
+        )
+
+    _patch_client(monkeypatch, handler)
+
+    clock = [1000.0]
+    monkeypatch.setattr(jolpica_service.time, "monotonic", lambda: clock[0])
+
+    await get_standings()
+    assert calls == 2  # one call each for drivers + constructors
+
+    # Still within the TTL — served from cache, no new requests.
+    clock[0] += 60
+    await get_standings()
+    assert calls == 2
+
+    # Past the TTL — refetches.
+    clock[0] += jolpica_service._STANDINGS_CACHE_TTL_SECONDS
+    await get_standings()
+    assert calls == 4
