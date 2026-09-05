@@ -1,43 +1,31 @@
 import { AboutNote } from "@/components/shared/AboutNote";
 import { SiteHeader } from "@/components/site-chrome";
+import { SeatFinder } from "@/components/tickets/SeatFinder";
 
-const SEPANG_TICKETS_URL = "https://www.sepangcircuit.com/home";
+export const metadata = {
+  title: "Tickets & seating — Jalur APEXGP",
+  description:
+    "Find a Sepang grandstand view for the 2026 Formula 1 Gulf Air Bahrain Grand Prix — pricing and seat picker, tickets sold via the organiser.",
+};
 
 export default function TicketsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-md px-4 py-6">
+      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-5xl">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Tickets &amp; seating
+          Find your view
         </p>
-        <h1 className="mt-2 font-display text-2xl uppercase tracking-wide text-paper">
-          Buy at the source
+        <h1 className="mt-2 font-display text-2xl uppercase tracking-wide text-paper sm:text-4xl">
+          Your seat. Your Sepang.
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Grandstand options, pricing, resident rates, and child policies change every year and
-          belong on the official circuit site — not duplicated here where they&apos;d go stale.
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-paper-dim">
+          Three days · 2–4 October · illustrative MyKad pricing, last checked against the
+          organiser&apos;s public listings. Tickets are sold by the circuit, not here — pick a
+          stand below to see what it looks over, then continue to the organiser to book.
         </p>
 
-        <a
-          href={SEPANG_TICKETS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-5 block rounded-lg border border-amber/40 bg-amber/5 px-4 py-4 text-center hover:border-amber"
-        >
-          <span className="font-display text-lg uppercase tracking-wide text-amber">
-            Sepang International Circuit →
-          </span>
-          <span className="mt-1 block font-mono text-[11px] text-paper-dim">
-            sepangcircuit.com — official tickets &amp; seating
-          </span>
-        </a>
-
-        <p className="mt-6 text-[11px] leading-relaxed text-paper-dim/70">
-          Jalur APEXGP is an independent fan project — not affiliated with, endorsed by, or an
-          official partner of Formula 1, the FIA, or Sepang International Circuit. No tickets are
-          sold here.
-        </p>
+        <SeatFinder />
 
         <AboutNote />
       </main>
