@@ -1,21 +1,24 @@
-import type {
-  AccuracyResponse,
-  OutcomeLogged,
-  OutcomeRequest,
-  PredictionResponse,
-  Session,
-} from "@/types";
+import type { PredictionResponse, Session, WhatIf } from "@/types";
+import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
+import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
+import type { SepangAccessPayload } from "@/types/transit";
 
-// Matches .env.example: the backend mounts every route under /api, baked
-// into the FastAPI app itself (not deploy-specific), so the fallback here
-// needs the same suffix a real .env value would carry.
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
-export async function fetchPrediction(session: Session): Promise<PredictionResponse> {
+export async function fetchPrediction(
+  session: Session,
+  whatIf: WhatIf = {},
+): Promise<PredictionResponse> {
+  const body: Record<string, unknown> = { session };
+  if (whatIf.rainProbability !== undefined) body.rain_probability = whatIf.rainProbability;
+  if (whatIf.tempC !== undefined) body.temp_c = whatIf.tempC;
+  if (whatIf.safetyCar) body.safety_car = whatIf.safetyCar;
+  if (whatIf.tyreChoice) body.tyre_choice = whatIf.tyreChoice;
+
   const res = await fetch(`${API_URL}/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session }),
+    body: JSON.stringify(body),
     cache: "no-store",
   });
 
@@ -26,32 +29,47 @@ export async function fetchPrediction(session: Session): Promise<PredictionRespo
   return res.json() as Promise<PredictionResponse>;
 }
 
-export async function submitOutcome(outcome: OutcomeRequest): Promise<OutcomeLogged> {
-  const res = await fetch(`${API_URL}/outcomes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(outcome),
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error(`Outcome log failed (${res.status})`);
-  }
-
-  return res.json() as Promise<OutcomeLogged>;
+export async function fetchTelemetryDrivers(): Promise<TelemetryDriver[]> {
+  const res = await fetch(`${API_URL}/telemetry/drivers`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Telemetry drivers request failed (${res.status})`);
+  return res.json() as Promise<TelemetryDriver[]>;
 }
 
-export async function fetchAccuracy(session: Session): Promise<AccuracyResponse | null> {
-  const res = await fetch(`${API_URL}/accuracy?session=${session}`, { cache: "no-store" });
+export async function fetchTelemetryLaps(driverNumber: number): Promise<TelemetryLap[]> {
+  const res = await fetch(
+    `${API_URL}/telemetry/laps?driver_number=${driverNumber}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`Telemetry laps request failed (${res.status})`);
+  return res.json() as Promise<TelemetryLap[]>;
+}
 
-  if (res.status === 404) {
-    // Not an error state — just means nothing has been scored yet for this
-    // session (no outcome logged against a same-day prediction).
-    return null;
-  }
-  if (!res.ok) {
-    throw new Error(`Accuracy request failed (${res.status})`);
-  }
+export async function fetchTelemetryLapTrace(
+  driverNumber: number,
+  lapNumber: number,
+): Promise<TelemetryLapTrace> {
+  const res = await fetch(
+    `${API_URL}/telemetry/lap-trace?driver_number=${driverNumber}&lap_number=${lapNumber}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`Telemetry lap-trace request failed (${res.status})`);
+  return res.json() as Promise<TelemetryLapTrace>;
+}
 
-  return res.json() as Promise<AccuracyResponse>;
+export async function fetchWeekendSchedule(): Promise<WeekendSchedule> {
+  const res = await fetch(`${API_URL}/schedule`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Schedule request failed (${res.status})`);
+  return res.json() as Promise<WeekendSchedule>;
+}
+
+export async function fetchStandings(): Promise<StandingsPayload> {
+  const res = await fetch(`${API_URL}/standings`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Standings request failed (${res.status})`);
+  return res.json() as Promise<StandingsPayload>;
+}
+
+export async function fetchSepangAccess(): Promise<SepangAccessPayload> {
+  const res = await fetch(`${API_URL}/transit/sepang-access`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Transit access request failed (${res.status})`);
+  return res.json() as Promise<SepangAccessPayload>;
 }

@@ -7,6 +7,21 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     open_meteo_base_url: str = "https://api.open-meteo.com/v1"
+    # OpenF1 (openf1.org) — free, no API key, historical data from 2023
+    # onward; real-time MQTT streaming needs a paid account, which this app
+    # doesn't use (see telemetry_service.py's module docstring).
+    openf1_base_url: str = "https://api.openf1.org/v1"
+    # Jolpica (api.jolpi.ca) — open-source Ergast-compatible F1 results API,
+    # free and keyless. Used for the Sepang weekend schedule and 2025
+    # championship standings; not an official F1/FIA/FOM product.
+    jolpica_base_url: str = "https://api.jolpi.ca/ergast/f1"
+    # Malaysia's official open-data API (developer.data.gov.my) — a real
+    # government source, not an F1/circuit-operated feed. Used for live
+    # RapidKL (Prasarana) bus positions toward the Sepang/KLIA corridor;
+    # see transit_service.py's module docstring for what this can and
+    # can't actually show.
+    gtfs_static_base_url: str = "https://api.data.gov.my/gtfs-static"
+    gtfs_realtime_base_url: str = "https://api.data.gov.my/gtfs-realtime/vehicle-position"
     mlflow_tracking_uri: str = "file:./ml/mlruns"
     # Databricks (and most hosted MLflow backends) require an absolute
     # workspace path, e.g. "/Users/you@example.com/jalur-apexgp-predictions" —

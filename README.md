@@ -1,73 +1,244 @@
 # Jalur APEXGP
 
-AI-style race engineer simulator for the Sepang F1 race weekend.
+A race-engineer **strategy simulator** for the Sepang F1 race weekend.
 Pick a session (FP1 / FP2 / FP3 / Quali / Race) and get two strategy reads —
-conservative vs aggressive — with confidence scores and a suggested pit window,
-built on a live weather blend (Open-Meteo) and tracked with MLflow.
-
-A secondary panel maps the gap after that session to originally written
-Sepang / Selangor / KL attraction notes, grouped by drive time from the circuit.
+conservative vs aggressive — with confidence scores, a lap-by-lap stint plan,
+and a pit window derived from modelled tyre life, built on a live weather blend
+(Open-Meteo). Then run your own **what-if** scenarios (rain, track temp, safety
+car, forced starting compound) and the model recomputes live.
 
 ## Architecture
 
-Next.js (Vercel) → FastAPI (Vercel, Python serverless) → Open-Meteo +
-deterministic strategy blend → MLflow run logging (Databricks-hosted).
-No database, no auth — stateless, public, read-only except for the
-accuracy loop's outcome log (see below), which is also just an MLflow run.
+Next.js (Vercel) → FastAPI (Vercel) → Open-Meteo + deterministic strategy
+blend → MLflow run logging. No database, no auth — stateless, public, read-only.
 
-**Note on "AI":** the strategy engine is a climatology / live-data blend, not a
-trained ML model. MLflow is used for experiment lifecycle tracking.
+**Honest framing (no "AI"):** this is a deterministic, rules-based *simulator*,
+not a trained predictor. It blends live Open-Meteo weather with Sepang
+climatology, then runs a transparent tyre/compound heuristic and a lap-by-lap
+stint model to derive pit windows. The response is labelled
+`modelKind: "deterministic-simulator"` so the UI never oversells it. MLflow logs
+only the unmodified live read (what-if scenarios are exploratory and are not
+logged), and the API echoes the effective `inputs` a read ran on.
 
 ## Features
 
-- **Predict flow** (`/predict`) — session picker, dual strategy cards with
-  distinct conservative/aggressive accents, confidence bars, pit-window lap
-  band, reasoning + key risk, a confidence-delta headline backed by the
-  MLflow same-day trend lookup, a monsoon hourly-rain strip, and a
-  URL-only share button.
+- **Landing page lap preview** ("The lap") — a second full-bleed,
+  scroll-scrubbed hero, same mechanism as the circuit flyover above it,
+  stacked directly beneath it on the landing page (`/apple-design` no
+  longer shares this mechanism — its hero is `CircuitVideoHero`, the same
+  video as the landing page background). Source clip is a generic,
+  unbranded single-seater (no team livery, no sponsor decals) filmed by a
+  chase drone at Sepang — genuinely clean on the car itself, so this one
+  skips `scripts/extract-frames.py --stylize` entirely — but it does carry
+  a burned-in speed/turn-number telemetry HUD for the whole clip, feathered
+  out with a masked blur (not stylized away, since the car itself needed no
+  treatment); a matching 9:16 frame set
+  (`frontend/public/lap-preview-frames-9x16/`) is picked on narrow
+  viewports instead of stretching the 16:9 frames. See
+  `frontend/public/lap-preview-frames/README.md` for the mask/verification
+  details. Replaced an earlier compact-GIF-card version of this section,
+  and an earlier still that used real official F1 broadcast footage of the
+  2016 Malaysian Grand Prix — a bird's-eye clip with a burned-in F1 logo
+  watermark and a live telemetry graphic, which docs/BRAND.md explicitly
+  rules out and no amount of mosaic-ing fixes (the whole clip is FOM's
+  copyrighted broadcast, not an incidental decal) — the current clip's own
+  telemetry HUD is the same category of graphic docs/BRAND.md rules out,
+  just fixable by masking rather than a reason to reject the clip outright.
+- **Circuit video hero** (landing page background, and `/apple-design`) — both
+  now render `CircuitVideoHero`, a muted, looping, controls-free background
+  video (`hero-16x9.mp4` / `hero-9x16.mp4`) that behaves like a GIF, replacing
+  the landing page's earlier static SVG map default and `/apple-design`'s
+  scroll-scrubbed frame-sequence hero. `docs/BRAND.md`'s Imagery section now
+  allows real circuit/on-track footage here (this project previously rejected
+  real footage twice on brand-safety grounds — see the lap-preview entry
+  above — but the concern was official broadcast graphics and copyrighted
+  broadcast footage, not real footage as such) provided it clears the same
+  checklist a generated clip would: no burned-in broadcast graphics, no
+  sponsor logos or team wordmarks, no readable real venue signage, and
+  rights the project actually has. The current clip is owner-supplied and
+  was checked frame-by-frame before use (one trackside sponsor board was
+  found — illegible but shaped enough like a real sponsor board to fail the
+  signage bar — and blurred out; see `frontend/public/videos/README.md` for
+  the exact fix, verification, and full provenance). It ships as two
+  actually-different renders rather
+  than one clip CSS-cropped: a 9:16 center crop for narrow viewports and the
+  native 16:9 otherwise, picked via `<source media>` art-direction (same
+  mechanism as `<picture>` — the browser picks once at load, not on resize).
+  A "3D flyover" toggle in the landing hero's link row swaps the video for an
+  opt-in alternative (`CircuitFlyoverHero`) instead — a continuously-looping
+  procedural three.js scene, built from the same real apex-point centreline as
+  `sepang.glb` and the map (`lib/circuitFlyoverTrack.ts`), running the
+  unbranded `car.glb` around the loop forever and easing from a high aerial
+  establishing shot into a low chase cam on toggle-in. Off by default so the
+  video is still what visitors see first.
+  The shared `ScrollFrameSequence` component (still used by the landing page's
+  "The lap" section below) had two real bugs surfaced and fixed while it was
+  still driving both hero sections: it never set a loaded texture's
+  `colorSpace`, shifting colors once real frames replaced the solid fallback;
+  and it mapped scroll progress to the whole document's scroll height, so
+  stacking a second full-bleed section on one page (or adding content below a
+  single one) started or ended its frame scrub off from where the section
+  itself was actually pinned. Fixed by measuring progress against each
+  section's own sticky-plus-spacer wrapper instead (`rangeRef`).
+- **Strategy simulator** (`/predict`) — session picker, dual strategy cards
+  with distinct conservative/aggressive accents, confidence bars, a lap-by-lap
+  stint plan, a pit-window band derived from modelled tyre life, reasoning +
+  key risk, a confidence-delta headline backed by the MLflow same-day trend
+  lookup, and a monsoon hourly-rain strip. Additions in this pass:
+  - **What-if controls** — rain %, track temp, safety-car toggle, and a forced
+    starting compound. Every knob flows through the same backend rules and
+    re-runs the read live (a deliberately bad choice — e.g. slicks in a
+    downpour — reads as clearly less confident).
+  - **Lap/stint model** — the pit window is no longer a fixed fraction of the
+    session; the first stint runs to its compound's modelled life (shortened by
+    track heat, pulled earlier by a safety car). Softer opening tyres therefore
+    pit earlier than durable ones.
+  - **Beginner glossary** — the strategy copy auto-annotates jargon (undercut,
+    deg, DRS, pit window, offset…); tap any dotted term for a plain-English,
+    Sepang-flavoured explainer.
+  - **Static circuit map** — an SVG of the Sepang layout (projected from the
+    project's own apex data) highlights exactly the corners the current
+    reasoning names (backend returns `referencedCorners`).
+  - **Shareable strategy card** — the share link encodes the full scenario and
+    the page renders a per-scenario `og:image` (via the `/og` route), so a
+    shared read previews as a real card; a "Card" button opens the image
+    directly.
+- **Trip planning** — a single outbound link to
+  [Tourism Malaysia](https://www.malaysia.travel/) on `/predict`, replacing the
+  old in-app tourism/itinerary panel (a different user's job than race strategy).
+- **Live transit access** (`/tickets`) — a real-time ETL read on public transit
+  toward Sepang, built on Malaysia's official open-data GTFS feeds
+  ([developer.data.gov.my](https://developer.data.gov.my)) for Prasarana
+  (RapidKL): fetch the static route/stop feed, match it by name against the
+  Sepang/KLIA corridor, fetch live GTFS-Realtime vehicle positions for any
+  matched route, and estimate ETA via a documented heuristic (live GPS
+  distance ÷ the vehicle's own live speed, or a conservative fallback pace
+  when it's stationary) — not a trained ML model, since no historical
+  arrival-time data exists yet for a route that's never been mapped this way
+  before; this service's own live reads are the path to a real one later. Two
+  honesty gaps stated plainly rather than hidden: no official F1 2026
+  race-weekend shuttle to the circuit has been announced yet (past years ran
+  RapidKL charter shuttles — event charters, never part of the standing GTFS
+  network), and the standing bus network has no stop at the circuit gate
+  itself, so this reports live ETA to the nearest real stop it can find
+  toward the corridor, not the venue. See
+  `backend/app/services/transit_service.py`'s module docstring for the full
+  design and its verification gap (api.data.gov.my is blocked by this
+  project's dev sandbox, so it was built and unit-tested against a mocked
+  transport plus a real, synthetically-constructed GTFS-RT protobuf message —
+  same pattern as `telemetry_service.py`'s OpenF1 gap).
 - **Deep links** — `/predict?session=FP2` preselects that session; with no
   param the page falls back to `getLiveOrNextSession()` against the 2026
-  weekend schedule rather than a hardcoded FP1.
+  weekend schedule (Jolpica/Ergast round 16 at Sepang — the Bahrain Grand
+  Prix hosted in Malaysia, 2–4 Oct) rather than a hardcoded FP1.
 - **Circuit lore** (`/lore`) — scroll-revealed timeline of four Sepang
   moments (1999 opening, 2009 monsoon red flag, 2017 farewell, 2026
   return), each tied to why it shapes a strategy read.
-- **Session-gap guide** — attractions filtered by the real gap after each
-  session, reordered toward indoor picks when rain risk is high, with a
-  drive-time itinerary builder and per-stop "leave by" countdown.
-- **Ticket orientation** (`/tickets`) — grandstand names and seating
-  categories, no pricing, no sales.
-- **Circuit explorer** (`/circuit`) — a stylized interactive 3D model
-  covering all 15 named Sepang corners, traced from the circuit's published
-  general map (not survey-grade geometry). Turns 5–7, 9, and 15 carry the
-  strategy engine's own reasoning hooks.
-- **Prediction accuracy** (`/accuracy`) — a results-based scoring loop, not
-  a self-reported confidence number. Every `/predict` call already logs an
-  MLflow run; this page lets you report what actually happened (rain
-  occurred, actual pit lap) for the same day, and scores both strategy
-  variants against it — a Brier-score-based rain-call accuracy and a
-  pit-window hit/miss, blended into one composite score per variant. See
-  `backend/app/services/scoring_service.py` for the scoring math (pure,
-  unit-tested) and `backend/app/core/mlflow_client.py`'s `get_accuracy` for
-  how same-day prediction and outcome runs are joined.
+- **Tickets** (`/tickets`) — reduced to a single outbound link to the official
+  [Sepang International Circuit](https://www.sepangcircuit.com/home) site;
+  pricing/seating change yearly and belong at the source, not duplicated here.
+- **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
+  (22 drivers, 11 teams, career stats through the 2025 season close) and a
+  second "Sepang history" set tied to three moments in `/lore`. Initials-only
+  markers, no photos or team liveries — see `docs/BRAND.md`. Each 2026-grid
+  driver also carries a "last time out" recap of the 2026 Dutch Grand
+  Prix at Zandvoort — the most recently completed real round — WebSearch-
+  verified rather than invented; deep-linkable via `/drivers?driver=<id>`.
+  A compact championship standings strip (top five drivers and
+  constructors) tracks the current, still-in-progress season live from
+  Jolpica/Ergast (refetched every few minutes server-side, not a fixed
+  snapshot) rather than hand-copied — a different, deliberately static
+  number from the career-totals-through-2025 stats above it.
+- **Teams** (`/teams`) — all 11 constructors (base, 2026 power unit,
+  constructors' titles, roster, and the same Zandvoort recap from the
+  team's side) as neutral engineer sheets.
+- **Fan cards** (`/fan`) — collectible-style constructor cards with team
+  accent colors, flip-to-recap, and a browser-local “my team” pick. Unofficial
+  fan surface; not licensed merch. Brand rules in `docs/BRAND.md` allow
+  constructor accents on fan surfaces.
+- **News** (`/news`) — curated links to real F1 reporting, filterable by
+  category. Titles, sources, and this app's own one-line framing only —
+  never reproduced article text, per `docs/BRAND.md`. A live-session
+  ticker at the top shows synthetic, schedule-derived markers ("Lights
+  out", "Chequered flag imminent") only while `now` genuinely falls inside
+  the fixed Sepang weekend window; otherwise it says so plainly rather
+  than faking a live feed this app has no telemetry source for. Also links
+  out to the official F1 [Apple TV channel](https://tv.apple.com/us/channel/formula-1/tvs.sbd.241000),
+  the [Bahrain Grand Prix](https://tv.apple.com/us/grand-prix/bahrain-grand-prix/umc.csl.1o0z2mi3mbs4pxxkvx7ldh3ju?ctx_brand=tvs.sbd.241000)
+  event hub (the round Sepang is hosting in 2026), and
+  [F1 The Movie](https://tv.apple.com/us/movie/f1-the-movie/umc.cmc.3t6dvnnr87zwd4wmvpdx5came)
+  under Lifestyle & Culture. A small "Watch this weekend →" link on the
+  landing hero and `/predict` points at that Bahrain GP hub.
+- **3D models** — `/models/sepang.glb` (the landing page's "Orbit Sepang"
+  stage) and `/models/car.glb` (an animated lap on `/circuit`'s traced
+  curve) are procedurally generated by `scripts/generate_circuit_models.py`.
+  `sepang.glb` is now a spline-swept ribbon **projected from the circuit's
+  real 18-point apex + elevation data** (the same centreline as
+  `scripts/blender/sepang_circuit_scene.py` and `data/sepangCircuit.ts`), so
+  the layout shape and its ~22 m elevation change are real (vertical
+  exaggerated ~6× for readability); `car.glb` stays box/cylinder primitives,
+  no scanned geometry. The car is deliberately unbranded (no livery, no sponsor
+  marks, no race number). Surfaced a real gotcha worth knowing if you ever
+  touch that script: trimesh's GLB exporter silently omits the `NORMAL`
+  accessor by default, even with vertex normals explicitly set on the
+  mesh — invisible (unlit black) once loaded, since three.js's
+  `GLTFLoader` doesn't compute missing normals itself. Fixed with
+  `include_normals=True` on `.export()`; see
+  `frontend/public/models/README.md`. An alternative, much higher-fidelity
+  Blender-based generator lives at `scripts/blender/` — untested end to
+  end (no Blender in this dev environment), documented there as an
+  optional path rather than the current source of truth for the shipped
+  file.
+- **Real telemetry** (`/telemetry`, and `/circuit`'s "real lap pacing"
+  toggle) — speed, throttle, brake, RPM, gear, and DRS from
+  [OpenF1](https://openf1.org) (free, keyless, historical-only; see
+  `docs/BRAND.md`), replaying the same real 2026 Dutch GP at Zandvoort
+  already cited for the driver/team recaps. `/circuit` doesn't plot the
+  real car's actual coordinates — this app's track shape is a stylized
+  fictional trace, and the real corners don't line up with it — instead
+  it paces movement along the *existing* traced curve by the real lap's
+  distance-weighted speed profile (`lib/telemetry.ts`'s
+  `buildDistanceProgress`), so a real braking zone visibly slows the
+  fictional car at whatever point in its own lap that fraction of
+  distance falls, even though the corner positions are unrelated. Backend
+  proxies OpenF1 (`backend/app/services/telemetry_service.py`) rather
+  than calling it from the browser, matching the existing Open-Meteo
+  pattern; the date-range filter needed a hand-built query string, since
+  OpenF1's `date>`/`date<` syntax glues the operator directly onto the
+  field name rather than using `key=value`.
+
+  **Verification gap, stated plainly:** `api.openf1.org` is blocked by
+  this dev sandbox's own network egress policy, so this integration was
+  built and unit-tested against a mocked HTTP transport
+  (`backend/tests/test_telemetry_service.py`) — confirming this repo's
+  own request-building and response-parsing logic, not that OpenF1's real
+  API actually matches the field names/shapes assumed here. The most
+  likely failure mode if something's off: the target session not
+  existing yet in OpenF1's archive, which the backend turns into a clean
+  404/502 rather than a crash (confirmed against the real, blocked host
+  from this sandbox — it fails exactly that way). Test this against the
+  live API somewhere with ordinary internet access (a normal dev machine
+  or the deployed Vercel function both qualify) before relying on it.
+
+## Brand
+
+Design tokens, voice/tone rules, and component patterns are documented in
+[`docs/BRAND.md`](./docs/BRAND.md) — written against what's actually in
+`frontend/tailwind.config.ts`, kept in sync rather than aspirational.
 
 ## Known gaps (next session priorities)
 
-- `AttractionCard` renders an image band, but no entry in
-  `data/attractions.ts` sets `imageUrl` — every guide card currently shows
-  an empty placeholder. `scripts/fetch-attraction-images.ts` exists and is
-  idempotent, but hasn't been run yet — needs `UNSPLASH_ACCESS_KEY` and
-  outbound access to `api.unsplash.com`.
-- Circuit hero frames are not extracted yet, so `CircuitFrameSequence`
-  renders its solid-color fallback instead of real footage. See
-  `scripts/extract-frames.py` — needs a locally downloaded source video.
 - `eslint.config.mjs` imports `eslint-config-next/core-web-vitals` without
   the `.js` extension, so `next build` skips linting with a resolution
   error.
+- The `og:image` scenario card is rendered from a shared link's query params,
+  not from a fresh backend read — a shared card reflects the numbers captured
+  at share time (which is the intent, but worth knowing).
 
 ## Out of scope (v2+)
 
-Live telemetry, user accounts, historical archive / quiz, social card export,
-and live tourism.gov.my booking APIs.
+User accounts, a results-based accuracy/scoring loop against real session
+outcomes, and a full 15-corner interactive circuit map.
 
 ## Local dev
 

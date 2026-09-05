@@ -48,12 +48,12 @@ export const loreEntries: LoreEntry[] = [
   {
     id: "2026-return",
     year: "2026",
-    date: "April 2026",
+    date: "2–4 October 2026",
     title: "Formula 1 returns to Sepang",
     body:
-      "The Formula 1 paddock is back at the circuit. This weekend runs under the Formula 1 Gulf Air Bahrain Grand Prix name — Sepang is hosting that event, not a rebranded Malaysian Grand Prix. Jalur APEXGP is built around this weekend.",
+      "The Formula 1 paddock is back at the circuit. Jolpica/Ergast lists this weekend as the Bahrain Grand Prix in Malaysia (round 16) — Sepang is hosting that event, not a rebranded Malaysian Grand Prix. Jalur APEXGP is built around this weekend.",
     kind: "return",
     engineerNote:
-      "An April date puts the weekend near the inter-monsoon transition, when afternoon convection is at its most aggressive — the hardest possible case for a strategy call.",
+      "An October date sits in the shoulder of the northeast monsoon — afternoon storms are still in play, just less of a daily certainty than the April inter-monsoon peak.",
   },
 ];

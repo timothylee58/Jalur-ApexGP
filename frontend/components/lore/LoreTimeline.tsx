@@ -21,7 +21,8 @@ export function LoreTimeline() {
         return (
           <motion.li
             key={entry.id}
-            className="relative pb-10 last:pb-0"
+            id={entry.id}
+            className="relative scroll-mt-20 pb-10 last:pb-0"
             // useReducedMotion() is null until its effect resolves (including
             // during SSR); only opt into the hidden->reveal animation once it
             // confirms the user is NOT reduced-motion, so an unresolved or true

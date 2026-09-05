@@ -1,67 +1,105 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { useEffect, useState } from "react";
 import { bgm } from "@/data/bgm";
 
 /**
- * Sitewide background music toggle, bottom-left, persistent across
- * client-side navigation (mounted once in the root layout). Starts paused —
- * browsers block audio-with-sound autoplay without a user gesture, so this
- * never pretends to autoplay; the first click is what actually starts it.
- * Hover or focus reveals the track title/artist to the right of the button.
+ * Sitewide Spotify playlist embed, bottom-left, persistent across
+ * client-side navigation (mounted once in the root layout). This is
+ * Spotify's own official compact embed — it plays in-page (unlike a plain
+ * link out to open.spotify.com), and its play control plus the currently-
+ * playing track's title/source are all part of Spotify's native embed UI.
+ * This component renders none of its own playback controls beyond the
+ * minimize/restore toggle below; the iframe's contents are Spotify's.
+ *
+ * Minimized state persists across visits (localStorage) — the embed keeps
+ * playing underneath either way, this only changes what's on screen. Fresh
+ * visitors get it expanded once so they discover it's there; anyone who's
+ * minimized it before stays minimized.
  */
-export function BgmPlayer() {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [playing, setPlaying] = useState(false);
 
-  function toggle() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playing) {
-      audio.pause();
-      setPlaying(false);
-      return;
+const STORAGE_KEY = "jalur-apexgp-bgm-minimized";
+
+// Tolerates either a bare playlist ID or a full pasted share link
+// (https://open.spotify.com/playlist/<ID>?si=...) in data/bgm.ts — pasting
+// the whole link is the easy mistake to make, and it'd otherwise nest a
+// full URL inside the embed src below instead of just the ID.
+function extractPlaylistId(value: string): string {
+  const match = value.match(/playlist\/([a-zA-Z0-9]+)/);
+  return match ? match[1] : value;
+}
+
+export function BgmPlayer() {
+  const playlistId = extractPlaylistId(bgm.playlistId);
+  const [minimized, setMinimized] = useState(false);
+
+  useEffect(() => {
+    try {
+      setMinimized(window.localStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      // private mode / blocked storage — stays expanded for this visit
     }
-    // Set optimistically, synchronously, rather than waiting for play() to
-    // resolve: a rapid second click landed before that promise settled
-    // otherwise still read the stale `playing=false` from this closure and
-    // called play() again instead of pause() — confirmed by reasoning
-    // through the async timing, not just plausible-sounding. Roll back to
-    // false only if play() actually rejects (blocked, or file missing).
-    setPlaying(true);
-    audio.play().catch(() => setPlaying(false));
+  }, []);
+
+  function toggle(next: boolean) {
+    setMinimized(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // ignore — toggle still works for this visit
+    }
+  }
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        onClick={() => toggle(false)}
+        aria-label="Show Formula 1 playlist player"
+        className="fixed bottom-4 left-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-paper/10 bg-asphalt shadow-lg shadow-black/40 hover:border-amber"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber" fill="currentColor" aria-hidden>
+          <path d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm4.3 13.1a.6.6 0 0 1-.83.2c-2.27-1.39-5.13-1.7-8.5-.93a.6.6 0 1 1-.27-1.17c3.69-.84 6.85-.48 9.4 1.08a.6.6 0 0 1 .2.82Zm1.1-2.45a.75.75 0 0 1-1.03.25c-2.6-1.6-6.56-2.06-9.63-1.13a.75.75 0 1 1-.43-1.44c3.51-1.06 7.87-.55 10.84 1.28a.75.75 0 0 1 .25 1.04Zm.1-2.55C14.7 9.3 9.3 9.1 6.5 9.96a.9.9 0 1 1-.52-1.72c3.22-.98 9.15-.75 12.75 1.4a.9.9 0 1 1-.93 1.54Z" />
+        </svg>
+      </button>
+    );
   }
 
   return (
-    // pointer-events-none here, not on the tooltip alone: the tooltip pill
-    // stays in the flex layout (just invisible) so its full reserved width
-    // extends well past the 40px button, and this wrapper — being `fixed`
-    // with a real z-index — would otherwise swallow clicks/hover in that
-    // whole region even while nothing is visibly there. Confirmed directly:
-    // elementFromPoint() well past the button was returning this wrapper,
-    // not whatever page content sat underneath it. `peer` + pointer-events-
-    // auto below re-enables interaction for just the button itself.
-    <div className="pointer-events-none fixed bottom-4 left-4 z-40 flex items-center gap-2">
-      <audio ref={audioRef} src={bgm.src} loop preload="none" />
-      <button
-        type="button"
-        onClick={toggle}
-        aria-pressed={playing}
-        aria-label={`${playing ? "Pause" : "Play"} background music — ${bgm.title} by ${bgm.artist}`}
-        className="peer pointer-events-auto flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-paper/20 bg-asphalt/90 text-paper backdrop-blur transition-colors hover:border-amber hover:text-amber focus-visible:border-amber focus-visible:text-amber"
-      >
-        {playing ? <Pause size={16} /> : <Play size={16} />}
-      </button>
-      <div
-        className="pointer-events-none max-w-[14rem] origin-left scale-95 rounded-full border border-paper/10 bg-asphalt/90 px-3 py-1.5 opacity-0 backdrop-blur transition-all duration-150 peer-hover:scale-100 peer-hover:opacity-100 peer-focus-visible:scale-100 peer-focus-visible:opacity-100"
-        aria-hidden
-      >
-        <p className="truncate font-mono text-[11px] uppercase tracking-wide text-paper">
-          {bgm.title}
-        </p>
-        <p className="truncate font-mono text-[10px] text-paper-dim">{bgm.artist}</p>
+    <div className="fixed bottom-4 left-4 z-40 w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-lg shadow-black/40">
+      <div className="flex items-center justify-end bg-asphalt px-2 py-1">
+        <button
+          type="button"
+          onClick={() => toggle(true)}
+          aria-label="Minimize playlist player"
+          className="rounded p-1 text-paper-dim hover:text-amber"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path d="M5 12h14" strokeLinecap="round" />
+          </svg>
+        </button>
       </div>
+      <iframe
+        title="Spotify playlist player"
+        // No autoplay here: Spotify's plain embed URL has no autoplay query
+        // param (an earlier version of this component added one — it was a
+        // no-op, since the embed silently ignores unrecognised params).
+        // Real autoplay needs the official Embed iFrame API
+        // (open.spotify.com/embed/iframe-api/v1, an EmbedController.play()
+        // call) — and even that only fires playback, not the browser's own
+        // autoplay-with-sound gate (Chrome/Safari/Firefox all still require
+        // a prior user gesture or engagement history on the site). Not
+        // worth the added script-loading complexity for a bottom-left
+        // corner widget when the ceiling is "starts after any click on the
+        // page" rather than true autoplay; Spotify's own play button in the
+        // embed below is one click away regardless.
+        src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0`}
+        width="100%"
+        height="80"
+        style={{ border: 0 }}
+        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+        loading="lazy"
+      />
     </div>
   );
 }
