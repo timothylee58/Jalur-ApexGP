@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { DriverAvatar } from "@/components/drivers/DriverAvatar";
 import { DriverGridScene } from "@/components/drivers/DriverGridScene";
+import { StandingsStrip } from "@/components/drivers/StandingsStrip";
 import { SiteHeader } from "@/components/site-chrome";
 import { drivers, type DriverEra } from "@/data/drivers";
 import { teams } from "@/data/teams";
@@ -66,6 +67,8 @@ function DriversView() {
           live in-season feed. Markers are paired by team, not a real
           qualifying or grid order.
         </p>
+
+        <StandingsStrip />
 
         <div className="mt-5 flex gap-2" role="tablist" aria-label="Driver era">
           {(Object.keys(ERA_LABEL) as DriverEra[]).map((key) => (

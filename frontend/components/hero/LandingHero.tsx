@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { SepangCircuitMap } from "@/components/circuit/SepangCircuitMap";
 import { SessionPicker } from "@/components/hero/SessionPicker";
+import { WATCH_THIS_WEEKEND } from "@/data/news";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 

@@ -121,6 +121,19 @@ export const news: NewsItem[] = [
     summary: "The official F1 channel on Apple TV, for live sessions and replays.",
   },
   {
+    id: "apple-tv-bahrain-gp",
+    title: "Bahrain Grand Prix",
+    source: "Apple TV",
+    url: "https://tv.apple.com/us/grand-prix/bahrain-grand-prix/umc.csl.1o0z2mi3mbs4pxxkvx7ldh3ju?ctx_brand=tvs.sbd.241000",
+    category: "Lifestyle & Culture",
+    // Event hub page, not a dated article. Jolpica/Ergast lists the 2026
+    // Bahrain Grand Prix at Sepang (round 16, 2–4 Oct) — same weekend this
+    // app is built around — so this deep link is the watch surface for it.
+    publishedAt: "2026-09-05",
+    summary:
+      "Apple TV's Bahrain Grand Prix hub — live sessions and replays for the round Sepang is hosting in 2026.",
+  },
+  {
     id: "f1-the-movie",
     title: "F1: The Movie",
     source: "Apple TV",
@@ -130,3 +143,6 @@ export const news: NewsItem[] = [
     summary: "Apple Original Films' racing feature, filmed with real F1 teams and cars during actual race weekends.",
   },
 ];
+
+/** Lifestyle deep link surfaced as the "Watch this weekend →" CTA. */
+export const WATCH_THIS_WEEKEND = news.find((item) => item.id === "apple-tv-bahrain-gp")!;

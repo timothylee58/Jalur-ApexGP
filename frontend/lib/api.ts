@@ -1,7 +1,7 @@
 import type { PredictionResponse, Session, WhatIf } from "@/types";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 export async function fetchPrediction(
   session: Session,
@@ -52,4 +52,16 @@ export async function fetchTelemetryLapTrace(
   );
   if (!res.ok) throw new Error(`Telemetry lap-trace request failed (${res.status})`);
   return res.json() as Promise<TelemetryLapTrace>;
+}
+
+export async function fetchWeekendSchedule(): Promise<WeekendSchedule> {
+  const res = await fetch(`${API_URL}/schedule`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Schedule request failed (${res.status})`);
+  return res.json() as Promise<WeekendSchedule>;
+}
+
+export async function fetchStandings(): Promise<StandingsPayload> {
+  const res = await fetch(`${API_URL}/standings`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Standings request failed (${res.status})`);
+  return res.json() as Promise<StandingsPayload>;
 }
