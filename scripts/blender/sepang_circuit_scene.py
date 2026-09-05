@@ -5,45 +5,60 @@ Sepang International Circuit -- Blender Scene Generator
 NOTE ON THIS SCRIPT'S PLACE IN jalur-apexgp: an alternative, much
 higher-fidelity generator than scripts/generate_circuit_models.py (the
 trimesh-based one actually wired into frontend/public/models/sepang.glb
-today). This one is Blender-only -- it needs the full Blender
-application, not a pip package -- and untested end-to-end from this
-repo's side too: no Blender is available in the sandbox that reviewed
-it, on top of the original author's own "never test-rendered" caveat
-below. Treat it as a richer optional path to regenerate sepang.glb from,
-not the current source of truth for that file. The generic "SponsorBoard"
-boxes it builds are plain colored blocks (no logo texture), so nothing
-here reproduces a real sponsor's actual branding -- still worth a look
-against docs/BRAND.md's "no sponsor logos" rule before using the result.
+today). This one is Blender-only -- originally needing the full Blender
+application, not a pip package, though the standalone `bpy` PyPI wheel
+(5.0.x, matching this repo's Python) now makes it runnable headlessly
+too. Treat it as a richer optional path to regenerate sepang.glb from,
+not the current source of truth for that file. A generic "SponsorBoard"
+paddock feature (plain colored blocks, no logo texture) was removed
+entirely per docs/BRAND.md's "no sponsor logos" rule -- not worth
+keeping even as an unused, brand-unsafe-by-default option.
 
 Golden-hour 3D scene of the full 15-turn Grand Prix layout (5.543 km,
 clockwise): track ribbon, Main Grandstand, K1 Grandstand, Pit
-Building, paddock sponsor boards, scattered palm trees, and a
-blurred distant grandstand roofline (via camera depth of field).
+Building, pit lane, scattered palm trees, and a blurred distant
+grandstand roofline (via camera depth of field).
 
 HOW TO RUN
 ----------
-Blender 4.x -> Scripting tab -> open/paste this file -> Run Script
-(Alt+P). Scene, camera and render settings are all set up by the
-time it finishes; hit F12 to render the golden-hour still, or see
-export_glb() at the bottom (added for jalur-apexgp, not part of the
-original script, and just as untested) to write the scene out as
+Blender 4.x/5.x -> Scripting tab -> open/paste this file -> Run Script
+(Alt+P), or headlessly via the standalone `bpy` PyPI wheel (`pip install
+bpy`, then `python sepang_circuit_scene.py`) -- confirmed both actually
+run end-to-end against bpy 5.0.1, the first time anyone (author or this
+repo) had a way to test it. Scene, camera and render settings are all
+set up by the time it finishes; hit F12 to render the golden-hour still,
+or see export_glb() at the bottom to write the scene out as
 frontend/public/models/sepang.glb instead.
 
-If it doesn't look right on first run, the two most likely culprits
-(flagged again inline where they happen, since this was written and
-never test-rendered -- no Blender/GPU is available in the environment
-that authored this script):
-  1. ROAD PROFILE ORIENTATION -- create_road_profile()'s cross-section
-     may come out rotated 90 deg (a tall thin wall instead of a flat
-     wide road) depending on how your Blender build interprets curve
-     bevel-object planes. Fix: add a 90 deg X-rotation to the
-     "RoadProfile" object, or swap the width/thickness axes in that
-     function.
-  2. SUN vs SKY TEXTURE alignment -- the World's Sky Texture sun
-     angle and the separate Sun light object's rotation are two
-     independent settings in Blender; they're both set to a similar
-     low golden-hour angle here but may need nudging to match
-     exactly in your viewport.
+UPDATE -- actually run for the first time against bpy 5.0.1, replacing
+the untested guesses below with real findings:
+  - The two risks flagged here originally (road profile orientation,
+    sun/sky alignment) were NOT the real problems. The road profile
+    renders correctly (verified with a bright red test material from
+    several camera angles, including a true cross-section view) --
+    the original author's own predicted fix (rotating the bevel
+    object) empirically does nothing at all in this Blender version
+    (a bevel object's own transform is ignored; only its raw curve
+    point data is used).
+  - Three real API incompatibilities did block a run, all fixed inline
+    where they occur: BezierSplinePoint has no `handle_type` (use
+    `handle_left_type`/`handle_right_type`); ShaderNodeTexSky's
+    `sky_type` has no `'NISHITA'` option in this build (use
+    `'MULTIPLE_SCATTERING'`); and `dust_density` was renamed
+    `aerosol_density`.
+  - Two real proportion bugs, invisible without an actual render: the
+    Main Grandstand (700m) and K1 Grandstand (160m) were both longer
+    than the short track segments they're centered on (455m and 82m
+    respectively), so each swung tens of meters into unrelated corners.
+    Fixed to 400m and 65m -- see build_grandstands_and_pits().
+  - The ground plane's 400m margin and the camera's default 1000m
+    clip_end were both too small for this ~1.7km-wide layout, letting
+    the sky shader's below-horizon continuation show through as a false
+    "ocean" band around the track. Both enlarged.
+  - Not yet checked against a render: sun/sky alignment (the original
+    risk #2), and whether the golden-hour color grade reads as intended
+    at full 128 samples (all testing so far used 32-48 samples with no
+    denoising, for speed).
 
 =====================================================================
 ACCURACY NOTES -- READ BEFORE TREATING THIS AS A SURVEY
@@ -132,7 +147,7 @@ NUM_PALMS = 260
 RESOLUTION = (1920, 1080)
 RENDER_ENGINE = 'CYCLES'
 SAMPLES = 128
-INCLUDE_PADDOCK = True          # full paddock + sponsor boards, as requested
+INCLUDE_PIT_LANE = True          # pit lane + pit wall — real infrastructure, not sponsor signage
 
 # ---------------------------------------------------------------
 # 1. TRACK DATA
@@ -258,7 +273,13 @@ def build_track_curve():
         track_xyz.append((name, (x, y, z)))
         bp = spline.bezier_points[i]
         bp.co = (x, y, z)
-        bp.handle_type = 'AUTO'
+        # Bezier spline points carry separate left/right handle types, not
+        # one combined `handle_type` (that attribute doesn't exist on
+        # BezierSplinePoint) -- found by actually running this script for
+        # the first time, per the module docstring's "never test-rendered"
+        # caveat.
+        bp.handle_left_type = 'AUTO'
+        bp.handle_right_type = 'AUTO'
         bp.tilt = math.radians(tilt_deg)
         bp.radius = WIDTH_RADIUS.get(name, 1.0)   # scales the 16m profile up to 22m
 
@@ -422,8 +443,13 @@ def build_grandstands_and_pits(track_xyz, names, mat_stand, mat_pit):
 
     # Main Grandstand -- median side, near Start/Finish. Real spec is
     # ~1.3km dual-frontage; shortened here to fit this sparse 18-point
-    # geometry without overshooting past T1 (see accuracy notes).
-    gs_len = 700.0
+    # geometry without overshooting past T1. The original 700m guess
+    # (author's own words: "without overshooting past T1") turned out to
+    # do exactly that once actually rendered -- Start/Finish to T1 Entry
+    # is only 455m along this centerline, so a 700m stand centered on its
+    # midpoint swung ~120m past each end. 400m fits the segment with a
+    # safety margin on both sides.
+    gs_len = 400.0
     gs_edge = sf.lerp(t1e, 0.5) + normal * (TRACK_WIDTH / 2 + 20)
     build_grandstand("MainGrandstand", gs_edge, gs_len, 22, 16,
                       facing=normal, material=mat_stand)
@@ -434,11 +460,15 @@ def build_grandstands_and_pits(track_xyz, names, mat_stand, mat_pit):
     build_flat_box("PitBuilding", pit_center, 264, 24, 12,
                     facing=normal, material=mat_pit)
 
-    # K1 Grandstand -- real location, Turn 1/2 (sepangcircuit.com/k1-grandstand)
+    # K1 Grandstand -- real location, Turn 1/2 (sepangcircuit.com/k1-grandstand).
+    # T1 Apex to T2 Apex is only 82m along this centerline -- the
+    # original 160m guess overshot both ends by ~40m each, same "guessed
+    # without a render to check against" issue as the Main Grandstand
+    # above. 65m fits with a margin.
     k1_seg = (t1a - t2a).normalized()
     k1_normal = Vector((-k1_seg.y, k1_seg.x, 0))
     k1_edge = t1a.lerp(t2a, 0.5) + k1_normal * (TRACK_WIDTH / 2 + 18)
-    build_grandstand("K1_Grandstand", k1_edge, 160, 16, 12,
+    build_grandstand("K1_Grandstand", k1_edge, 65, 16, 12,
                       facing=k1_normal, material=mat_stand)
 
     # "B" / "C" / "F" stands from your reference image -- identity and
@@ -455,19 +485,6 @@ def build_grandstands_and_pits(track_xyz, names, mat_stand, mat_pit):
         n = Vector((-seg.y, seg.x, 0)) * side
         edge = mid + n * (TRACK_WIDTH / 2 + 15)
         build_grandstand(label, edge, 110, 13, 9, facing=n, material=mat_stand)
-
-
-def build_sponsor_boards(track_xyz, names, material):
-    coords = dict(zip(names, [p[1] for p in track_xyz]))
-    sf, t1e = Vector(coords["Start/Finish"]), Vector(coords["T1 Entry"])
-    tangent = (t1e - sf).normalized()
-    normal = Vector((-tangent.y, tangent.x, 0))
-    for i in range(10):
-        t = i / 9
-        base = sf.lerp(t1e, t)
-        pos = base + normal * (TRACK_WIDTH / 2 + 12)
-        build_flat_box(f"SponsorBoard_{i}", pos, 9, 0.4, 2.2,
-                        facing=normal, material=material)
 
 
 def build_pit_lane(track_xyz, names, mat_lane, mat_wall):
@@ -611,7 +628,11 @@ def scatter_palms(track_xyz, names, count, material):
 def setup_ground_plane(track_xyz, material):
     xs = [p[1][0] for p in track_xyz]
     ys = [p[1][1] for p in track_xyz]
-    margin = 400
+    # 400 wasn't enough -- the camera in setup_camera() sees past the
+    # ground plane's edge at this margin, straight through to the sky
+    # shader's below-horizon continuation, reading as a false "ocean"
+    # around the track (found by actually rendering the full scene).
+    margin = 4000
     minx, maxx = min(xs) - margin, max(xs) + margin
     miny, maxy = min(ys) - margin, max(ys) + margin
     size_x, size_y = maxx - minx, maxy - miny
@@ -649,11 +670,20 @@ def setup_lighting_golden_hour():
     nt.nodes.clear()
 
     sky = nt.nodes.new("ShaderNodeTexSky")
-    sky.sky_type = 'NISHITA'
+    # 'NISHITA' doesn't exist in this Blender build's sky_type enum --
+    # found by actually running this script; the real options here are
+    # ('SINGLE_SCATTERING', 'MULTIPLE_SCATTERING', 'PREETHAM',
+    # 'HOSEK_WILKIE'). MULTIPLE_SCATTERING is the modern physically-based
+    # equivalent Nishita was aiming for (full atmospheric scattering, not
+    # the older analytic Preetham/Hosek-Wilkie models).
+    sky.sky_type = 'MULTIPLE_SCATTERING'
     sky.sun_elevation = math.radians(6.0)     # low sun -> golden hour
     sky.sun_rotation = math.radians(250.0)
     sky.air_density = 1.2
-    sky.dust_density = 3.0                    # warmer, hazier tropical dusk
+    # Renamed from 'dust_density' in older Blender versions -- found by
+    # actually running this script and inspecting ShaderNodeTexSky's real
+    # property list on this build.
+    sky.aerosol_density = 3.0                 # warmer, hazier tropical dusk
 
     bg = nt.nodes.new("ShaderNodeBackground")
     bg.inputs['Strength'].default_value = 1.1
@@ -678,6 +708,12 @@ def setup_camera(track_xyz, names):
 
     cam_data = bpy.data.cameras.new("MainCamera")
     cam_data.lens = 35
+    # Default clip_end (1000m) is shorter than this track's own ~1.7km
+    # span -- found the same way as the ground-plane margin issue above,
+    # by actually rendering: distant geometry (and the now-enlarged
+    # ground plane) was silently clipped away rather than fading into the
+    # horizon.
+    cam_data.clip_end = 20000
     cam_data.dof.use_dof = True
     cam_data.dof.aperture_fstop = 2.0
     cam_obj = bpy.data.objects.new("MainCamera", cam_data)
@@ -759,7 +795,6 @@ def main():
     mat_checker = make_material("StartFinish", (0.9, 0.9, 0.9), roughness=0.4)
     mat_stand = make_material("GrandstandSteel", (0.55, 0.56, 0.58), roughness=0.4, metallic=0.3)
     mat_pit = make_material("PitBuilding", (0.85, 0.85, 0.82), roughness=0.55)
-    mat_sponsor = make_material("SponsorBoard", (0.1, 0.35, 0.65), roughness=0.3)
     mat_lane = make_material("PitLaneAsphalt", (0.06, 0.06, 0.07), roughness=0.8)
     mat_wall = make_material("PitWall", (0.9, 0.9, 0.88), roughness=0.5)
     mat_ground = make_material("Ground", (0.09, 0.22, 0.07), roughness=0.9)
@@ -773,8 +808,7 @@ def main():
     add_start_finish_line(track_xyz, names, mat_checker)
     add_curbs(track_xyz, names, mat_curb)
     build_grandstands_and_pits(track_xyz, names, mat_stand, mat_pit)
-    if INCLUDE_PADDOCK:
-        build_sponsor_boards(track_xyz, names, mat_sponsor)
+    if INCLUDE_PIT_LANE:
         build_pit_lane(track_xyz, names, mat_lane, mat_wall)
     setup_ground_plane(track_xyz, mat_ground)
     scatter_palms(track_xyz, names, NUM_PALMS, mat_frond)
