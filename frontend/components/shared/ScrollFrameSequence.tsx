@@ -7,6 +7,16 @@ interface ScrollFrameSequenceProps {
   /** Public directory holding zero-padded frames, e.g. "/circuit-frames". */
   framesPath: string;
   frameCount: number;
+  /**
+   * Separate frame set for narrow viewports (a real 9:16 composition, not
+   * the same frames stretched) — same idea as CircuitVideoHero's `<source
+   * media>` art direction. Picked once at mount via matchMedia, same
+   * breakpoint as the hero (max-width: 639px); it won't re-pick on resize,
+   * same accepted trade-off as the video. Omit to use `framesPath` at every
+   * width (frames still won't distort — see the cover-fit note below —
+   * they just won't be composed for portrait).
+   */
+  mobileFramesPath?: string;
   /** Zero-pad width for frame filenames (0001.webp…). */
   framePad?: number;
   /** Solid color shown before the first frame loads. */
@@ -33,10 +43,22 @@ interface ScrollFrameSequenceProps {
  * originally CircuitFrameSequence's own implementation once a second scroll-
  * frame page (apple-design) needed the identical mechanism; that component
  * is now a thin wrapper around this one, unchanged in behavior.
+ *
+ * Camera and mesh scale are recomputed on every resize to "cover" the
+ * container (same idea as CSS `object-fit: cover`) rather than the flat
+ * stretch-to-fill this had before — the orthographic camera was fixed at
+ * [-1,1] on both axes with a 2x2 plane regardless of the canvas's actual
+ * aspect, so a frame composed at one aspect ratio (e.g. 16:9) visibly
+ * squashed or stretched in any container that wasn't exactly that shape
+ * (most mobile portrait viewports). Now the camera's bounds track the
+ * canvas's real aspect, and the mesh is scaled from the loaded texture's
+ * own image dimensions to fill that view without distortion, cropping the
+ * long axis instead of squeezing it.
  */
 export function ScrollFrameSequence({
   framesPath,
   frameCount,
+  mobileFramesPath,
   framePad = 4,
   loadingColor = 0x14181c,
   fallbackColor = 0x0a0c0e,
@@ -49,9 +71,14 @@ export function ScrollFrameSequence({
     const mount = mountRef.current;
     if (!mount) return;
 
+    const activeFramesPath =
+      mobileFramesPath && window.matchMedia("(max-width: 639px)").matches
+        ? mobileFramesPath
+        : framesPath;
+
     const frameSrc = (index: number) => {
       const n = String(index + 1).padStart(framePad, "0");
-      return `${framesPath}/${n}.webp`;
+      return `${activeFramesPath}/${n}.webp`;
     };
 
     const scene = new THREE.Scene();
@@ -65,6 +92,7 @@ export function ScrollFrameSequence({
     const loader = new THREE.TextureLoader();
     const textures: THREE.Texture[] = [];
     let hasFrames = false;
+    let imageAspect: number | null = null;
 
     const material = new THREE.MeshBasicMaterial({ color: loadingColor });
     const mesh = new THREE.Mesh(geometry, material);
@@ -74,6 +102,37 @@ export function ScrollFrameSequence({
       material.color.set(fallbackColor);
       material.map = null;
       material.needsUpdate = true;
+    };
+
+    // Fit camera + mesh to the mount's current size, "covering" it (crop
+    // the long axis, never stretch) once we know the source frames' own
+    // aspect ratio.
+    const fitToContainer = () => {
+      const canvasAspect = mount.clientWidth / Math.max(mount.clientHeight, 1);
+      if (canvasAspect >= 1) {
+        camera.left = -canvasAspect;
+        camera.right = canvasAspect;
+        camera.top = 1;
+        camera.bottom = -1;
+      } else {
+        camera.left = -1;
+        camera.right = 1;
+        camera.top = 1 / canvasAspect;
+        camera.bottom = -1 / canvasAspect;
+      }
+      camera.updateProjectionMatrix();
+
+      if (imageAspect) {
+        const viewWidth = camera.right - camera.left;
+        const viewHeight = camera.top - camera.bottom;
+        let targetWidth = viewHeight * imageAspect;
+        let targetHeight = viewHeight;
+        if (targetWidth < viewWidth) {
+          targetWidth = viewWidth;
+          targetHeight = viewWidth / imageAspect;
+        }
+        mesh.scale.set(targetWidth / 2, targetHeight / 2, 1);
+      }
     };
 
     const applyTexture = (index: number) => {
@@ -96,6 +155,7 @@ export function ScrollFrameSequence({
 
       if (!first) {
         fallback();
+        fitToContainer();
         renderer.render(scene, camera);
         return;
       }
@@ -111,6 +171,11 @@ export function ScrollFrameSequence({
       // fallback.
       first.colorSpace = THREE.SRGBColorSpace;
       textures[0] = first;
+      const image = first.image as { width?: number; height?: number } | undefined;
+      if (image?.width && image?.height) {
+        imageAspect = image.width / image.height;
+      }
+      fitToContainer();
       applyTexture(0);
       renderer.render(scene, camera);
 
@@ -143,6 +208,7 @@ export function ScrollFrameSequence({
 
     const onResize = () => {
       renderer.setSize(mount.clientWidth, mount.clientHeight);
+      fitToContainer();
       renderer.render(scene, camera);
     };
 
@@ -159,7 +225,7 @@ export function ScrollFrameSequence({
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
-  }, [framesPath, frameCount, framePad, loadingColor, fallbackColor]);
+  }, [framesPath, mobileFramesPath, frameCount, framePad, loadingColor, fallbackColor, rangeRef]);
 
   return <div ref={mountRef} className={className} aria-hidden />;
 }

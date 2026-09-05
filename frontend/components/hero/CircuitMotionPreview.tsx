@@ -5,16 +5,23 @@ import { ScrollFrameSequence } from "@/components/shared/ScrollFrameSequence";
 
 const FRAME_COUNT = 48;
 
-// Full-bleed scroll-scrubbed hero, same mechanism as /apple-design and the
-// landing page's own circuit flyover above it — reusing the pattern rather
-// than the old compact GIF card this section used to be. Source clip is a
-// generic, unbranded single-seater (matte livery, no team name or sponsor
-// marks, no number) filmed at Sepang and Silverstone; verified frame-by-
-// frame, including a native-resolution crop of the trackside sign boards
-// visible in the wide Sepang shots, that nothing on them is legible at this
-// clip's resolution. Genuinely clean, so — unlike the flyover above and
-// /apple-design — this one skips scripts/extract-frames.py's --stylize
-// entirely; see frontend/public/lap-preview-frames/README.md.
+// Full-bleed scroll-scrubbed hero, same mechanism as the landing page's own
+// circuit flyover above it — reusing the pattern rather than the old
+// compact GIF card this section used to be. Source clip is a generic,
+// unbranded single-seater (matte livery, no team name, sponsor marks, or
+// number) filmed at Sepang from a chase drone; verified frame-by-frame that
+// nothing on the car reads as branding. Genuinely clean, so this one skips
+// scripts/extract-frames.py's --stylize entirely — but the source clip
+// carries a burned-in speed/turn-number telemetry HUD in one corner
+// throughout, which does need removing (docs/BRAND.md rules out live
+// telemetry overlays same as broadcast graphics); see
+// frontend/public/lap-preview-frames/README.md for how it was masked out
+// and verified.
+//
+// 9:16 frames (frontend/public/lap-preview-frames-9x16/) are a separate
+// centered-crop extraction, not the same frames stretched — same idea as
+// CircuitVideoHero's `<source media>` art direction, picked once at mount
+// by ScrollFrameSequence.
 export function CircuitMotionPreview() {
   // See LandingHero's identical rangeRef: this wraps the sticky section
   // plus its scroll-spacer so ScrollFrameSequence measures progress against
@@ -26,6 +33,7 @@ export function CircuitMotionPreview() {
       <div className="sticky top-0 z-10 h-[100dvh] overflow-hidden">
         <ScrollFrameSequence
           framesPath="/lap-preview-frames"
+          mobileFramesPath="/lap-preview-frames-9x16"
           frameCount={FRAME_COUNT}
           rangeRef={rangeRef}
         />
