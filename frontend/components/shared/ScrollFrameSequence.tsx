@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import * as THREE from "three";
 
 interface ScrollFrameSequenceProps {
@@ -14,6 +14,17 @@ interface ScrollFrameSequenceProps {
   /** Solid color shown if frames never load (e.g. none extracted yet). */
   fallbackColor?: number;
   className?: string;
+  /**
+   * Ref to the ancestor spanning this section's whole sticky-pin range (the
+   * sticky div plus its scroll-spacer sibling, both wrapped together).
+   * Progress is measured against that element's own bounding rect instead
+   * of the whole document — without it, two of these on one page (or one
+   * page with other content below) share a single document-wide scroll
+   * fraction, so a section starts mid-sequence or never reaches its last
+   * frame by the time it unpins. Omit only for a page that is itself
+   * exactly one full-page section with nothing else to scroll past.
+   */
+  rangeRef?: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -30,6 +41,7 @@ export function ScrollFrameSequence({
   loadingColor = 0x14181c,
   fallbackColor = 0x0a0c0e,
   className = "pointer-events-none absolute inset-0 z-0 opacity-80",
+  rangeRef,
 }: ScrollFrameSequenceProps) {
   const mountRef = useRef<HTMLDivElement>(null);
 
@@ -114,8 +126,16 @@ export function ScrollFrameSequence({
 
     const onScroll = () => {
       if (!hasFrames) return;
-      const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
-      const progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+      const rangeEl = rangeRef?.current;
+      let progress: number;
+      if (rangeEl) {
+        const rect = rangeEl.getBoundingClientRect();
+        const scrollable = Math.max(rect.height - window.innerHeight, 1);
+        progress = Math.min(Math.max(-rect.top / scrollable, 0), 1);
+      } else {
+        const maxScroll = Math.max(document.body.scrollHeight - window.innerHeight, 1);
+        progress = Math.min(Math.max(window.scrollY / maxScroll, 0), 1);
+      }
       const index = Math.min(frameCount - 1, Math.floor(progress * (frameCount - 1)));
       if (textures[index]) applyTexture(index);
       renderer.render(scene, camera);

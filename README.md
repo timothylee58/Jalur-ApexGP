@@ -18,21 +18,35 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 
 ## Features
 
-- **Landing page lap preview** — a desaturated loop of a car in motion at
-  the circuit, sitting between the hero and the 3D track model. Sourced
-  from a user-supplied clip that (in its cleanest take) still painted a
-  fake sponsor decal on the rear wing for the back half of its runtime;
-  rather than mosaic the whole thing, the loop keeps full detail wherever
-  the source is actually clean and only mosaics the window that isn't
-  (`scripts/extract-frames.py --stylize --stylize-after`), crossfading
-  between the two — see `docs/BRAND.md`.
+- **Landing page lap preview** ("The lap") — a second full-bleed,
+  scroll-scrubbed hero, same mechanism as the circuit flyover above it,
+  stacked directly beneath it on the landing page. Source clip is a
+  generic, unbranded single-seater (no team livery, no sponsor decals) —
+  genuinely clean, so unlike the flyover and `/apple-design` it skips
+  `scripts/extract-frames.py --stylize` entirely; a background trackside
+  sign board in some shots was checked at native resolution and confirmed
+  not legible, not stylized to destroy it — see
+  `frontend/public/lap-preview-frames/README.md`. Replaced an earlier
+  compact-GIF-card version of this section, and an earlier still that used
+  real official F1 broadcast footage of the 2016 Malaysian Grand Prix — a
+  bird's-eye clip with a burned-in F1 logo watermark and a live telemetry
+  graphic, which docs/BRAND.md explicitly rules out and no amount of
+  mosaic-ing fixes (the whole clip is FOM's copyrighted broadcast, not an
+  incidental decal).
 - **Circuit hero flyover** (landing page background) and **Product reveal**
   (`/apple-design`) — the same scroll-scrubbed frame-sequence mechanism,
-  both now populated (48 frames each) with the same source and
-  time-windowed treatment as the lap preview above. Fixed a real bug this
-  surfaced: `ScrollFrameSequence` never set a texture's `colorSpace`, which
-  shifted colors once real (not fallback-color) frames finally loaded
-  through it — fixed at the shared component, so both benefit.
+  both populated (48 frames each) with a time-windowed sharp/mosaic
+  treatment for a source clip with a sponsor mark partway through. Two real
+  bugs surfaced and fixed at the shared `ScrollFrameSequence` component
+  itself (so every section built on it benefits): it never set a loaded
+  texture's `colorSpace`, shifting colors once real frames replaced the
+  solid fallback; and it mapped scroll progress to the whole document's
+  scroll height, so stacking a second full-bleed section on one page (or
+  adding content below a single one) started or ended its frame scrub off
+  from where the section itself was actually pinned. Fixed by measuring
+  progress against each section's own sticky-plus-spacer wrapper instead
+  (`rangeRef`), verified by scrolling both the landing page (two stacked
+  sequences) and `/apple-design` (one, plus content below it) end-to-end.
 - **Predict flow** (`/predict`) — session picker, dual strategy cards with
   distinct conservative/aggressive accents, confidence bars, pit-window lap
   band, reasoning + key risk, a confidence-delta headline backed by the

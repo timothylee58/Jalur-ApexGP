@@ -7,7 +7,6 @@ export default function HomePage() {
   return (
     <main className="relative">
       <LandingHero />
-      <div className="h-[120vh]" aria-hidden />
       <CircuitMotionPreview />
       <CircuitModelPreview />
       <div className="relative z-20 mx-auto max-w-md px-4 pb-10">
