@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { SiteHeader } from "@/components/site-chrome";
@@ -18,19 +19,27 @@ export default function AppleDesignPage() {
               Product reveal
             </p>
             <h1 className="mt-3 max-w-2xl font-display text-5xl uppercase tracking-wide sm:text-6xl md:text-7xl">
-              Full-bleed hero
+              Sepang, full-bleed
             </h1>
             <p className="mt-4 max-w-xl text-sm text-paper-dim md:text-base">
-              The same background as the landing page&apos;s hero — an
-              original, AI-generated clip (not real broadcast footage),
-              art-directed as two separate renders for 9:16 and 16:9 rather
-              than one clip stretched or letterboxed to fit. See{" "}
-              <code className="text-paper">
-                frontend/public/videos/README.md
-              </code>{" "}
-              for provenance and <code className="text-paper">docs/BRAND.md</code>
-              for the checklist it was generated against.
+              Same weekend, three ways to see it: a live strategy read, a
+              corner-by-corner 3D circuit, and real telemetry pulled off the
+              car. Pick one below.
             </p>
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
+              <Link href="/predict" className="hover:text-paper">
+                Strategy simulator →
+              </Link>
+              <Link href="/circuit" className="hover:text-paper">
+                Corner-by-corner 3D →
+              </Link>
+              <Link href="/drivers" className="hover:text-paper">
+                Driver grid →
+              </Link>
+              <Link href="/telemetry" className="hover:text-paper">
+                Real telemetry →
+              </Link>
+            </div>
           </div>
         </div>
         <div className="relative z-20 mx-auto max-w-md px-4 pb-10">

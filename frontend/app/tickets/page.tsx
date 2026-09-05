@@ -26,19 +26,7 @@ export default function TicketsPage() {
           stand below to see what it looks over, then continue to the organiser to book.
         </p>
 
-        <a
-          href={SEPANG_TICKETS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-5 block rounded-lg border border-amber/40 bg-amber/5 px-4 py-4 text-center hover:border-amber"
-        >
-          <span className="font-display text-lg uppercase tracking-wide text-amber">
-            Sepang International Circuit →
-          </span>
-          <span className="mt-1 block font-mono text-[11px] text-paper-dim">
-            sepangcircuit.com — official tickets &amp; seating
-          </span>
-        </a>
+        <SeatFinder />
 
         <TransitAccessPanel />
 

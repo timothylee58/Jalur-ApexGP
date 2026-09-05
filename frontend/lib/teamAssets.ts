@@ -1,4 +1,8 @@
-/** Local team logo + car render paths under `public/`. Fan deck only. */
+/**
+ * Local team logo + car render paths under `public/`. Used by `/fan`
+ * (constructor accent cards) and `/teams` (neutral engineer sheet, badge
+ * only — no car render there, see TeamCard.tsx).
+ */
 
 export const TEAM_LOGO: Record<string, string> = {
   mclaren: "/teams/mclaren.png",
