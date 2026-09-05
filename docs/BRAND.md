@@ -94,19 +94,16 @@ explicit about being a heuristic, not a black box.
   section still is one) must use originally captured/extracted frames only
   (`scripts/extract-frames.py`) — never official F1 broadcast footage, team
   media, or licensed circuit photography.
-- No driver photos, no team liveries, no sponsor logos, anywhere.
-- Any AI-generated or synthetic motorsport imagery (e.g. a text-to-image
-  prompt standing in for footage that can't be used) must exclude, as a
-  checklist: logos, sponsor names, team liveries, Ferrari, Santander, FIA,
-  F1 watermark, readable signage, real venue text (don't name Sepang or any
-  real circuit in generated text or signage), and real driver likeness (no
-  recognizable real driver's face). This is the same "no team liveries, no
-  sponsor logos" rule above, just spelled out as an explicit negative-prompt
-  checklist — a generator won't infer it from the short version alone.
-- No per-team color coding, even with brand-neutral-looking hex values — a
-  fixed team→color mapping reads as a livery reference once you know which
-  team is which (Ferrari-and-red, Mercedes-and-teal are the obvious traps).
-  `/teams` uses one neutral card style for all 11 teams for this reason.
+- Fan surfaces may use constructor accent colors and fan-card styling.
+  `/fan` ships per-team accent hexes and collectible cards on purpose —
+  that is fan identity, not an official product claim. Prefer originally
+  made graphics over scraped team media when possible; do not imply
+  partnership or licensing.
+- `/teams` can stay neutral for the engineer-tool read; `/fan` is the
+  place for colored team cards. Both are valid.
+- Driver photos and sponsor wordmarks are optional on fan cards; if you
+  add them, label the page as unofficial fan content and avoid framing
+  them as official merch.
 
 ## External content
 
@@ -171,12 +168,16 @@ area to keep "originally made," not less.
 
 ## Don'ts
 
-- Don't use F1's red as a primary or accent color, even unintentionally —
-  check any new accent against it before shipping.
-- Prefer the supplied brand PNG over inventing new marks; avoid official F1 broadcast motifs.
-- Don't reproduce official grandstand pricing, team colors, or driver
-  imagery.
+- Don't claim official Formula 1 / FIA / team partnership — keep the
+  independence disclaimer on fan and product surfaces.
+- Don't sell or present fan cards as licensed merch.
+- Prefer the supplied brand PNG over inventing new marks; avoid official F1
+  broadcast motifs.
+- Don't reproduce official grandstand pricing as this app's own ticket offer.
 - Don't rewrite or excerpt real outlets' news articles as this app's own
   content — link out instead (see External content above).
 - Don't let marketing-voice copy creep into strategy card text — if it
   wouldn't sound right said over a radio, rewrite it.
+- Copyright note: team accent colors and public roster facts on `/fan`
+  are fine for an unofficial fan project. Still avoid ripping official
+  broadcast footage or full copyrighted articles into the app.

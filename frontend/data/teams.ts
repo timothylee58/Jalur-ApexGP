@@ -1,5 +1,5 @@
 /**
- * Constructor roster for the /teams page — the 11 teams behind the 22
+ * Constructor roster for `/teams` and `/fan` — the 11 teams behind the 22
  * `data/drivers.ts` 2026-grid entries, one entry each, `driverIds` pointing
  * back into that file rather than duplicating driver data.
  *
@@ -10,11 +10,9 @@
  * written from the team's side — see the note on `Driver.recap` in
  * `data/drivers.ts` for the sourcing/inference caveat on four drivers.
  *
- * Deliberately no team colors here, even brand-neutral-looking ones: any
- * fixed team→color mapping risks reading as a livery reference once you
- * know which team is which (Ferrari-and-red, Mercedes-and-teal are the
- * obvious traps), which is exactly what docs/BRAND.md's "no team liveries"
- * rule is about. TeamCard uses the same neutral card treatment for all 11.
+ * `primary` / `secondary` are fan-card accent hexes for `/fan` (papaya,
+ * rosso, petrol teal, etc.). `/teams` can stay neutral; `/fan` leans into
+ * constructor identity on purpose — see docs/BRAND.md Imagery.
  */
 
 export interface Team {
@@ -26,6 +24,10 @@ export interface Team {
   constructorTitles: number;
   driverIds: [string, string];
   recap: string;
+  /** Fan-card accent (constructor identity color). */
+  primary: string;
+  /** Supporting accent for gradients / trim on `/fan`. */
+  secondary: string;
 }
 
 export const teams: Team[] = [
@@ -38,6 +40,8 @@ export const teams: Team[] = [
     constructorTitles: 9,
     driverIds: ["norris", "piastri"],
     recap: "Locked out the top of the story at Zandvoort — Norris's second straight win with Piastri sixth after the race was reshaped by an early red flag.",
+    primary: "#FF8000",
+    secondary: "#47C7FC",
   },
   {
     id: "ferrari",
@@ -48,6 +52,8 @@ export const teams: Team[] = [
     constructorTitles: 16,
     driverIds: ["leclerc", "hamilton"],
     recap: "A quiet but solid Zandvoort: Hamilton fourth, Leclerc fifth with the race's fastest lap — neither close enough to trouble the fight up front.",
+    primary: "#E80020",
+    secondary: "#FFF200",
   },
   {
     id: "red-bull",
@@ -60,6 +66,8 @@ export const teams: Team[] = [
     constructorTitles: 6,
     driverIds: ["verstappen", "hadjar"],
     recap: "Verstappen's Zandvoort ended on Lap 1 in a heavy crash that red-flagged the race; Hadjar brought the second car home outside the points.",
+    primary: "#1E5BC6",
+    secondary: "#DC052D",
   },
   {
     id: "mercedes",
@@ -70,6 +78,8 @@ export const teams: Team[] = [
     constructorTitles: 8,
     driverIds: ["russell", "antonelli"],
     recap: "A genuine Zandvoort podium lockout, Antonelli ahead of Russell — the rookie's podium tally keeps climbing.",
+    primary: "#00D2BE",
+    secondary: "#C0C0C0",
   },
   {
     id: "aston-martin",
@@ -82,6 +92,8 @@ export const teams: Team[] = [
     constructorTitles: 0,
     driverIds: ["alonso", "stroll"],
     recap: "Alonso's ninth was the team's best result of the season; Stroll didn't make it to the flag.",
+    primary: "#006F62",
+    secondary: "#CEDC00",
   },
   {
     id: "alpine",
@@ -94,6 +106,8 @@ export const teams: Team[] = [
     constructorTitles: 2,
     driverIds: ["gasly", "colapinto"],
     recap: "Gasly scored in tenth; Colapinto's Zandvoort was undone by two separate yellow-flag penalties, dropping him to 14th.",
+    primary: "#FF87BC",
+    secondary: "#0F1C2C",
   },
   {
     id: "haas",
@@ -104,6 +118,8 @@ export const teams: Team[] = [
     constructorTitles: 0,
     driverIds: ["ocon", "bearman"],
     recap: "A weekend to forget at Zandvoort — both Ocon and Bearman retired without reaching the chequered flag.",
+    primary: "#FFFFFF",
+    secondary: "#E6002D",
   },
   {
     id: "racing-bulls",
@@ -114,6 +130,8 @@ export const teams: Team[] = [
     constructorTitles: 0,
     driverIds: ["lawson", "lindblad"],
     recap: "Lawson brought the team's only finisher home in seventh, weathering a yellow-flag penalty; Lindblad finished outside the points.",
+    primary: "#6692FF",
+    secondary: "#152238",
   },
   {
     id: "williams",
@@ -124,6 +142,8 @@ export const teams: Team[] = [
     constructorTitles: 9,
     driverIds: ["sainz", "albon"],
     recap: "A first-lap clash between teammates Sainz and Albon ended Albon's race and left Sainz last of the runners after a penalty.",
+    primary: "#00A0DE",
+    secondary: "#041E42",
   },
   {
     id: "audi",
@@ -136,6 +156,8 @@ export const teams: Team[] = [
     constructorTitles: 0,
     driverIds: ["hulkenberg", "bortoleto"],
     recap: "Hulkenberg's eighth was the team's best result of the season; Bortoleto finished outside the points.",
+    primary: "#F50537",
+    secondary: "#000000",
   },
   {
     id: "cadillac",
@@ -146,5 +168,7 @@ export const teams: Team[] = [
     constructorTitles: 0,
     driverIds: ["perez", "bottas"],
     recap: "Pérez finished outside the points; Bottas was the other retirement of the day.",
+    primary: "#D4AF37",
+    secondary: "#0A0A0A",
   },
 ];

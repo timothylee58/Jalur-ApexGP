@@ -2,8 +2,7 @@ import Link from "next/link";
 import type { Team } from "@/data/teams";
 import { drivers } from "@/data/drivers";
 
-// Same neutral card for all 11 teams, deliberately — see the comment atop
-// data/teams.ts on why there's no per-team color coding here.
+// Neutral engineer sheet for /teams. Colored constructor fan cards live on /fan.
 export function TeamCard({ team }: { team: Team }) {
   const roster = team.driverIds.map(
     (id) => drivers.find((driver) => driver.id === id) ?? null,
