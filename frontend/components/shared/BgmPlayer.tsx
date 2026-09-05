@@ -26,13 +26,19 @@ export function BgmPlayer() {
     <div className="fixed bottom-4 left-4 z-40 w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-lg shadow-black/40">
       <iframe
         title="Spotify playlist player"
-        // autoplay=1 asks Spotify's embed to start playing on load; browsers
-        // still gate autoplay-with-sound behind their own policy (Chrome
-        // requires a prior user gesture or engagement history on this site,
-        // Safari/Firefox similarly), so this reliably autoplays on repeat
-        // visits and after any click on the page, but not guaranteed on
-        // every first-ever page load — no embed can force past that.
-        src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0&autoplay=1`}
+        // No autoplay here: Spotify's plain embed URL has no autoplay query
+        // param (an earlier version of this component added one — it was a
+        // no-op, since the embed silently ignores unrecognised params).
+        // Real autoplay needs the official Embed iFrame API
+        // (open.spotify.com/embed/iframe-api/v1, an EmbedController.play()
+        // call) — and even that only fires playback, not the browser's own
+        // autoplay-with-sound gate (Chrome/Safari/Firefox all still require
+        // a prior user gesture or engagement history on the site). Not
+        // worth the added script-loading complexity for a bottom-left
+        // corner widget when the ceiling is "starts after any click on the
+        // page" rather than true autoplay; Spotify's own play button in the
+        // embed below is one click away regardless.
+        src={`https://open.spotify.com/embed/playlist/${playlistId}?utm_source=generator&theme=0`}
         width="100%"
         height="80"
         style={{ border: 0 }}
