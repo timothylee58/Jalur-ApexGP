@@ -1,4 +1,5 @@
 import type { PredictionResponse, Session, WhatIf } from "@/types";
+import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
