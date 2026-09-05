@@ -81,9 +81,13 @@ explicit about being a heuristic, not a black box.
 - Attraction photos: Unsplash only, fetched at build time
   (`scripts/fetch-attraction-images.ts`), never hotlinked or scraped from
   tourism sites.
-- Circuit hero: originally captured/extracted frames only
-  (`scripts/extract-frames.py`) — never official F1 broadcast footage,
-  team media, or licensed circuit photography.
+- Circuit hero: the landing page background is a static SVG map by
+  default, with an opt-in procedural 3D flyover (`CircuitFlyoverHero`) —
+  neither is footage, so this rule doesn't constrain them. Any
+  frame-sequence hero (`/apple-design` still is one) must use originally
+  captured/extracted frames only (`scripts/extract-frames.py`) — never
+  official F1 broadcast footage, team media, or licensed circuit
+  photography.
 - No driver photos, no team liveries, no sponsor logos, anywhere.
 - No per-team color coding, even with brand-neutral-looking hex values — a
   fixed team→color mapping reads as a livery reference once you know which

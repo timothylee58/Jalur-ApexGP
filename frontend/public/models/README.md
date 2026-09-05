@@ -13,9 +13,12 @@ reference geometry.
 `sepang.glb` powers the landing page's "Orbit Sepang" stage
 (`CircuitModelPreview.tsx`, which auto-detects it and otherwise links to
 the procedural `/circuit` explorer); `car.glb` runs a lap of that
-explorer's own traced curve (`CircuitExplorer3D.tsx`). The car is
-deliberately unbranded — no team livery, no sponsor marks, no race number,
-per docs/BRAND.md.
+explorer's own traced curve (`CircuitExplorer3D.tsx`), and separately
+loops the real apex-point centreline (`lib/circuitFlyoverTrack.ts`) in the
+landing hero's opt-in "3D flyover" toggle (`CircuitFlyoverHero.tsx`) — two
+different curves, so the car's lap shape differs slightly between the two.
+The car is deliberately unbranded — no team livery, no sponsor marks, no
+race number, per docs/BRAND.md.
 
 A much higher-fidelity but untested Blender-based generator also exists
 at `scripts/blender/sepang_circuit_scene.py` — see `scripts/blender/README.md`

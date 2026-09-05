@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { SepangCircuitMap } from "@/components/circuit/SepangCircuitMap";
+import { CircuitFlyoverHero } from "@/components/hero/CircuitFlyoverHero";
 import { SessionPicker } from "@/components/hero/SessionPicker";
 import { WATCH_THIS_WEEKEND } from "@/data/news";
 
@@ -18,13 +20,43 @@ const fadeUp = {
 };
 
 export function LandingHero() {
+  // Static SVG map is the default backdrop (see SepangCircuitMap below) —
+  // the landing hero's earlier scroll-scrubbed video flyover was retired
+  // for good reasons (see README). This 3D flyover is a from-scratch,
+  // opt-in alternative built on the same real apex-point centreline as
+  // sepang.glb and the map itself, not video, so none of those reasons
+  // apply to it — off by default so the calmer static map stays what
+  // visitors see first.
+  const [show3D, setShow3D] = useState(false);
+
   return (
     <div className="relative min-h-[100dvh] overflow-hidden">
-      {/* Static circuit map backdrop — projected from the project's own Sepang
-          apex data (see data/sepangCircuit.ts), replacing the retired flyover
-          frame sequence. */}
       <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
-        <SepangCircuitMap muted className="h-[80%] max-h-[720px] w-auto opacity-30" />
+        <AnimatePresence initial={false}>
+          {show3D ? (
+            <motion.div
+              key="flyover"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="absolute inset-0"
+            >
+              <CircuitFlyoverHero className="pointer-events-none absolute inset-0" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="map"
+              className="flex h-full items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <SepangCircuitMap muted className="h-[80%] max-h-[720px] w-auto opacity-30" />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <div
         className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-asphalt via-asphalt/55 to-asphalt/20"
@@ -79,6 +111,14 @@ export function LandingHero() {
           <Link href="/tickets" className="hover:text-paper">
             Tickets &amp; seating
           </Link>
+          <button
+            type="button"
+            onClick={() => setShow3D((prev) => !prev)}
+            aria-pressed={show3D}
+            className="hover:text-paper"
+          >
+            {show3D ? "Static map" : "3D flyover"}
+          </button>
         </motion.div>
         <motion.p
           custom={0.62}

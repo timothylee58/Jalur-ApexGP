@@ -48,7 +48,7 @@ const LON0 = RAW_POINTS[0].lon;
 const M_PER_DEG_LAT = 110540;
 const M_PER_DEG_LON = 111320 * Math.cos((LAT0 * Math.PI) / 180);
 
-interface XY {
+export interface XY {
   x: number;
   y: number;
 }
@@ -59,6 +59,14 @@ const projected: XY[] = RAW_POINTS.map((p) => ({
   x: (p.lon - LON0) * M_PER_DEG_LON,
   y: -(p.lat - LAT0) * M_PER_DEG_LAT,
 }));
+
+/**
+ * Same 18-point centreline as `circuitPath`, in real metres (clockwise,
+ * Start/Finish first) rather than normalised into the SVG viewBox — for
+ * consumers that need actual world-space coordinates instead of a
+ * ready-to-draw path string, e.g. a 3D scene's track curve.
+ */
+export const circuitPointsMetres: readonly XY[] = projected;
 
 const xs = projected.map((p) => p.x);
 const ys = projected.map((p) => p.y);

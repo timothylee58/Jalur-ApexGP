@@ -40,7 +40,15 @@ logged), and the API echoes the effective `inputs` a read ran on.
 - **Static circuit map hero** (landing page background) — the landing hero now
   renders the static SVG Sepang map (projected from the project's own apex data
   in `data/sepangCircuit.ts`), replacing the retired scroll-scrubbed flyover,
-  which depended on 48 WebP frames that were never committed. The **Product
+  which depended on 48 WebP frames that were never committed. A "3D flyover"
+  toggle in the hero's link row swaps this for an opt-in alternative
+  (`CircuitFlyoverHero`) instead — a continuously-looping procedural three.js
+  scene, not video, so the reasons the old flyover was retired don't apply to
+  it: it's built from the same real apex-point centreline as `sepang.glb` and
+  the map itself (`lib/circuitFlyoverTrack.ts`), runs the unbranded `car.glb`
+  around the loop forever, and eases from a high aerial establishing shot into
+  a low chase cam on toggle-in. Off by default so the calmer static map is
+  still what visitors see first. The **Product
   reveal** (`/apple-design`) still uses the scroll-scrubbed frame-sequence
   mechanism (`ScrollFrameSequence`), populated with a time-windowed
   sharp/mosaic treatment for a source clip with a sponsor mark partway through.
