@@ -99,6 +99,11 @@ explicit about being a heuristic, not a black box.
   that is fan identity, not an official product claim. Prefer originally
   made graphics over scraped team media when possible; do not imply
   partnership or licensing.
+- `/drivers` uses constructor accent rings around driver headshots with
+  race-number badges (local assets under `public/drivers/`). Label the
+  page as an unofficial fan project; do not present photos as licensed
+  merch. Initials on an accent shell remain the fallback when a photo
+  is missing.
 - `/teams` can stay neutral for the engineer-tool read; `/fan` is the
   place for colored team cards. Both are valid.
 - Driver photos and sponsor wordmarks are optional on fan cards; if you
