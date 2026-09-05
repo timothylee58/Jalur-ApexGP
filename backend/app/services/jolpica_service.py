@@ -6,8 +6,10 @@ This app's Sepang weekend is the 2026 Bahrain Grand Prix hosted at Sepang
 (Jolpica round 16). Session *starts* come from Jolpica; end times aren't
 in the Ergast schema, so practice/Quali are treated as 60 minutes and the
 race as 120 — same duration convention the frontend schedule bake uses.
-Standings default to the 2025 season close (the snapshot the driver/team
-career stats already hold themselves to), overridable via `season`.
+Standings default to the current, still-in-progress season — a live read
+refetched every few minutes (see _STANDINGS_CACHE_TTL_SECONDS), not a
+fixed snapshot — overridable via `season` (e.g. the 2025 season close the
+driver/team career stats in data/drivers.ts still hold themselves to).
 
 Unlike OpenF1, api.jolpi.ca is reachable from this sandbox, so the unit
 tests below can (and do) hit a mocked transport for determinism while
@@ -16,6 +18,7 @@ live calls work fine here too.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -32,10 +35,21 @@ from app.schemas.jolpica import (
 
 DEFAULT_SEASON = 2026
 DEFAULT_CIRCUIT_ID = "sepang"
-STANDINGS_SEASON = 2025
+# Was a fixed 2025 season-close snapshot — the standings strip now tracks
+# the *current*, still-in-progress season live instead, same as the
+# schedule above. A caller can still pass ?season=2025 for the old
+# snapshot; this is only the default.
+STANDINGS_SEASON = DEFAULT_SEASON
 
 _TIMEOUT = httpx.Timeout(10.0)
 _MYT = timezone(timedelta(hours=8))
+# Standings only change once a session's results are final, not
+# continuously — but a warm serverless instance can live for a while, and
+# an indefinite in-process cache would silently serve a stale table for
+# that whole lifetime. A short TTL keeps this "live" in the sense that
+# actually matters (never more than a few minutes behind Jolpica) without
+# hitting the upstream API on every single request.
+_STANDINGS_CACHE_TTL_SECONDS = 300
 
 # Practice / Quali duration when Ergast only publishes a start; race is
 # longer. Mirrors the frontend bake in lib/sepangSchedule.ts.
@@ -48,7 +62,7 @@ _DURATION_MINUTES = {
 }
 
 _schedule_cache: dict[tuple[int, str], WeekendSchedule] = {}
-_standings_cache: dict[int, StandingsPayload] = {}
+_standings_cache: dict[int, tuple[StandingsPayload, float]] = {}
 
 
 class JolpicaUnavailable(Exception):
@@ -143,7 +157,9 @@ async def get_sepang_schedule(
 async def get_standings(season: int = STANDINGS_SEASON) -> StandingsPayload:
     cached = _standings_cache.get(season)
     if cached is not None:
-        return cached
+        payload, fetched_at = cached
+        if time.monotonic() - fetched_at < _STANDINGS_CACHE_TTL_SECONDS:
+            return payload
 
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         drivers_payload = await _get(client, f"{season}/driverstandings/")
@@ -211,5 +227,5 @@ async def get_standings(season: int = STANDINGS_SEASON) -> StandingsPayload:
         drivers=drivers,
         constructors=constructors,
     )
-    _standings_cache[season] = result
+    _standings_cache[season] = (result, time.monotonic())
     return result

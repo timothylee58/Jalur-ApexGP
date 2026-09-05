@@ -1,6 +1,7 @@
 import type { PredictionResponse, Session, WhatIf } from "@/types";
 import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
+import type { SepangAccessPayload } from "@/types/transit";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
@@ -65,4 +66,10 @@ export async function fetchStandings(): Promise<StandingsPayload> {
   const res = await fetch(`${API_URL}/standings`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Standings request failed (${res.status})`);
   return res.json() as Promise<StandingsPayload>;
+}
+
+export async function fetchSepangAccess(): Promise<SepangAccessPayload> {
+  const res = await fetch(`${API_URL}/transit/sepang-access`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Transit access request failed (${res.status})`);
+  return res.json() as Promise<SepangAccessPayload>;
 }
