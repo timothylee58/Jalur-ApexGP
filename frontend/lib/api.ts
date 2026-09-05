@@ -1,4 +1,5 @@
 import type { PredictionResponse, Session } from "@/types";
+import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -15,4 +16,31 @@ export async function fetchPrediction(session: Session): Promise<PredictionRespo
   }
 
   return res.json() as Promise<PredictionResponse>;
+}
+
+export async function fetchTelemetryDrivers(): Promise<TelemetryDriver[]> {
+  const res = await fetch(`${API_URL}/telemetry/drivers`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Telemetry drivers request failed (${res.status})`);
+  return res.json() as Promise<TelemetryDriver[]>;
+}
+
+export async function fetchTelemetryLaps(driverNumber: number): Promise<TelemetryLap[]> {
+  const res = await fetch(
+    `${API_URL}/telemetry/laps?driver_number=${driverNumber}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`Telemetry laps request failed (${res.status})`);
+  return res.json() as Promise<TelemetryLap[]>;
+}
+
+export async function fetchTelemetryLapTrace(
+  driverNumber: number,
+  lapNumber: number,
+): Promise<TelemetryLapTrace> {
+  const res = await fetch(
+    `${API_URL}/telemetry/lap-trace?driver_number=${driverNumber}&lap_number=${lapNumber}`,
+    { cache: "no-store" },
+  );
+  if (!res.ok) throw new Error(`Telemetry lap-trace request failed (${res.status})`);
+  return res.json() as Promise<TelemetryLapTrace>;
 }

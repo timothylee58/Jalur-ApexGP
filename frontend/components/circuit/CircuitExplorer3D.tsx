@@ -2,7 +2,26 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { circuitCorners } from "@/data/circuitCorners";
+import { progressFractionAt } from "@/lib/telemetry";
+import type { TelemetrySample } from "@/types/telemetry";
+
+const CAR_SRC = "/models/car.glb";
+// Seconds for one lap of the traced curve — arbitrary showcase pacing, used
+// whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
+// from any real lap time.
+const LAP_SECONDS = 14;
+
+export interface RealLapPacing {
+  samples: TelemetrySample[];
+  /** Same length/order as samples — see lib/telemetry.ts's buildDistanceProgress. */
+  distanceProgress: number[];
+  /** Seconds into the real lap right now, driven by a playback clock the
+   * caller owns (e.g. useTelemetryPlayback) — read every animation frame
+   * via a ref, not by re-running this component's three.js setup effect. */
+  currentTime: number;
+}
 
 // Traced by eye from the circuit's published general map — a stylized
 // closed loop reflecting its actual shape (pit straight, a tight hairpin
@@ -38,13 +57,23 @@ const GRANDSTANDS: Array<{ x: number; z: number; color: number; label: string }>
 interface CircuitExplorer3DProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
+  /** When present, paces the car by a real lap's actual speed rhythm
+   * instead of the arbitrary constant-time loop — see the module-level
+   * RealLapPacing doc comment. */
+  realLap?: RealLapPacing | null;
 }
 
-export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DProps) {
+export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: CircuitExplorer3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const hotspotMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  // Read inside the rAF loop below rather than closed over at effect-setup
+  // time — that effect only runs once (empty dep array, same as the rest
+  // of this component's setup), so a plain closure would freeze whatever
+  // realLap was on first mount.
+  const realLapRef = useRef(realLap);
+  realLapRef.current = realLap;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -166,6 +195,41 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
     });
     scene.add(hotspotGroup);
 
+    // Animated car — a generic, unbranded model (see
+    // scripts/generate_circuit_models.py) run around the traced curve at
+    // an arbitrary showcase pace, purely decorative. Loaded async, so it
+    // simply never appears if the GLB is missing rather than blocking the
+    // rest of the scene.
+    let car: THREE.Object3D | null = null;
+    const carDisposables: Array<{ dispose: () => void }> = [];
+    const carLoader = new GLTFLoader();
+    carLoader.load(
+      CAR_SRC,
+      (gltf) => {
+        car = gltf.scene;
+        car.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            carDisposables.push(child.geometry);
+            if (Array.isArray(child.material)) child.material.forEach((m) => carDisposables.push(m));
+            else carDisposables.push(child.material);
+          }
+        });
+        // Same auto-scale approach as CircuitModelPreview's track model —
+        // this component's own units are small (the curve spans a few
+        // units), so a car authored at roughly real-world scale needs
+        // normalizing down rather than assuming any particular size.
+        const carBox = new THREE.Box3().setFromObject(car);
+        const carSize = carBox.getSize(new THREE.Vector3());
+        const carScale = ribbonWidth * 3.2 / Math.max(carSize.x, carSize.z, 0.001);
+        car.scale.setScalar(carScale);
+        scene.add(car);
+      },
+      undefined,
+      () => {
+        car = null;
+      },
+    );
+
     // Camera framing — isometric-ish, orbiting around the ribbon's bounding
     // box center rather than the world origin (the traced loop isn't
     // centered at 0,0).
@@ -229,12 +293,23 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
     };
     window.addEventListener("resize", onResize);
 
+    const clock = new THREE.Clock();
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
       if (autoRotate) {
         azimuth += 0.0018;
         applyCamera();
+      }
+      if (car) {
+        const active = realLapRef.current;
+        const t = active
+          ? progressFractionAt(active.samples, active.distanceProgress, active.currentTime)
+          : (clock.getElapsedTime() % LAP_SECONDS) / LAP_SECONDS;
+        const point = curve.getPointAt(t);
+        const tangent = curve.getTangentAt(t);
+        car.position.copy(point).setY(0.02);
+        car.rotation.y = Math.atan2(tangent.x, tangent.z);
       }
       renderer.render(scene, camera);
     };
@@ -251,6 +326,7 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
       ribbonMaterial.dispose();
       ground.geometry.dispose();
       (ground.material as THREE.Material).dispose();
+      carDisposables.forEach((item) => item.dispose());
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };

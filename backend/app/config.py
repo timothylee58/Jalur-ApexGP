@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     open_meteo_base_url: str = "https://api.open-meteo.com/v1"
+    # OpenF1 (openf1.org) — free, no API key, historical data from 2023
+    # onward; real-time MQTT streaming needs a paid account, which this app
+    # doesn't use (see telemetry_service.py's module docstring).
+    openf1_base_url: str = "https://api.openf1.org/v1"
     mlflow_tracking_uri: str = "file:./ml/mlruns"
     # Databricks (and most hosted MLflow backends) require an absolute
     # workspace path, e.g. "/Users/you@example.com/jalur-apexgp-predictions" —

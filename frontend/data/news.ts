@@ -109,4 +109,24 @@ export const news: NewsItem[] = [
     publishedAt: "2026-08-20",
     summary: "Sardinia holidays, a Russell engagement, and how the grid actually spent its three weeks off.",
   },
+  {
+    id: "apple-tv-f1-channel",
+    title: "Formula 1 on Apple TV",
+    source: "Apple TV",
+    url: "https://tv.apple.com/us/channel/formula-1/tvs.sbd.241000",
+    category: "Lifestyle & Culture",
+    // Not a dated article — a standing channel page. Dated as of when it
+    // was added to this list, not any claimed publish date.
+    publishedAt: "2026-09-05",
+    summary: "The official F1 channel on Apple TV, for live sessions and replays.",
+  },
+  {
+    id: "f1-the-movie",
+    title: "F1: The Movie",
+    source: "Apple TV",
+    url: "https://tv.apple.com/us/movie/f1-the-movie/umc.cmc.3t6dvnnr87zwd4wmvpdx5came",
+    category: "Lifestyle & Culture",
+    publishedAt: "2026-09-05",
+    summary: "Apple Original Films' racing feature, filmed with real F1 teams and cars during actual race weekends.",
+  },
 ];
