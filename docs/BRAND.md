@@ -89,6 +89,14 @@ explicit about being a heuristic, not a black box.
   official F1 broadcast footage, team media, or licensed circuit
   photography.
 - No driver photos, no team liveries, no sponsor logos, anywhere.
+- Any AI-generated or synthetic motorsport imagery (e.g. a text-to-image
+  prompt standing in for footage that can't be used) must exclude, as a
+  checklist: logos, sponsor names, team liveries, Ferrari, Santander, FIA,
+  F1 watermark, readable signage, real venue text (don't name Sepang or any
+  real circuit in generated text or signage), and real driver likeness (no
+  recognizable real driver's face). This is the same "no team liveries, no
+  sponsor logos" rule above, just spelled out as an explicit negative-prompt
+  checklist — a generator won't infer it from the short version alone.
 - No per-team color coding, even with brand-neutral-looking hex values — a
   fixed team→color mapping reads as a livery reference once you know which
   team is which (Ferrari-and-red, Mercedes-and-teal are the obvious traps).
