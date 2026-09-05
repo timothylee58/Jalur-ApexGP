@@ -73,8 +73,8 @@ export default function CircuitPage() {
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
           Drag to orbit, or tap a corner below. This is a stylized model
           traced from the circuit&apos;s published general map — not
-          survey-grade geometry — built to showcase the same four corners
-          the strategy engine's own reasoning already names.
+          survey-grade geometry — covering all 15 named corners, with Turns
+          5–7, 9, and 15 carrying the strategy engine&apos;s own reasoning.
         </p>
 
         <label className="mt-4 flex items-center gap-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
