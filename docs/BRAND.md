@@ -137,15 +137,27 @@ explicit about being a heuristic, not a black box.
   account this app doesn't use, and honesty about that gap beats faking
   one, same standard the weather blend and strategy engine already hold
   themselves to (see root README's "Note on AI").
-- The Sepang weekend schedule and the 2025 championship standings strip
-  on `/drivers` are sourced from
+- The Sepang weekend schedule and the championship standings strip on
+  `/drivers` are sourced from
   [Jolpica](https://github.com/jolpica/jolpica-f1) (Ergast-compatible,
   open-source, keyless) — again not an official F1/FIA/FOM product.
   Session starts come from Jolpica; end times aren't in the feed, so
   practice/Quali are treated as 60 minutes and the race as 120, and that
   convention is stated next to the data. Career totals on each driver
-  card remain a static through-2025 snapshot; the standings strip is the
-  live season-close table those numbers sit next to.
+  card remain a static through-2025 snapshot; the standings strip tracks
+  the current, still-in-progress season live instead (refetched every few
+  minutes server-side, not cached indefinitely — see
+  `jolpica_service.py`'s `_STANDINGS_CACHE_TTL_SECONDS`), a different
+  number those career totals sit next to, not a duplicate of them.
+- The live public-transit read on `/tickets` (nearest real RapidKL
+  service toward Sepang/KLIA) uses Malaysia's official open-data GTFS
+  feeds ([developer.data.gov.my](https://developer.data.gov.my)) for
+  Prasarana — a real government API, not an F1- or circuit-operated
+  feed. ETA is a documented heuristic (live GPS distance ÷ live or
+  fallback speed), not a trained model — see `transit_service.py`'s
+  module docstring for the two honesty gaps this is built around: no
+  official 2026 race-weekend shuttle exists yet, and no standing route
+  reaches the circuit gate itself.
 
 ## Iconography
 

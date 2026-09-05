@@ -1,4 +1,5 @@
 import { AboutNote } from "@/components/shared/AboutNote";
+import { TransitAccessPanel } from "@/components/tickets/TransitAccessPanel";
 import { SiteHeader } from "@/components/site-chrome";
 
 const SEPANG_TICKETS_URL = "https://www.sepangcircuit.com/home";
@@ -32,6 +33,8 @@ export default function TicketsPage() {
             sepangcircuit.com — official tickets &amp; seating
           </span>
         </a>
+
+        <TransitAccessPanel />
 
         <p className="mt-6 text-[11px] leading-relaxed text-paper-dim/70">
           Jalur APEXGP is an independent fan project — not affiliated with, endorsed by, or an
