@@ -1,6 +1,6 @@
 """Extract a WebP frame sequence from source footage into a frontend
-public/*-frames/ directory, matching what ScrollFrameSequence (used by both
-CircuitFrameSequence and the /apple-design page) expects to load.
+public/*-frames/ directory, matching what ScrollFrameSequence (used by the
+landing page's CircuitMotionPreview "lap" section) expects to load.
 
 Requires ffmpeg on PATH (https://ffmpeg.org/download.html).
 
@@ -8,9 +8,9 @@ Usage:
     python scripts/extract-frames.py path/to/source.mp4
     python scripts/extract-frames.py path/to/source.mp4 --count 60 --quality 80
     python scripts/extract-frames.py path/to/source.mp4 \
-        --out frontend/public/apple-design-frames --stylize
+        --out frontend/public/lap-preview-frames --stylize
     python scripts/extract-frames.py path/to/source.mp4 \
-        --out frontend/public/apple-design-frames --stylize --stylize-after 5.5
+        --out frontend/public/lap-preview-frames --stylize --stylize-after 5.5
 
 The hero component hardcodes FRAME_COUNT=48 and zero-pads to 4 digits
 (0001.webp … 0048.webp) — if you change --count here, update FRAME_COUNT in
