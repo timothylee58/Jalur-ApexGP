@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/site-chrome";
 export const metadata = {
   title: "Fan cards — Jalur APEXGP",
   description:
-    "Pick your 2026 constructor. Unofficial fan cards with team accent colors — not licensed merch.",
+    "Pick your 2026 constructor. Unofficial fan cards with driver photos, team logos, and race cars — not licensed merch.",
 };
 
 export default function FanPage() {
@@ -21,9 +21,10 @@ export default function FanPage() {
           Constructor cards
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-paper-dim">
-          Eleven fan cards for the 2026 grid — accent colors and roster facts,
-          pick-your-team stored locally. Unofficial fan project, not team or
-          Formula 1 merch. Neutral engineer sheets stay on{" "}
+          Eleven fan cards for the 2026 grid — driver headshots, team marks,
+          race cars, and accent colors. Pick-your-team stays in this browser.
+          Unofficial fan project, not team or Formula 1 merch. Neutral
+          engineer sheets stay on{" "}
           <Link href="/teams" className="text-amber hover:underline">
             /teams
           </Link>
