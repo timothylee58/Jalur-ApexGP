@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { bgm } from "@/data/bgm";
 
 /**
@@ -6,9 +9,16 @@ import { bgm } from "@/data/bgm";
  * Spotify's own official compact embed — it plays in-page (unlike a plain
  * link out to open.spotify.com), and its play control plus the currently-
  * playing track's title/source are all part of Spotify's native embed UI.
- * This component renders none of its own playback controls; it just sizes
- * and positions the iframe.
+ * This component renders none of its own playback controls beyond the
+ * minimize/restore toggle below; the iframe's contents are Spotify's.
+ *
+ * Minimized state persists across visits (localStorage) — the embed keeps
+ * playing underneath either way, this only changes what's on screen. Fresh
+ * visitors get it expanded once so they discover it's there; anyone who's
+ * minimized it before stays minimized.
  */
+
+const STORAGE_KEY = "jalur-apexgp-bgm-minimized";
 
 // Tolerates either a bare playlist ID or a full pasted share link
 // (https://open.spotify.com/playlist/<ID>?si=...) in data/bgm.ts — pasting
@@ -21,9 +31,54 @@ function extractPlaylistId(value: string): string {
 
 export function BgmPlayer() {
   const playlistId = extractPlaylistId(bgm.playlistId);
+  const [minimized, setMinimized] = useState(false);
+
+  useEffect(() => {
+    try {
+      setMinimized(window.localStorage.getItem(STORAGE_KEY) === "1");
+    } catch {
+      // private mode / blocked storage — stays expanded for this visit
+    }
+  }, []);
+
+  function toggle(next: boolean) {
+    setMinimized(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+    } catch {
+      // ignore — toggle still works for this visit
+    }
+  }
+
+  if (minimized) {
+    return (
+      <button
+        type="button"
+        onClick={() => toggle(false)}
+        aria-label="Show Formula 1 playlist player"
+        className="fixed bottom-4 left-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-paper/10 bg-asphalt shadow-lg shadow-black/40 hover:border-amber"
+      >
+        <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber" fill="currentColor" aria-hidden>
+          <path d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm4.3 13.1a.6.6 0 0 1-.83.2c-2.27-1.39-5.13-1.7-8.5-.93a.6.6 0 1 1-.27-1.17c3.69-.84 6.85-.48 9.4 1.08a.6.6 0 0 1 .2.82Zm1.1-2.45a.75.75 0 0 1-1.03.25c-2.6-1.6-6.56-2.06-9.63-1.13a.75.75 0 1 1-.43-1.44c3.51-1.06 7.87-.55 10.84 1.28a.75.75 0 0 1 .25 1.04Zm.1-2.55C14.7 9.3 9.3 9.1 6.5 9.96a.9.9 0 1 1-.52-1.72c3.22-.98 9.15-.75 12.75 1.4a.9.9 0 1 1-.93 1.54Z" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <div className="fixed bottom-4 left-4 z-40 w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-lg shadow-black/40">
+      <div className="flex items-center justify-end bg-asphalt px-2 py-1">
+        <button
+          type="button"
+          onClick={() => toggle(true)}
+          aria-label="Minimize playlist player"
+          className="rounded p-1 text-paper-dim hover:text-amber"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <path d="M5 12h14" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
       <iframe
         title="Spotify playlist player"
         // No autoplay here: Spotify's plain embed URL has no autoplay query

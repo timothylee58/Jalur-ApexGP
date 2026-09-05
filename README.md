@@ -24,19 +24,26 @@ logged), and the API echoes the effective `inputs` a read ran on.
 
 - **Landing page lap preview** ("The lap") — a second full-bleed,
   scroll-scrubbed hero, same mechanism as the circuit flyover above it,
-  stacked directly beneath it on the landing page. Source clip is a
-  generic, unbranded single-seater (no team livery, no sponsor decals) —
-  genuinely clean, so unlike the flyover and `/apple-design` it skips
-  `scripts/extract-frames.py --stylize` entirely; a background trackside
-  sign board in some shots was checked at native resolution and confirmed
-  not legible, not stylized to destroy it — see
-  `frontend/public/lap-preview-frames/README.md`. Replaced an earlier
-  compact-GIF-card version of this section, and an earlier still that used
-  real official F1 broadcast footage of the 2016 Malaysian Grand Prix — a
-  bird's-eye clip with a burned-in F1 logo watermark and a live telemetry
-  graphic, which docs/BRAND.md explicitly rules out and no amount of
-  mosaic-ing fixes (the whole clip is FOM's copyrighted broadcast, not an
-  incidental decal).
+  stacked directly beneath it on the landing page (`/apple-design` no
+  longer shares this mechanism — its hero is `CircuitVideoHero`, the same
+  video as the landing page background). Source clip is a generic,
+  unbranded single-seater (no team livery, no sponsor decals) filmed by a
+  chase drone at Sepang — genuinely clean on the car itself, so this one
+  skips `scripts/extract-frames.py --stylize` entirely — but it does carry
+  a burned-in speed/turn-number telemetry HUD for the whole clip, feathered
+  out with a masked blur (not stylized away, since the car itself needed no
+  treatment); a matching 9:16 frame set
+  (`frontend/public/lap-preview-frames-9x16/`) is picked on narrow
+  viewports instead of stretching the 16:9 frames. See
+  `frontend/public/lap-preview-frames/README.md` for the mask/verification
+  details. Replaced an earlier compact-GIF-card version of this section,
+  and an earlier still that used real official F1 broadcast footage of the
+  2016 Malaysian Grand Prix — a bird's-eye clip with a burned-in F1 logo
+  watermark and a live telemetry graphic, which docs/BRAND.md explicitly
+  rules out and no amount of mosaic-ing fixes (the whole clip is FOM's
+  copyrighted broadcast, not an incidental decal) — the current clip's own
+  telemetry HUD is the same category of graphic docs/BRAND.md rules out,
+  just fixable by masking rather than a reason to reject the clip outright.
 - **Circuit video hero** (landing page background, and `/apple-design`) — both
   now render `CircuitVideoHero`, a muted, looping, controls-free background
   video (`hero-16x9.mp4` / `hero-9x16.mp4`) that behaves like a GIF, replacing
