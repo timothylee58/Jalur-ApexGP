@@ -41,14 +41,19 @@ logged), and the API echoes the effective `inputs` a read ran on.
   now render `CircuitVideoHero`, a muted, looping, controls-free background
   video (`hero-16x9.mp4` / `hero-9x16.mp4`) that behaves like a GIF, replacing
   the landing page's earlier static SVG map default and `/apple-design`'s
-  scroll-scrubbed frame-sequence hero. The clip is AI-generated, not real
-  broadcast/aerial footage — this project has twice rejected real footage on
-  brand-safety grounds (see the lap-preview entry above and `docs/BRAND.md`'s
-  Imagery section) — generated against the explicit negative-prompt checklist
-  `docs/BRAND.md` now codifies, and verified frame-by-frame before use (one
-  AI-generated trackside sign with garbled, real-signage-like lettering was
-  found and blurred out; see `frontend/public/videos/README.md` for the exact
-  fix and verification). It ships as two actually-different renders rather
+  scroll-scrubbed frame-sequence hero. `docs/BRAND.md`'s Imagery section now
+  allows real circuit/on-track footage here (this project previously rejected
+  real footage twice on brand-safety grounds — see the lap-preview entry
+  above — but the concern was official broadcast graphics and copyrighted
+  broadcast footage, not real footage as such) provided it clears the same
+  checklist a generated clip would: no burned-in broadcast graphics, no
+  sponsor logos or team wordmarks, no readable real venue signage, and
+  rights the project actually has. The current clip is owner-supplied and
+  was checked frame-by-frame before use (one trackside sponsor board was
+  found — illegible but shaped enough like a real sponsor board to fail the
+  signage bar — and blurred out; see `frontend/public/videos/README.md` for
+  the exact fix, verification, and full provenance). It ships as two
+  actually-different renders rather
   than one clip CSS-cropped: a 9:16 center crop for narrow viewports and the
   native 16:9 otherwise, picked via `<source media>` art-direction (same
   mechanism as `<picture>` — the browser picks once at load, not on resize).
