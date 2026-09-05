@@ -7,38 +7,51 @@ GIF, not a video player.
 
 ## Provenance
 
-AI-generated (text-to-image/video), not real footage — an original,
-license-clear stand-in for the real broadcast/aerial footage this project
-has twice rejected (see root `README.md`'s "Landing page lap preview"
-entry and `docs/BRAND.md`'s Imagery section for that history). Generated
-against the negative-prompt checklist `docs/BRAND.md` now codifies: no
-logos, sponsor names, team liveries, Ferrari, Santander, FIA, F1
-watermark, readable signage, real venue text, or real driver likeness.
+Source clip: a single-seater drifting/on-track clip supplied directly by
+the project owner (`85447171-Race_car_driving_on_tarmac_*.mp4`, 1280x720,
+~10s). The car carries a generic black/orange livery with no team name,
+sponsor decal, or real driver likeness — no rights-clearance concerns
+there. Per `docs/BRAND.md`'s Imagery section, real circuit footage is
+allowed for this hero as long as it clears the same checklist a generated
+clip would: no burned-in broadcast graphics, no sponsor logos/team
+wordmarks, no readable real venue signage, and no footage the project
+doesn't actually have the rights to use. This source is the owner's own
+supplied file, not a scrape of official broadcast or licensed circuit
+media, so it's usable; it does read as AI-rendered rather than a real
+camera take (the trackside architecture visibly reshapes itself between
+cuts — the same grandstand isn't self-consistent shot to shot — which real
+footage can't do).
 
-**One frame region needed a fix before use:** from ~1.65s to the scene cut
-at ~3.45s, the generator rendered a trackside board with garbled
-letterforms — not legible as any real word, but shaped enough like real
-Sepang corner signage to fail the "no readable signage / no real venue
-text" bar on sight. Blurred out with a targeted `boxblur`, verified by
-re-extracting frames across that exact window afterward to confirm it's
-actually illegible now (not just assumed) and that the blur doesn't bleed
-into the next scene. The rest of the clip — the car on-track and the
-podium celebration — was checked frame-by-frame and is clean: no
-logos, no readable text, a synthetic/non-recognizable face.
+**One region needed a fix before use:** for the clip's opening shot
+(0.0s-~1.8s), a trackside sponsor board is in frame — its text isn't
+legible even at native resolution, but the layout (repeated red circular
+mark + white wordmark on a black board) reads enough like a real
+trackside sponsor board to fail the "no real venue signage" bar on sight,
+same standard as the previous clip. Blurred out with a targeted `boxblur`
+over that region for that time window only; verified by re-extracting
+frames from the *output* across and just past the window to confirm it's
+actually illegible now and the blur doesn't bleed into the next shot. The
+rest of the clip was checked frame-by-frame (roughly 1 fps, plus the
+transition points) and is clean: no logos, no other readable signage, no
+visible driver face (helmet/visor only throughout).
 
 ## 9:16 crop
 
-`hero-9x16.mp4` is a center crop of the cleaned 16:9 master
-(`crop=404:720:438:0` — 720p height, 9:16 width, centered), not a separate
-generation. Verified across all three shots in the clip (wide establishing
-pan, the car through two corners, the podium close-up) that a single
-static center crop composes correctly throughout — the car and driver stay
-in frame at every sampled timestamp, so no per-shot crop offset was
-needed.
+`hero-9x16.mp4` is a center-weighted crop of the cleaned 16:9 master
+(`crop=404:720:340:0` — 720p height, 9:16 width), not a separate
+generation. The source is one continuous drifting pan (plus a short static
+opening shot) where the car's on-screen position drifts from roughly
+centered to left-of-center over the clip; `x=340` was chosen by sampling
+car position every ~0.5s across the whole clip and picking the offset that
+keeps the cockpit and main car body in frame at every sampled timestamp —
+front/rear wingtips clip at the extremes, which is the same acceptable
+trade-off the previous clip's crop made, since a single static crop can't
+track a moving subject frame-by-frame.
 
 ## Regenerating
 
 If either file is ever replaced, re-run the same checks before shipping:
 scrub through the new clip frame-by-frame for anything the checklist
-above rules out, and re-verify any crop/blur fix by re-extracting frames
-from the *output*, not just trusting the filter graph.
+above rules out, re-verify any crop/blur fix by re-extracting frames from
+the *output* (not just trusting the filter graph), and re-sample car
+position across the clip before picking a 9:16 crop offset.

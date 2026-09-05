@@ -85,15 +85,21 @@ explicit about being a heuristic, not a black box.
   (`scripts/fetch-attraction-images.ts`), never hotlinked or scraped from
   tourism sites.
 - Circuit hero: the landing page background and `/apple-design` both default
-  to `CircuitVideoHero`, a muted/looping/controls-free AI-generated video
+  to `CircuitVideoHero`, a muted/looping/controls-free background video
   (see `frontend/public/videos/README.md` for provenance and the
-  checklist below it was generated against), with an opt-in procedural 3D
-  flyover (`CircuitFlyoverHero`) as the landing page's alternate view —
-  neither is real footage, so the frame-sequence rule below doesn't
-  constrain them. Any frame-sequence hero (the landing page's "The lap"
-  section still is one) must use originally captured/extracted frames only
-  (`scripts/extract-frames.py`) — never official F1 broadcast footage, team
-  media, or licensed circuit photography.
+  checklist any new clip is checked against), with an opt-in procedural 3D
+  flyover (`CircuitFlyoverHero`) as the landing page's alternate view. Real
+  circuit/on-track footage is allowed here (and for any frame-sequence hero,
+  e.g. the landing page's "The lap" section, sourced via
+  `scripts/extract-frames.py`) provided it's footage this project actually
+  has the rights to use — still no burned-in official broadcast graphics
+  (network bugs, live telemetry overlays, F1/FIA watermarks) and still no
+  sponsor logos, team livery wordmarks, or readable real venue signage in
+  frame; blur/crop those out per the checklist in
+  `frontend/public/videos/README.md` rather than assuming they're fine.
+  Verbatim use of someone else's copyrighted broadcast (e.g. FOM's) is
+  still off the table regardless of this — that's a licensing problem, not
+  a style one.
 - Fan surfaces may use constructor accent colors and fan-card styling.
   `/fan` ships per-team accent hexes and collectible cards on purpose —
   that is fan identity, not an official product claim. Prefer originally
