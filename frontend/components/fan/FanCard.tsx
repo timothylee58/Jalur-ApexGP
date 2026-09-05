@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { Team } from "@/data/teams";
 import { drivers } from "@/data/drivers";
+import { photoForDriver } from "@/lib/driverPhotos";
+import { carForTeam, logoForTeam } from "@/lib/teamAssets";
 
 interface FanCardProps {
   team: Team;
@@ -33,7 +35,8 @@ export function FanCard({
     (id) => drivers.find((driver) => driver.id === id) ?? null,
   );
   const ink = contrastInk(team.primary);
-  // team.primary / team.secondary are the /fan accent hexes from data/teams.ts
+  const logo = logoForTeam(team.id);
+  const car = carForTeam(team.id);
 
   return (
     <article
@@ -43,21 +46,31 @@ export function FanCard({
           : "border-paper/10 hover:border-paper/25"
       }`}
       style={{
-        background: `linear-gradient(155deg, ${team.primary}22 0%, #14181c 42%, #0a0c0e 100%)`,
+        background: `linear-gradient(155deg, ${team.primary}22 0%, #14181c 38%, #0a0c0e 100%)`,
       }}
     >
       <div
-        className="flex items-center justify-between gap-2 px-4 py-2.5"
+        className="flex items-center justify-between gap-2 px-4 py-2"
         style={{ backgroundColor: team.primary, color: ink }}
       >
         <p className="font-mono text-[10px] uppercase tracking-[0.28em]">
           Fan card · 2026
         </p>
-        <span
-          className="h-2.5 w-2.5 rounded-full"
-          style={{ backgroundColor: team.secondary }}
-          aria-hidden
-        />
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={logo}
+            alt=""
+            className="h-6 w-auto max-w-[5.5rem] object-contain object-right"
+            draggable={false}
+          />
+        ) : (
+          <span
+            className="h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: team.secondary }}
+            aria-hidden
+          />
+        )}
       </div>
 
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
@@ -79,37 +92,82 @@ export function FanCard({
               </p>
             </div>
 
-            <div
-              className="mt-4 h-1.5 w-full rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${team.primary}, ${team.secondary})`,
-              }}
-              aria-hidden
-            />
+            {car ? (
+              <div className="relative mt-3 overflow-hidden rounded-lg border border-paper/10 bg-black/35">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={car}
+                  alt=""
+                  className="mx-auto h-24 w-full object-contain object-center sm:h-28"
+                  draggable={false}
+                />
+                <p className="absolute bottom-1 left-2 font-mono text-[9px] uppercase tracking-wide text-paper-dim">
+                  {team.powerUnit} PU
+                </p>
+              </div>
+            ) : (
+              <div
+                className="mt-3 h-1.5 w-full rounded-full"
+                style={{
+                  background: `linear-gradient(90deg, ${team.primary}, ${team.secondary})`,
+                }}
+                aria-hidden
+              />
+            )}
 
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-3 grid grid-cols-2 gap-2">
               {roster.map((driver, index) =>
                 driver ? (
                   <li
                     key={driver.id}
-                    className="flex items-baseline justify-between gap-2 border-b border-paper/10 pb-2 last:border-0"
+                    className="flex items-center gap-2 rounded-md border border-paper/10 bg-asphalt/50 px-2 py-2"
                   >
-                    <span className="text-sm text-paper">{driver.name}</span>
-                    <span className="font-mono text-[11px] text-paper-dim">
-                      {driver.number !== null ? `#${driver.number}` : "—"}
+                    <span
+                      className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full"
+                      style={{ boxShadow: `0 0 0 2px ${team.primary}` }}
+                    >
+                      {photoForDriver(driver.id) ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photoForDriver(driver.id)!}
+                          alt=""
+                          className="h-full w-full object-cover object-top"
+                          draggable={false}
+                        />
+                      ) : (
+                        <span
+                          className="flex h-full w-full items-center justify-center font-mono text-[10px] font-bold"
+                          style={{ backgroundColor: team.primary, color: ink }}
+                        >
+                          {driver.initials}
+                        </span>
+                      )}
+                      <span
+                        className="absolute -bottom-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 font-mono text-[9px] font-bold"
+                        style={{ backgroundColor: team.primary, color: ink }}
+                      >
+                        {driver.number !== null ? driver.number : "—"}
+                      </span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-medium text-paper">
+                        {driver.name.split(" ").slice(-1)[0]}
+                      </span>
+                      <span className="block truncate font-mono text-[9px] uppercase tracking-wide text-paper-dim">
+                        {driver.name.split(" ").slice(0, -1).join(" ") || "—"}
+                      </span>
                     </span>
                   </li>
                 ) : (
-                  <li key={index} className="text-sm text-paper-dim">
+                  <li
+                    key={index}
+                    className="rounded-md border border-paper/10 px-2 py-3 text-xs text-paper-dim"
+                  >
                     Unlisted
                   </li>
                 ),
               )}
             </ul>
-
-            <p className="mt-3 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-              {team.powerUnit} power unit
-            </p>
           </>
         ) : (
           <>
@@ -117,6 +175,17 @@ export function FanCard({
               Last time out
             </p>
             <p className="mt-2 text-sm leading-relaxed text-paper">{team.recap}</p>
+            {car ? (
+              <div className="mt-3 overflow-hidden rounded-lg border border-paper/10 bg-black/30">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={car}
+                  alt=""
+                  className="mx-auto h-20 w-full object-contain opacity-90"
+                  draggable={false}
+                />
+              </div>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-3 font-mono text-[11px] uppercase tracking-wide">
               <Link href={`/teams#${team.id}`} className="text-amber hover:underline">
                 Team sheet →
@@ -133,7 +202,7 @@ export function FanCard({
           </>
         )}
 
-        <div className="mt-auto flex gap-2 pt-5">
+        <div className="mt-auto flex gap-2 pt-4">
           <button
             type="button"
             onClick={onSelect}
