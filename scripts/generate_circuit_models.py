@@ -19,6 +19,7 @@ race number) per docs/BRAND.md.
 from __future__ import annotations
 
 import argparse
+import json
 import math
 from pathlib import Path
 
@@ -26,31 +27,8 @@ import numpy as np
 import trimesh
 from scipy.interpolate import splev, splprep
 
-# Sepang apex centreline: (lat, lon, elevation_m ASL). Same 18-point data as
-# scripts/blender/sepang_circuit_scene.py and frontend/data/sepangCircuit.ts —
-# a close, honest centreline (not a laser survey). Projecting these here means
-# the exported GLB reproduces the circuit's real shape and its ~22 m elevation
-# change (T3/T4 crest high, T11/T12 dip low) rather than a traced-by-eye loop.
-APEX_POINTS = [
-    ("Start/Finish", 2.76070, 101.73830, 27.0),
-    ("T1 Entry", 2.76455, 101.73975, 26.0),
-    ("T1 Apex", 2.76560, 101.74020, 25.0),
-    ("T2 Apex", 2.76525, 101.74085, 20.0),
-    ("T3 Apex", 2.76280, 101.74270, 39.0),
-    ("T4 Apex", 2.75790, 101.74310, 36.0),
-    ("T5 Apex", 2.75470, 101.74040, 33.0),
-    ("T6 Apex", 2.75405, 101.73880, 31.0),
-    ("T7 Apex", 2.75230, 101.73600, 28.0),
-    ("T8 Apex", 2.75250, 101.73420, 26.0),
-    ("T9 Apex", 2.75620, 101.73350, 30.0),
-    ("T10 Apex", 2.75780, 101.73480, 27.0),
-    ("T11 Apex", 2.75920, 101.73280, 17.0),
-    ("T12 Apex", 2.75750, 101.73080, 18.0),
-    ("T13 Apex", 2.75630, 101.72890, 23.0),
-    ("T14 Apex", 2.75820, 101.72750, 26.0),
-    ("Back Straight Mid", 2.76180, 101.73710, 29.0),
-    ("T15 Hairpin", 2.76495, 101.73835, 26.0),
-]
+ROOT = Path(__file__).resolve().parents[1]
+SEPANG_JSON = ROOT / "frontend" / "data" / "sepang.json"
 
 # Horizontal size of the exported loop (three.js units). CircuitModelPreview
 # re-normalises on load, so this is just an authoring scale.
@@ -59,6 +37,42 @@ PLANAR_TARGET = 34.0
 # change actually reads on a ~1.5 km-wide layout — flagged so it's not mistaken
 # for true-scale relief.
 VERT_EXAGGERATION = 6.0
+
+
+def _load_apex_points() -> list[tuple[str, float, float, float]]:
+    """Load shared centreline from frontend/data/sepang.json (same file the
+    2D map + CircuitViewer + flyover read). Falls back to an inline copy
+    only if the JSON is missing — keep them in sync."""
+    if SEPANG_JSON.is_file():
+        payload = json.loads(SEPANG_JSON.read_text())
+        return [
+            (p["name"], float(p["lat"]), float(p["lon"]), float(p["elevM"]))
+            for p in payload["points"]
+        ]
+    # Fallback mirrors sepang.json — do not invent a second centreline.
+    return [
+        ("Start/Finish", 2.76070, 101.73830, 27.0),
+        ("T1 Entry", 2.76455, 101.73975, 26.0),
+        ("T1 Apex", 2.76560, 101.74020, 25.0),
+        ("T2 Apex", 2.76525, 101.74085, 20.0),
+        ("T3 Apex", 2.76280, 101.74270, 39.0),
+        ("T4 Apex", 2.75790, 101.74310, 36.0),
+        ("T5 Apex", 2.75470, 101.74040, 33.0),
+        ("T6 Apex", 2.75405, 101.73880, 31.0),
+        ("T7 Apex", 2.75230, 101.73600, 28.0),
+        ("T8 Apex", 2.75250, 101.73420, 26.0),
+        ("T9 Apex", 2.75620, 101.73350, 30.0),
+        ("T10 Apex", 2.75780, 101.73480, 27.0),
+        ("T11 Apex", 2.75920, 101.73280, 17.0),
+        ("T12 Apex", 2.75750, 101.73080, 18.0),
+        ("T13 Apex", 2.75630, 101.72890, 23.0),
+        ("T14 Apex", 2.75820, 101.72750, 26.0),
+        ("Back Straight Mid", 2.76180, 101.73710, 29.0),
+        ("T15 Hairpin", 2.76495, 101.73835, 26.0),
+    ]
+
+
+APEX_POINTS = _load_apex_points()
 
 
 def _projected_anchors() -> np.ndarray:

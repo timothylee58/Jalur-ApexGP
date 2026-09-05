@@ -1,44 +1,25 @@
 /**
- * Static Sepang International Circuit geometry for the 2D SVG map.
- *
- * The lat/lon apex points come from the project's own Blender scene generator
- * (scripts/blender/sepang_circuit_scene.py) — the same 18-point centreline used
- * for the 3D work — projected here to a flat local plane and normalised into an
- * SVG viewBox. It is a close, honest centreline (not a laser-scanned survey),
- * matching the honesty standard the strategy simulator holds itself to.
- *
- * Corner `code` values match backend `referencedCorners`
- * (backend/app/services/strategy_service.py) and frontend/data/circuitCorners.ts
- * so the map can highlight exactly the corners the strategy reasoning names.
+ * Static Sepang International Circuit geometry for the 2D SVG map and 3D
+ * consumers. Points load from `data/sepang.json` — the same centreline
+ * `scripts/generate_circuit_models.py` sweeps into `sepang.glb` (Orbit Sepang)
+ * and CircuitFlyoverHero uses via circuitPointsMetres.
  */
+
+import sepang from "@/data/sepang.json";
 
 interface RawPoint {
   name: string;
   lat: number;
   lon: number;
+  elevM?: number;
 }
 
-// From TRACK_POINTS in sepang_circuit_scene.py (clockwise, Start/Finish first).
-const RAW_POINTS: RawPoint[] = [
-  { name: "Start/Finish", lat: 2.7607, lon: 101.7383 },
-  { name: "T1 Entry", lat: 2.76455, lon: 101.73975 },
-  { name: "T1 Apex", lat: 2.7656, lon: 101.7402 },
-  { name: "T2 Apex", lat: 2.76525, lon: 101.74085 },
-  { name: "T3 Apex", lat: 2.7628, lon: 101.7427 },
-  { name: "T4 Apex", lat: 2.7579, lon: 101.7431 },
-  { name: "T5 Apex", lat: 2.7547, lon: 101.7404 },
-  { name: "T6 Apex", lat: 2.75405, lon: 101.7388 },
-  { name: "T7 Apex", lat: 2.7523, lon: 101.736 },
-  { name: "T8 Apex", lat: 2.7525, lon: 101.7342 },
-  { name: "T9 Apex", lat: 2.7562, lon: 101.7335 },
-  { name: "T10 Apex", lat: 2.7578, lon: 101.7348 },
-  { name: "T11 Apex", lat: 2.7592, lon: 101.7328 },
-  { name: "T12 Apex", lat: 2.7575, lon: 101.7308 },
-  { name: "T13 Apex", lat: 2.7563, lon: 101.7289 },
-  { name: "T14 Apex", lat: 2.7582, lon: 101.7275 },
-  { name: "Back Straight Mid", lat: 2.7618, lon: 101.7371 },
-  { name: "T15 Hairpin", lat: 2.76495, lon: 101.73835 },
-];
+const RAW_POINTS: RawPoint[] = sepang.points.map((p) => ({
+  name: p.name,
+  lat: p.lat,
+  lon: p.lon,
+  elevM: p.elevM,
+}));
 
 const VIEW = 1000;
 const PADDING = 90;
@@ -53,8 +34,6 @@ export interface XY {
   y: number;
 }
 
-// Equirectangular projection to metres, then normalise into the viewBox. SVG y
-// grows downward, so north (larger lat) is flipped to smaller y.
 const projected: XY[] = RAW_POINTS.map((p) => ({
   x: (p.lon - LON0) * M_PER_DEG_LON,
   y: -(p.lat - LAT0) * M_PER_DEG_LAT,
@@ -62,9 +41,7 @@ const projected: XY[] = RAW_POINTS.map((p) => ({
 
 /**
  * Same 18-point centreline as `circuitPath`, in real metres (clockwise,
- * Start/Finish first) rather than normalised into the SVG viewBox — for
- * consumers that need actual world-space coordinates instead of a
- * ready-to-draw path string, e.g. a 3D scene's track curve.
+ * Start/Finish first) — for 3D consumers that need world-space coords.
  */
 export const circuitPointsMetres: readonly XY[] = projected;
 
@@ -113,7 +90,6 @@ export const circuitViewBox = `0 0 ${VIEW} ${VIEW}`;
 export const circuitPath = closedSmoothPath(points);
 
 export interface CircuitMarker {
-  /** Matches backend referencedCorners; null for the start/finish marker. */
   code: string | null;
   label: string;
   x: number;
@@ -123,7 +99,6 @@ export interface CircuitMarker {
 
 export const startFinish: XY = pointFor("Start/Finish");
 
-// The four corners the strategy engine names, plus start/finish for orientation.
 export const circuitMarkers: CircuitMarker[] = [
   {
     code: "T1",
