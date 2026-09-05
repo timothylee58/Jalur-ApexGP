@@ -11,6 +11,11 @@ explorer's own traced curve (`CircuitExplorer3D.tsx`). The car is
 deliberately unbranded — no team livery, no sponsor marks, no race number,
 per docs/BRAND.md.
 
+A much higher-fidelity but untested Blender-based generator also exists
+at `scripts/blender/sepang_circuit_scene.py` — see `scripts/blender/README.md`
+before using it; it's an optional alternative path, not currently wired
+into either file below.
+
 To replace either with a hand-authored model instead, drop a compressed
 glTF binary at the matching filename:
 

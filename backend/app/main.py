@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.predict import router as predict_router
+from app.api.routes.telemetry import router as telemetry_router
 from app.config import settings
 
 app = FastAPI(
@@ -30,6 +31,7 @@ app.add_middleware(
 # also uses this prefix (baked into the app itself, not deploy-specific) —
 # see frontend/.env.example for the matching NEXT_PUBLIC_API_URL value.
 app.include_router(predict_router, prefix="/api")
+app.include_router(telemetry_router, prefix="/api")
 
 
 @app.get("/api/health")

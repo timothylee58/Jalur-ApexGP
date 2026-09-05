@@ -101,6 +101,16 @@ explicit about being a heuristic, not a black box.
   themselves to. Where a specific detail wasn't confirmed by any source
   found, say so plainly (e.g. "finished outside the points" as an
   inference, not a fabricated exact position) rather than making one up.
+- `/telemetry` and `/circuit`'s "real lap pacing" mode use
+  [OpenF1](https://openf1.org) — an independent, community-run API, not
+  an official F1/FIA/FOM product, and free/keyless only for historical
+  data. Both surface a real, clearly-labeled session (the 2026 Dutch GP
+  at Zandvoort — the same one already cited for the driver/team recaps
+  above) rather than pretending this app's own fictional Sepang weekend
+  has real telemetry. No live data: OpenF1's live stream needs a paid
+  account this app doesn't use, and honesty about that gap beats faking
+  one, same standard the weather blend and strategy engine already hold
+  themselves to (see root README's "Note on AI").
 
 ## Iconography
 

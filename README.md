@@ -97,7 +97,41 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   mesh — invisible (unlit black) once loaded, since three.js's
   `GLTFLoader` doesn't compute missing normals itself. Fixed with
   `include_normals=True` on `.export()`; see
-  `frontend/public/models/README.md`.
+  `frontend/public/models/README.md`. An alternative, much higher-fidelity
+  Blender-based generator lives at `scripts/blender/` — untested end to
+  end (no Blender in this dev environment), documented there as an
+  optional path rather than the current source of truth for the shipped
+  file.
+- **Real telemetry** (`/telemetry`, and `/circuit`'s "real lap pacing"
+  toggle) — speed, throttle, brake, RPM, gear, and DRS from
+  [OpenF1](https://openf1.org) (free, keyless, historical-only; see
+  `docs/BRAND.md`), replaying the same real 2026 Dutch GP at Zandvoort
+  already cited for the driver/team recaps. `/circuit` doesn't plot the
+  real car's actual coordinates — this app's track shape is a stylized
+  fictional trace, and the real corners don't line up with it — instead
+  it paces movement along the *existing* traced curve by the real lap's
+  distance-weighted speed profile (`lib/telemetry.ts`'s
+  `buildDistanceProgress`), so a real braking zone visibly slows the
+  fictional car at whatever point in its own lap that fraction of
+  distance falls, even though the corner positions are unrelated. Backend
+  proxies OpenF1 (`backend/app/services/telemetry_service.py`) rather
+  than calling it from the browser, matching the existing Open-Meteo
+  pattern; the date-range filter needed a hand-built query string, since
+  OpenF1's `date>`/`date<` syntax glues the operator directly onto the
+  field name rather than using `key=value`.
+
+  **Verification gap, stated plainly:** `api.openf1.org` is blocked by
+  this dev sandbox's own network egress policy, so this integration was
+  built and unit-tested against a mocked HTTP transport
+  (`backend/tests/test_telemetry_service.py`) — confirming this repo's
+  own request-building and response-parsing logic, not that OpenF1's real
+  API actually matches the field names/shapes assumed here. The most
+  likely failure mode if something's off: the target session not
+  existing yet in OpenF1's archive, which the backend turns into a clean
+  404/502 rather than a crash (confirmed against the real, blocked host
+  from this sandbox — it fails exactly that way). Test this against the
+  live API somewhere with ordinary internet access (a normal dev machine
+  or the deployed Vercel function both qualify) before relying on it.
 
 ## Brand
 
