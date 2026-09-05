@@ -10,6 +10,7 @@ import { StandingsStrip } from "@/components/drivers/StandingsStrip";
 import { SiteHeader } from "@/components/site-chrome";
 import { drivers, type DriverEra } from "@/data/drivers";
 import { teams } from "@/data/teams";
+import { accentForDriver } from "@/lib/driverAccent";
 
 const ERA_LABEL: Record<DriverEra, string> = {
   "2026-grid": "2026 grid",
@@ -61,11 +62,11 @@ function DriversView() {
           Every seat on the grid
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Real drivers, real career numbers — no photos or team liveries, just
-          an initials marker per seat. Stats are career totals through the
-          2025 season close, the season this grid enters 2026 with, not a
-          live in-season feed. Markers are paired by team, not a real
-          qualifying or grid order.
+          Real drivers, real career numbers — stylized helmet markers with
+          constructor accent colors, not photos or likenesses. Stats are
+          career totals through the 2025 season close, the season this grid
+          enters 2026 with, not a live in-season feed. Markers are paired by
+          team, not a real qualifying or grid order.
         </p>
 
         <StandingsStrip />
@@ -117,7 +118,18 @@ function DriversView() {
                   : "border-paper/10 hover:border-paper/25"
               }`}
             >
-              <DriverAvatar initials={driver.initials} active={selectedId === driver.id} />
+              {(() => {
+                const accent = accentForDriver(driver);
+                return (
+                  <DriverAvatar
+                    initials={driver.initials}
+                    number={driver.number}
+                    accent={accent.primary}
+                    accentSecondary={accent.secondary}
+                    active={selectedId === driver.id}
+                  />
+                );
+              })()}
               <span className="min-w-0">
                 <span
                   className={`block truncate text-xs font-medium ${
@@ -141,7 +153,19 @@ function DriversView() {
             className="mt-4 rounded-lg border border-paper/10 bg-asphalt px-4 py-4"
           >
             <div className="flex items-center gap-3">
-              <DriverAvatar initials={selected.initials} active size="lg" />
+              {(() => {
+                const accent = accentForDriver(selected);
+                return (
+                  <DriverAvatar
+                    initials={selected.initials}
+                    number={selected.number}
+                    accent={accent.primary}
+                    accentSecondary={accent.secondary}
+                    active
+                    size="lg"
+                  />
+                );
+              })()}
               <div className="min-w-0">
                 <h2 className="truncate font-display text-xl uppercase tracking-wide text-paper">
                   {selected.name}
