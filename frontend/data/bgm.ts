@@ -1,16 +1,14 @@
 /**
- * Sitewide "listen while you browse" link, bottom-left — just an outbound
- * link to a Spotify playlist now, not a self-hosted audio file (see
- * BgmPlayer.tsx: no play/pause, no in-page audio element, so no licensing
- * or hosting to manage — Spotify handles playback in its own app/tab).
+ * Sitewide Spotify playlist embed, bottom-left (see BgmPlayer.tsx). This is
+ * Spotify's own official embed iframe, not a custom player — playback,
+ * the play/pause control, and the track-title/source display are all
+ * Spotify's native embed UI, not anything this app builds or manages.
  *
- * Edit these once you've picked a real public playlist:
+ * Edit `playlistId` once you've picked a real public playlist:
  * 1. Open the playlist in Spotify, "Share" → "Copy link to playlist".
- * 2. Paste it as `url` below.
- * 3. Set `name` to whatever should show on the pill (playlist title, or
- *    your own label for it).
+ * 2. That link looks like https://open.spotify.com/playlist/<ID>?si=... —
+ *    copy just the <ID> segment (before any "?") into `playlistId` below.
  */
 export const bgm = {
-  name: "Add your playlist name",
-  url: "https://open.spotify.com/playlist/REPLACE_WITH_PLAYLIST_ID",
+  playlistId: "REPLACE_WITH_PLAYLIST_ID",
 };
