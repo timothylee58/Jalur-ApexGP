@@ -5,11 +5,14 @@ import { fetchStandings } from "@/lib/api";
 import type { StandingsPayload } from "@/types/jolpica";
 
 /**
- * Compact 2025 championship table from Jolpica/Ergast — the same open
- * results feed the Sepang weekend schedule now comes from. Career totals
- * on each driver card stay as the static through-2025 snapshot in
- * `data/drivers.ts`; this strip is the season-close table those numbers
- * sit next to, fetched live rather than hand-copied.
+ * Compact championship table from Jolpica/Ergast — the same open results
+ * feed the Sepang weekend schedule now comes from. Tracks the current,
+ * still-in-progress season live (refetched every few minutes server-side,
+ * see jolpica_service.py's _STANDINGS_CACHE_TTL_SECONDS), not a fixed
+ * snapshot. Career totals on each driver card stay as the static
+ * through-2025 snapshot in `data/drivers.ts` — a different, deliberately
+ * static number this strip's live table sits next to, not a duplicate of
+ * it.
  */
 export function StandingsStrip() {
   const [data, setData] = useState<StandingsPayload | null>(null);
@@ -32,7 +35,7 @@ export function StandingsStrip() {
   if (error) {
     return (
       <p className="mt-5 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-        2025 standings unavailable — Jolpica feed didn&apos;t respond.
+        Live standings unavailable — Jolpica feed didn&apos;t respond.
       </p>
     );
   }
@@ -40,7 +43,7 @@ export function StandingsStrip() {
   if (!data) {
     return (
       <p className="mt-5 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-        Loading 2025 standings…
+        Loading live standings…
       </p>
     );
   }

@@ -99,6 +99,27 @@ logged), and the API echoes the effective `inputs` a read ran on.
 - **Trip planning** — a single outbound link to
   [Tourism Malaysia](https://www.malaysia.travel/) on `/predict`, replacing the
   old in-app tourism/itinerary panel (a different user's job than race strategy).
+- **Live transit access** (`/tickets`) — a real-time ETL read on public transit
+  toward Sepang, built on Malaysia's official open-data GTFS feeds
+  ([developer.data.gov.my](https://developer.data.gov.my)) for Prasarana
+  (RapidKL): fetch the static route/stop feed, match it by name against the
+  Sepang/KLIA corridor, fetch live GTFS-Realtime vehicle positions for any
+  matched route, and estimate ETA via a documented heuristic (live GPS
+  distance ÷ the vehicle's own live speed, or a conservative fallback pace
+  when it's stationary) — not a trained ML model, since no historical
+  arrival-time data exists yet for a route that's never been mapped this way
+  before; this service's own live reads are the path to a real one later. Two
+  honesty gaps stated plainly rather than hidden: no official F1 2026
+  race-weekend shuttle to the circuit has been announced yet (past years ran
+  RapidKL charter shuttles — event charters, never part of the standing GTFS
+  network), and the standing bus network has no stop at the circuit gate
+  itself, so this reports live ETA to the nearest real stop it can find
+  toward the corridor, not the venue. See
+  `backend/app/services/transit_service.py`'s module docstring for the full
+  design and its verification gap (api.data.gov.my is blocked by this
+  project's dev sandbox, so it was built and unit-tested against a mocked
+  transport plus a real, synthetically-constructed GTFS-RT protobuf message —
+  same pattern as `telemetry_service.py`'s OpenF1 gap).
 - **Deep links** — `/predict?session=FP2` preselects that session; with no
   param the page falls back to `getLiveOrNextSession()` against the 2026
   weekend schedule (Jolpica/Ergast round 16 at Sepang — the Bahrain Grand
@@ -116,8 +137,11 @@ logged), and the API echoes the effective `inputs` a read ran on.
   driver also carries a "last time out" recap of the 2026 Dutch Grand
   Prix at Zandvoort — the most recently completed real round — WebSearch-
   verified rather than invented; deep-linkable via `/drivers?driver=<id>`.
-  A compact 2025 championship standings strip (top five drivers and
-  constructors) is fetched live from Jolpica/Ergast rather than hand-copied.
+  A compact championship standings strip (top five drivers and
+  constructors) tracks the current, still-in-progress season live from
+  Jolpica/Ergast (refetched every few minutes server-side, not a fixed
+  snapshot) rather than hand-copied — a different, deliberately static
+  number from the career-totals-through-2025 stats above it.
 - **Teams** (`/teams`) — all 11 constructors (base, 2026 power unit,
   constructors' titles, roster, and the same Zandvoort recap from the
   team's side) as neutral engineer sheets.
