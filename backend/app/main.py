@@ -15,6 +15,18 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.frontend_origin, "http://localhost:3000"],
+    # Belt-and-suspenders alongside allow_origins above: this project's
+    # Vercel frontend is reachable from its production domain *and* a new
+    # preview subdomain on every branch/PR (jalur-apex-gp-git-<branch>-
+    # <team>.vercel.app, jalur-apex-gp-<hash>-<team>.vercel.app, …) — an
+    # ever-changing set that FRONTEND_ORIGIN (one fixed string, defaulting
+    # to localhost) can't cover, and did in fact leave preflight requests
+    # from the deployed production origin rejected with a plain 400
+    # ("Disallowed CORS origin") until this was added — confirmed against
+    # this project's own runtime logs (OPTIONS /predict 400) rather than
+    # assumed. Scoped to this exact project name so it doesn't accidentally
+    # allow every *.vercel.app site.
+    allow_origin_regex=r"https://jalur-apex-gp(-[a-zA-Z0-9]+)*\.vercel\.app$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
