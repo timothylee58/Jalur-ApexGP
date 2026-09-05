@@ -19,40 +19,71 @@ race number) per docs/BRAND.md.
 from __future__ import annotations
 
 import argparse
+import math
 from pathlib import Path
 
 import numpy as np
 import trimesh
 from scipy.interpolate import splev, splprep
 
-# Loosely-shaped anchor points for a closed circuit loop (main straight,
-# a hairpin complex, a sweeping middle sector, a back straight, a final
-# hairpin) — a stylized impression, not survey data, same "traced by eye"
-# standard CircuitExplorer3D.tsx's own TRACK_POINTS already holds itself
-# to. Not meant to line up with that component's separate 2D trace.
-TRACK_ANCHORS = np.array(
-    [
-        [-15.0, 0.0, 5.0],
-        [-20.0, 0.0, 5.0],
-        [-24.0, 0.0, 2.0],
-        [-23.0, 0.0, -1.0],
-        [-18.0, 0.0, -4.0],
-        [-10.0, 0.0, -6.0],
-        [-3.0, 0.0, -9.0],
-        [2.0, 0.0, -8.0],
-        [6.0, 0.0, -4.0],
-        [4.0, 0.0, 0.0],
-        [8.0, 0.0, 4.0],
-        [15.0, 0.0, 7.0],
-        [22.0, 0.0, 8.0],
-        [24.0, 0.0, -2.0],
-        [23.0, 0.0, -7.0],
-        [0.0, 0.0, 5.0],
-    ]
-)
+# Sepang apex centreline: (lat, lon, elevation_m ASL). Same 18-point data as
+# scripts/blender/sepang_circuit_scene.py and frontend/data/sepangCircuit.ts —
+# a close, honest centreline (not a laser survey). Projecting these here means
+# the exported GLB reproduces the circuit's real shape and its ~22 m elevation
+# change (T3/T4 crest high, T11/T12 dip low) rather than a traced-by-eye loop.
+APEX_POINTS = [
+    ("Start/Finish", 2.76070, 101.73830, 27.0),
+    ("T1 Entry", 2.76455, 101.73975, 26.0),
+    ("T1 Apex", 2.76560, 101.74020, 25.0),
+    ("T2 Apex", 2.76525, 101.74085, 20.0),
+    ("T3 Apex", 2.76280, 101.74270, 39.0),
+    ("T4 Apex", 2.75790, 101.74310, 36.0),
+    ("T5 Apex", 2.75470, 101.74040, 33.0),
+    ("T6 Apex", 2.75405, 101.73880, 31.0),
+    ("T7 Apex", 2.75230, 101.73600, 28.0),
+    ("T8 Apex", 2.75250, 101.73420, 26.0),
+    ("T9 Apex", 2.75620, 101.73350, 30.0),
+    ("T10 Apex", 2.75780, 101.73480, 27.0),
+    ("T11 Apex", 2.75920, 101.73280, 17.0),
+    ("T12 Apex", 2.75750, 101.73080, 18.0),
+    ("T13 Apex", 2.75630, 101.72890, 23.0),
+    ("T14 Apex", 2.75820, 101.72750, 26.0),
+    ("Back Straight Mid", 2.76180, 101.73710, 29.0),
+    ("T15 Hairpin", 2.76495, 101.73835, 26.0),
+]
 
-TRACK_WIDTH = 1.2
-TRACK_SAMPLES = 300
+# Horizontal size of the exported loop (three.js units). CircuitModelPreview
+# re-normalises on load, so this is just an authoring scale.
+PLANAR_TARGET = 34.0
+# Vertical is exaggerated relative to horizontal so the 22 m real elevation
+# change actually reads on a ~1.5 km-wide layout — flagged so it's not mistaken
+# for true-scale relief.
+VERT_EXAGGERATION = 6.0
+
+
+def _projected_anchors() -> np.ndarray:
+    """Project the apex lat/lon/elev to centred three.js (x, y=up, z) units."""
+    lat0, lon0 = APEX_POINTS[0][1], APEX_POINTS[0][2]
+    m_per_deg_lat = 110540.0
+    m_per_deg_lon = 111320.0 * math.cos(math.radians(lat0))
+
+    xs = np.array([(lon - lon0) * m_per_deg_lon for _, _, lon, _ in APEX_POINTS])
+    zs = np.array([-(lat - lat0) * m_per_deg_lat for _, lat, _, _ in APEX_POINTS])
+    elev = np.array([e for *_, e in APEX_POINTS])
+
+    span = max(xs.max() - xs.min(), zs.max() - zs.min()) or 1.0
+    scale = PLANAR_TARGET / span
+    xs = (xs - xs.mean()) * scale
+    zs = (zs - zs.mean()) * scale
+    ys = (elev - elev.min()) * scale * VERT_EXAGGERATION
+
+    return np.column_stack([xs, ys, zs])
+
+
+TRACK_ANCHORS = _projected_anchors()
+
+TRACK_WIDTH = 0.9
+TRACK_SAMPLES = 400
 
 
 def create_sepang_circuit(out_path: Path) -> None:
