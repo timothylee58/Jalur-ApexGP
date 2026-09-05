@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import type { Driver } from "@/data/drivers";
 import { accentForDriver, hexToThree, inkForAccent } from "@/lib/driverAccent";
+import { photoForDriver } from "@/lib/driverPhotos";
 
 interface DriverGridSceneProps {
   drivers: Driver[];
@@ -33,8 +34,28 @@ function layoutPosition(index: number, era: Driver["era"]): { x: number; z: numb
   };
 }
 
-function badgeTexture(
-  label: string,
+function numberBadgeTexture(label: string, primaryHex: string): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, 128, 128);
+  ctx.fillStyle = primaryHex;
+  ctx.beginPath();
+  ctx.arc(64, 64, 58, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = inkForAccent(primaryHex);
+  ctx.font = "700 52px 'Geist Mono', ui-monospace, monospace";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 64, 68);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function initialsFallbackTexture(
+  initials: string,
   primaryHex: string,
   secondaryHex: string,
 ): THREE.CanvasTexture {
@@ -42,38 +63,29 @@ function badgeTexture(
   canvas.width = 256;
   canvas.height = 256;
   const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, 256, 256);
-
-  const gradient = ctx.createLinearGradient(40, 20, 220, 230);
+  const gradient = ctx.createLinearGradient(0, 0, 256, 256);
   gradient.addColorStop(0, primaryHex);
   gradient.addColorStop(1, secondaryHex);
   ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.ellipse(128, 128, 100, 110, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#0a0c0e";
-  ctx.beginPath();
-  ctx.ellipse(128, 108, 72, 38, 0, 0, Math.PI * 2);
-  ctx.fill();
-
+  ctx.fillRect(0, 0, 256, 256);
   ctx.fillStyle = inkForAccent(primaryHex);
-  ctx.font = "700 64px 'Geist Mono', ui-monospace, monospace";
+  ctx.font = "700 72px 'Geist Mono', ui-monospace, monospace";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(label, 128, 168);
-
+  ctx.fillText(initials.slice(0, 2).toUpperCase(), 128, 136);
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   return texture;
 }
 
-function buildHelmet(
+function buildPhotoMarker(
   primary: number,
   secondary: number,
   label: string,
   primaryHex: string,
   secondaryHex: string,
+  initials: string,
+  photoUrl: string | null,
   disposables: Array<{ dispose: () => void }>,
 ): { group: THREE.Group; shell: THREE.Mesh; base: THREE.Mesh } {
   const group = new THREE.Group();
@@ -91,95 +103,74 @@ function buildHelmet(
   group.add(base);
   disposables.push(baseGeo, baseMat);
 
-  // Pedestal stem
-  const stemGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.1, 12);
+  const stemGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.08, 12);
   const stemMat = new THREE.MeshStandardMaterial({
     color: secondary,
     roughness: 0.45,
     metalness: 0.4,
   });
   const stem = new THREE.Mesh(stemGeo, stemMat);
-  stem.position.y = 0.085;
+  stem.position.y = 0.075;
   group.add(stem);
   disposables.push(stemGeo, stemMat);
 
-  // Helmet shell — slightly flattened sphere
-  const shellGeo = new THREE.SphereGeometry(0.12, 32, 24);
-  shellGeo.scale(1.05, 0.92, 1.12);
-  const shellMat = new THREE.MeshStandardMaterial({
+  // Team-color ring behind the portrait
+  const ringGeo = new THREE.RingGeometry(0.115, 0.145, 40);
+  const ringMat = new THREE.MeshStandardMaterial({
     color: primary,
     emissive: primary,
-    emissiveIntensity: 0.14,
-    roughness: 0.28,
-    metalness: 0.4,
-  });
-  const shell = new THREE.Mesh(shellGeo, shellMat);
-  shell.position.y = 0.22;
-  group.add(shell);
-  disposables.push(shellGeo, shellMat);
-
-  // Dark visor band
-  const visorGeo = new THREE.TorusGeometry(0.085, 0.028, 10, 28, Math.PI * 1.15);
-  const visorMat = new THREE.MeshStandardMaterial({
-    color: 0x050608,
-    roughness: 0.12,
-    metalness: 0.85,
-  });
-  const visor = new THREE.Mesh(visorGeo, visorMat);
-  visor.rotation.x = Math.PI / 2.15;
-  visor.position.set(0, 0.215, 0.04);
-  group.add(visor);
-  disposables.push(visorGeo, visorMat);
-
-  // Chin bar
-  const chinGeo = new THREE.BoxGeometry(0.11, 0.035, 0.07);
-  const chinMat = new THREE.MeshStandardMaterial({
-    color: primary,
-    roughness: 0.35,
-    metalness: 0.3,
-  });
-  const chin = new THREE.Mesh(chinGeo, chinMat);
-  chin.position.set(0, 0.145, 0.07);
-  group.add(chin);
-  disposables.push(chinGeo, chinMat);
-
-  // Rear aero ridge
-  const ridgeGeo = new THREE.BoxGeometry(0.04, 0.035, 0.08);
-  const ridgeMat = new THREE.MeshStandardMaterial({
-    color: secondary,
+    emissiveIntensity: 0.35,
     roughness: 0.4,
-    metalness: 0.35,
+    metalness: 0.3,
+    side: THREE.DoubleSide,
   });
-  const ridge = new THREE.Mesh(ridgeGeo, ridgeMat);
-  ridge.position.set(0, 0.28, -0.08);
-  ridge.rotation.x = -0.35;
-  group.add(ridge);
-  disposables.push(ridgeGeo, ridgeMat);
+  const ring = new THREE.Mesh(ringGeo, ringMat);
+  ring.rotation.x = -Math.PI / 2.4;
+  ring.position.y = 0.2;
+  group.add(ring);
+  disposables.push(ringGeo, ringMat);
 
-  // Number plate on cheek
-  const texture = badgeTexture(label, primaryHex, secondaryHex);
-  const plateMat = new THREE.MeshBasicMaterial({
-    map: texture,
+  const fallback = initialsFallbackTexture(initials, primaryHex, secondaryHex);
+  const portraitMat = new THREE.MeshStandardMaterial({
+    map: fallback,
+    roughness: 0.55,
+    metalness: 0.05,
+  });
+  const portraitGeo = new THREE.CircleGeometry(0.12, 40);
+  const shell = new THREE.Mesh(portraitGeo, portraitMat);
+  shell.rotation.x = -Math.PI / 2.4;
+  shell.position.y = 0.205;
+  group.add(shell);
+  disposables.push(portraitGeo, portraitMat, fallback);
+
+  if (photoUrl) {
+    const loader = new THREE.TextureLoader();
+    loader.load(
+      photoUrl,
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        portraitMat.map = texture;
+        portraitMat.needsUpdate = true;
+        disposables.push(texture);
+      },
+      undefined,
+      () => {
+        // Keep initials fallback if the headshot fails.
+      },
+    );
+  }
+
+  const badge = numberBadgeTexture(label, primaryHex);
+  const badgeMat = new THREE.SpriteMaterial({
+    map: badge,
     transparent: true,
     depthWrite: false,
   });
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.12), plateMat);
-  plate.position.set(0.09, 0.2, 0.06);
-  plate.rotation.y = Math.PI / 2.6;
-  group.add(plate);
-  disposables.push(texture, plateMat, plate.geometry);
-
-  const spriteMat = new THREE.SpriteMaterial({
-    map: texture,
-    transparent: true,
-    depthWrite: false,
-    opacity: 0.95,
-  });
-  const sprite = new THREE.Sprite(spriteMat);
-  sprite.position.y = 0.4;
-  sprite.scale.set(0.22, 0.22, 1);
-  group.add(sprite);
-  disposables.push(spriteMat);
+  const badgeSprite = new THREE.Sprite(badgeMat);
+  badgeSprite.position.set(0.11, 0.12, 0.08);
+  badgeSprite.scale.set(0.11, 0.11, 1);
+  group.add(badgeSprite);
+  disposables.push(badge, badgeMat);
 
   return { group, shell, base };
 }
@@ -266,12 +257,15 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
       const label =
         driver.number !== null ? String(driver.number) : driver.initials.slice(0, 2);
 
-      const { group, shell, base } = buildHelmet(
+      const photoUrl = photoForDriver(driver.id);
+      const { group, shell, base } = buildPhotoMarker(
         primary,
         secondary,
         label,
         accent.primary,
         accent.secondary,
+        driver.initials,
+        photoUrl,
         disposables,
       );
       group.position.set(x, 0, z);

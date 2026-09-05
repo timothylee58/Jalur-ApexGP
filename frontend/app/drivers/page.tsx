@@ -62,11 +62,12 @@ function DriversView() {
           Every seat on the grid
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Real drivers, real career numbers — stylized helmet markers with
-          constructor accent colors, not photos or likenesses. Stats are
-          career totals through the 2025 season close, the season this grid
-          enters 2026 with, not a live in-season feed. Markers are paired by
-          team, not a real qualifying or grid order.
+          Real drivers, real career numbers — headshots in constructor-color
+          rings with race numbers. Stats are career totals through the 2025
+          season close, the season this grid enters 2026 with, not a live
+          in-season feed. Markers are paired by team, not a real qualifying
+          or grid order. Unofficial fan project — photos for identification
+          only, not licensed merch.
         </p>
 
         <StandingsStrip />
@@ -122,6 +123,7 @@ function DriversView() {
                 const accent = accentForDriver(driver);
                 return (
                   <DriverAvatar
+                    driverId={driver.id}
                     initials={driver.initials}
                     number={driver.number}
                     accent={accent.primary}
@@ -157,6 +159,7 @@ function DriversView() {
                 const accent = accentForDriver(selected);
                 return (
                   <DriverAvatar
+                    driverId={selected.id}
                     initials={selected.initials}
                     number={selected.number}
                     accent={accent.primary}
