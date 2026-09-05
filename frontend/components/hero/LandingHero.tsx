@@ -77,9 +77,17 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-3 max-w-2xl font-display text-5xl uppercase tracking-wide sm:text-6xl md:text-7xl"
+          className="mt-3 max-w-3xl"
         >
-          Jalur APEXGP
+          <img
+            src="/brand/jalur-apexgp.png"
+            alt="Jalur APEXGP"
+            width={500}
+            height={500}
+            className="h-auto w-[min(100%,22rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
+            decoding="async"
+            fetchPriority="high"
+          />
         </motion.h1>
         <motion.p
           custom={0.28}
