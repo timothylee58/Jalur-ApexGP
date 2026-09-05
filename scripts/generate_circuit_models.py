@@ -96,8 +96,27 @@ def _projected_anchors() -> np.ndarray:
 
 TRACK_ANCHORS = _projected_anchors()
 
-TRACK_WIDTH = 0.9
+# v1 was a single flat, zero-thickness ribbon with every normal hardcoded
+# straight up — at this scale (0.9 units wide against a 34-unit loop) that
+# rendered as a near-invisible hairline outline with no shading variation
+# at all, so the whole point of this model (a *visible* ~22 m elevation
+# change) never actually read on screen. v2 extrudes a real slab (top +
+# two side walls + bottom) with the top face's normals derived from the
+# actual 3D tangent, so a directional light visibly shades the climbs and
+# descents instead of lighting the whole loop uniformly.
+TRACK_WIDTH = 1.6
+SLAB_HEIGHT = 0.6
 TRACK_SAMPLES = 400
+# This app's own `paper.dim` token (#a39b8f) — a warm gray already vetted
+# in docs/BRAND.md as legible against the asphalt background. Kept as the
+# top/road face only now; the walls below get a second, darker tone so the
+# ribbon reads as a raised shape by color contrast alone, before lighting
+# even factors in.
+ROAD_COLOR = [163, 155, 143, 255]
+# `asphalt.line` (#2a3036) — an existing border/divider token, not a new
+# color introduced for this model (docs/BRAND.md's "every color should be
+# legible as a signal" / no arbitrary decorative colors).
+WALL_COLOR = [42, 48, 54, 255]
 
 
 def create_sepang_circuit(out_path: Path) -> None:
@@ -110,63 +129,125 @@ def create_sepang_circuit(out_path: Path) -> None:
     centerline = np.array(splev(u, tck)).T
 
     n = len(centerline)
-    vertices = np.zeros((n * 2, 3))
+    # Eight vertex rings, each n long: the top face (road) and the two
+    # walls + bottom face (all sharing the same edge *positions* as the
+    # top ring but needing their own vertex copies, since each face needs
+    # its own flat-shaded normal — a shared vertex can only carry one
+    # normal, and a road top and a vertical wall meeting at a hard edge
+    # need genuinely different ones).
+    top_l = np.zeros((n, 3))
+    top_r = np.zeros((n, 3))
+    wall_l_top = np.zeros((n, 3))
+    wall_l_bot = np.zeros((n, 3))
+    wall_r_top = np.zeros((n, 3))
+    wall_r_bot = np.zeros((n, 3))
+    bot_l = np.zeros((n, 3))
+    bot_r = np.zeros((n, 3))
+    normal_top = np.zeros((n, 3))
+    normal_wall_l = np.zeros((n, 3))
+    normal_wall_r = np.zeros((n, 3))
+
     for i in range(n):
         point = centerline[i]
         next_point = centerline[(i + 1) % n]
         tangent = next_point - point
-        # In-plane sideways offset (perpendicular to the direction of
-        # travel, not the surface normal — the mesh is flat at y=0, so its
-        # actual surface normal is simply straight up, set explicitly
-        # below rather than derived from this).
-        lateral = np.array([-tangent[2], 0.0, tangent[0]])
+        horizontal_tangent = np.array([tangent[0], 0.0, tangent[2]])
+        # In-plane sideways offset (perpendicular to the *horizontal*
+        # direction of travel — width is measured across the ground, not
+        # along the slope, so a steep section isn't narrower than a flat
+        # one).
+        lateral = np.array([-horizontal_tangent[2], 0.0, horizontal_tangent[0]])
         length = np.linalg.norm(lateral)
         # A repeated or collinear anchor could zero out the tangent; fall
-        # back to the previous vertex's offset rather than dividing by
+        # back to the previous station's lateral rather than dividing by
         # zero. Doesn't happen with TRACK_ANCHORS as given, but a mesh
         # generator that can silently emit NaN vertices on bad input is a
         # worse failure mode than a rare visible kink.
         if length < 1e-9:
-            lateral = (vertices[(i - 1) * 2] - vertices[(i - 1) * 2 + 1]) if i > 0 else np.array([1.0, 0.0, 0.0])
+            lateral = lateral if i == 0 else (top_l[i - 1] - top_r[i - 1])
             length = np.linalg.norm(lateral) or 1.0
         lateral /= length
-        vertices[i * 2] = point + lateral * (TRACK_WIDTH / 2.0)
-        vertices[i * 2 + 1] = point - lateral * (TRACK_WIDTH / 2.0)
+
+        # The top face's real surface normal — cross(lateral, tangent),
+        # not a hardcoded straight-up vector — so it tilts forward/back
+        # with the actual climb or descent between these two samples.
+        # That tilt is what lets a directional light shade the hills at
+        # all; a flat up-normal lit the whole loop identically regardless
+        # of elevation.
+        n_top = np.cross(lateral, tangent)
+        n_top_len = np.linalg.norm(n_top)
+        n_top = n_top / n_top_len if n_top_len > 1e-9 else np.array([0.0, 1.0, 0.0])
+        if n_top[1] < 0:
+            n_top = -n_top  # keep it pointing generally upward
+
+        top_l[i] = point + lateral * (TRACK_WIDTH / 2.0)
+        top_r[i] = point - lateral * (TRACK_WIDTH / 2.0)
+        drop = np.array([0.0, SLAB_HEIGHT, 0.0])
+        wall_l_top[i] = top_l[i]
+        wall_l_bot[i] = top_l[i] - drop
+        wall_r_top[i] = top_r[i]
+        wall_r_bot[i] = top_r[i] - drop
+        bot_l[i] = wall_l_bot[i]
+        bot_r[i] = wall_r_bot[i]
+        normal_top[i] = n_top
+        normal_wall_l[i] = lateral  # outer wall faces outward, +lateral
+        normal_wall_r[i] = -lateral  # inner wall faces outward, -lateral
+
+    rings = [top_l, top_r, wall_l_top, wall_l_bot, wall_r_top, wall_r_bot, bot_l, bot_r]
+    vertices = np.concatenate(rings, axis=0)
+    normals = np.concatenate(
+        [
+            normal_top, normal_top,  # top face: both edges share the station's tilt
+            normal_wall_l, normal_wall_l,
+            normal_wall_r, normal_wall_r,
+            -normal_top, -normal_top,  # bottom face: mirror of the top tilt, facing down
+        ],
+        axis=0,
+    )
+    colors = np.concatenate(
+        [
+            np.tile(ROAD_COLOR, (2 * n, 1)),  # top_l, top_r
+            np.tile(WALL_COLOR, (6 * n, 1)),  # both walls + bottom
+        ],
+        axis=0,
+    )
 
     # Both winding orders for every quad: trimesh's GLB export doesn't
     # attach a material to a pure-vertex-color mesh (confirmed by
     # inspecting the exported JSON — no material, so viewers fall back to
-    # a default single-sided one), and this ribbon's own winding direction
-    # from these anchor points isn't something worth hand-deriving. Two
-    # opposite-wound copies of every triangle render correctly regardless
-    # of which way any given viewer treats as "front".
-    faces = []
-    for i in range(n):
-        a = i * 2
-        b = ((i + 1) % n) * 2
-        faces.append([a, a + 1, b])
-        faces.append([a + 1, b + 1, b])
-        faces.append([a, b, a + 1])
-        faces.append([a + 1, b, b + 1])
+    # a default single-sided one), and deriving the "correct" winding by
+    # hand for four different face strips isn't worth it when the actual
+    # shading now comes entirely from the explicit per-vertex normals
+    # above (winding order plays no part in that). Two opposite-wound
+    # copies of every triangle render correctly regardless of which way
+    # any given viewer treats as "front".
+    def strip_faces(ring_a: np.ndarray, ring_b: np.ndarray) -> list[list[int]]:
+        faces = []
+        for i in range(n):
+            a, b = ring_a[i], ring_b[i]
+            a2, b2 = ring_a[(i + 1) % n], ring_b[(i + 1) % n]
+            faces.append([a, a2, b])
+            faces.append([a2, b2, b])
+            faces.append([a, b, a2])
+            faces.append([a2, b, b2])
+        return faces
+
+    idx = np.arange(8 * n).reshape(8, n)
+    top_l_idx, top_r_idx, wl_top_idx, wl_bot_idx, wr_top_idx, wr_bot_idx, bot_l_idx, bot_r_idx = idx
+    faces = (
+        strip_faces(top_l_idx, top_r_idx)
+        + strip_faces(wl_top_idx, wl_bot_idx)
+        + strip_faces(wr_top_idx, wr_bot_idx)
+        + strip_faces(bot_l_idx, bot_r_idx)
+    )
 
     # process=False skips trimesh's default vertex-merge pass — unnecessary
     # here since every vertex is already exactly where it should be, and
-    # merging by proximity risks welding the ribbon's two near-parallel
-    # edges together wherever the track pinches tight.
+    # merging by proximity would weld faces that are deliberately
+    # duplicated (same position, different normal) at every hard edge.
     track_mesh = trimesh.Trimesh(vertices=vertices, faces=np.array(faces), process=False)
-    # Explicit straight-up normals rather than fix_normals(): this is a
-    # flat mesh at y=0, so "up" is trivially correct, and fix_normals()'s
-    # winding-based inference has no reliable "outward" to find on an
-    # open, doubled-winding strip like this one anyway.
-    track_mesh.vertex_normals = np.tile([0.0, 1.0, 0.0], (len(vertices), 1))
-    # This app's own `paper.dim` token (#a39b8f) — a warm gray already
-    # vetted in docs/BRAND.md as legible against the asphalt background,
-    # not a shade picked freehand. Two darker grays tried first (matching
-    # the asphalt tokens, then a mid gray) both nearly disappeared against
-    # the scene's equally-dark background under single-directional-light
-    # shading; this is the first one that actually reads as a track line
-    # at the preview's small on-page size.
-    track_mesh.visual.vertex_colors = [163, 155, 143, 255]
+    track_mesh.vertex_normals = normals
+    track_mesh.visual.vertex_colors = colors
     out_path.parent.mkdir(parents=True, exist_ok=True)
     # include_normals=True: trimesh's own heuristic for whether to bother
     # writing a NORMAL accessor skipped it here by default even with
