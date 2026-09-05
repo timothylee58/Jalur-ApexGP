@@ -8,6 +8,30 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const MODEL_SRC = "/models/sepang.glb";
 
+// Initial camera framing mirrors a real establishing shot of the pit
+// straight / main grandstand, from this Google Earth reference view:
+// https://earth.google.com/web/@2.75990886,101.73779433,36.25740786a,1930.44055644d,35y,48.48808706h,60t,0r
+// (heading 48.49°, tilt 60° from nadir — i.e. 30° of elevation above the
+// horizon; that target point sits ~104 m from this model's own
+// Start/Finish apex, per data/sepangCircuit.ts). The model's own axes
+// (scripts/generate_circuit_models.py's lat/lon projection) put +X = east
+// and -Z = north, so a camera *facing* that heading sits on the opposite
+// bearing (heading + 180°) from the target it's looking at; the tilt's
+// elevation angle sets the height-to-horizontal-distance ratio. Overall
+// distance is picked to roughly match the old hardcoded framing's zoom
+// level, not the real 1930 m the reference shot was taken from.
+const CAMERA_HEADING_DEG = 48.48808706;
+const CAMERA_ELEVATION_DEG = 90 - 60; // tilt is measured from nadir, not the horizon
+const CAMERA_DISTANCE = 7.8;
+
+function initialCameraPosition(): THREE.Vector3 {
+  const heading = (CAMERA_HEADING_DEG * Math.PI) / 180;
+  const elevation = (CAMERA_ELEVATION_DEG * Math.PI) / 180;
+  const horizontal = CAMERA_DISTANCE * Math.cos(elevation);
+  const height = CAMERA_DISTANCE * Math.sin(elevation);
+  return new THREE.Vector3(-horizontal * Math.sin(heading), height, horizontal * Math.cos(heading));
+}
+
 export function CircuitModelPreview() {
   const mountRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "missing">("loading");
@@ -40,7 +64,7 @@ export function CircuitModelPreview() {
         0.1,
         200
       );
-      camera.position.set(4.5, 3.2, 5.5);
+      camera.position.copy(initialCameraPosition());
 
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
