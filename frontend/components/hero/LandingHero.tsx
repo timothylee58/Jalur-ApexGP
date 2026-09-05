@@ -17,6 +17,13 @@ const fadeUp = {
   }),
 };
 
+const EXPLORE = [
+  { href: "/circuit", label: "Corner-by-corner 3D" },
+  { href: "/apple-design", label: "Product reveal" },
+  { href: "/lore", label: "Circuit lore" },
+  { href: "/tickets", label: "Seat orientation" },
+] as const;
+
 export function LandingHero() {
   return (
     <div className="relative min-h-[100dvh] overflow-hidden">
