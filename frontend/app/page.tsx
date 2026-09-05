@@ -25,6 +25,9 @@ export default function HomePage() {
             <Link href="/circuit" className="hover:text-paper">
               Corner-by-corner 3D
             </Link>
+            <Link href="/accuracy" className="hover:text-paper">
+              Prediction accuracy
+            </Link>
             <Link href="/apple-design" className="hover:text-paper">
               Product reveal
             </Link>

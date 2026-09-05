@@ -273,7 +273,7 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
       ref={mountRef}
       className="h-[52vh] w-full cursor-grab overflow-hidden rounded-lg border border-paper/10 bg-asphalt active:cursor-grabbing sm:h-[60vh]"
       role="img"
-      aria-label="Interactive stylized 3D model of the Sepang International Circuit layout with four corner markers"
+      aria-label="Interactive stylized 3D model of the Sepang International Circuit layout with all 15 corner markers"
     />
   );
 }

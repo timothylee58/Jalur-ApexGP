@@ -10,8 +10,10 @@ Sepang / Selangor / KL attraction notes, grouped by drive time from the circuit.
 
 ## Architecture
 
-Next.js (Vercel) → FastAPI (Railway) → Open-Meteo + deterministic strategy
-blend → MLflow run logging. No database, no auth — stateless, public, read-only.
+Next.js (Vercel) → FastAPI (Vercel, Python serverless) → Open-Meteo +
+deterministic strategy blend → MLflow run logging (Databricks-hosted).
+No database, no auth — stateless, public, read-only except for the
+accuracy loop's outcome log (see below), which is also just an MLflow run.
 
 **Note on "AI":** the strategy engine is a climatology / live-data blend, not a
 trained ML model. MLflow is used for experiment lifecycle tracking.
@@ -34,6 +36,19 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
   drive-time itinerary builder and per-stop "leave by" countdown.
 - **Ticket orientation** (`/tickets`) — grandstand names and seating
   categories, no pricing, no sales.
+- **Circuit explorer** (`/circuit`) — a stylized interactive 3D model
+  covering all 15 named Sepang corners, traced from the circuit's published
+  general map (not survey-grade geometry). Turns 5–7, 9, and 15 carry the
+  strategy engine's own reasoning hooks.
+- **Prediction accuracy** (`/accuracy`) — a results-based scoring loop, not
+  a self-reported confidence number. Every `/predict` call already logs an
+  MLflow run; this page lets you report what actually happened (rain
+  occurred, actual pit lap) for the same day, and scores both strategy
+  variants against it — a Brier-score-based rain-call accuracy and a
+  pit-window hit/miss, blended into one composite score per variant. See
+  `backend/app/services/scoring_service.py` for the scoring math (pure,
+  unit-tested) and `backend/app/core/mlflow_client.py`'s `get_accuracy` for
+  how same-day prediction and outcome runs are joined.
 
 ## Known gaps (next session priorities)
 

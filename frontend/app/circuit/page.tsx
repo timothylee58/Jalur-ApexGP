@@ -23,15 +23,15 @@ export default function CircuitPage() {
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
           Drag to orbit, or tap a corner below. This is a stylized model
           traced from the circuit&apos;s published general map — not
-          survey-grade geometry — built to showcase the same four corners
-          the strategy engine's own reasoning already names.
+          survey-grade geometry — covering all 15 named corners, with Turns
+          5–7, 9, and 15 carrying the strategy engine&apos;s own reasoning.
         </p>
 
         <div className="mt-6">
           <CircuitExplorer3D selectedId={selectedId} onSelect={setSelectedId} />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
           {circuitCorners.map((corner) => (
             <button
               key={corner.id}
