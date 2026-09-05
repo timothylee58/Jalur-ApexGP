@@ -48,7 +48,7 @@ export function CircuitMotionPreview() {
           </p>
         </HeroOverlay>
       </div>
-      <div className="h-[70vh] sm:h-[100vh] md:h-[120vh]" aria-hidden />
+      <div className="h-[50vh] sm:h-[100vh] md:h-[120vh]" aria-hidden />
     </div>
   );
 }
