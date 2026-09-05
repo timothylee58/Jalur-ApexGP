@@ -7,8 +7,9 @@
  * Edit `playlistId` once you've picked a real public playlist:
  * 1. Open the playlist in Spotify, "Share" → "Copy link to playlist".
  * 2. That link looks like https://open.spotify.com/playlist/<ID>?si=... —
- *    copy just the <ID> segment (before any "?") into `playlistId` below.
+ *    pasting the whole thing here works too (BgmPlayer.tsx extracts the
+ *    <ID> either way), but the bare ID is the cleaner value to keep.
  */
 export const bgm = {
-  playlistId: "https://open.spotify.com/playlist/3lxQkKfmR7kehvSmI8Fnpp?si=8MGjvFBGTMyW9VwWmeCI6Q",
+  playlistId: "3lxQkKfmR7kehvSmI8Fnpp",
 };
