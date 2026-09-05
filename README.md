@@ -37,32 +37,37 @@ logged), and the API echoes the effective `inputs` a read ran on.
   graphic, which docs/BRAND.md explicitly rules out and no amount of
   mosaic-ing fixes (the whole clip is FOM's copyrighted broadcast, not an
   incidental decal).
-- **Static circuit map hero** (landing page background) — the landing hero now
-  renders the static SVG Sepang map (projected from the project's own apex data
-  in `data/sepangCircuit.ts`), replacing the retired scroll-scrubbed flyover,
-  which depended on 48 WebP frames that were never committed. A "3D flyover"
-  toggle in the hero's link row swaps this for an opt-in alternative
-  (`CircuitFlyoverHero`) instead — a continuously-looping procedural three.js
-  scene, not video, so the reasons the old flyover was retired don't apply to
-  it: it's built from the same real apex-point centreline as `sepang.glb` and
-  the map itself (`lib/circuitFlyoverTrack.ts`), runs the unbranded `car.glb`
-  around the loop forever, and eases from a high aerial establishing shot into
-  a low chase cam on toggle-in. Off by default so the calmer static map is
-  still what visitors see first. The **Product
-  reveal** (`/apple-design`) still uses the scroll-scrubbed frame-sequence
-  mechanism (`ScrollFrameSequence`), populated with a time-windowed
-  sharp/mosaic treatment for a source clip with a sponsor mark partway through.
-  Two real
-  bugs surfaced and fixed at the shared `ScrollFrameSequence` component
-  itself (so every section built on it benefits): it never set a loaded
-  texture's `colorSpace`, shifting colors once real frames replaced the
-  solid fallback; and it mapped scroll progress to the whole document's
-  scroll height, so stacking a second full-bleed section on one page (or
-  adding content below a single one) started or ended its frame scrub off
-  from where the section itself was actually pinned. Fixed by measuring
-  progress against each section's own sticky-plus-spacer wrapper instead
-  (`rangeRef`), verified by scrolling both the landing page (two stacked
-  sequences) and `/apple-design` (one, plus content below it) end-to-end.
+- **Circuit video hero** (landing page background, and `/apple-design`) — both
+  now render `CircuitVideoHero`, a muted, looping, controls-free background
+  video (`hero-16x9.mp4` / `hero-9x16.mp4`) that behaves like a GIF, replacing
+  the landing page's earlier static SVG map default and `/apple-design`'s
+  scroll-scrubbed frame-sequence hero. The clip is AI-generated, not real
+  broadcast/aerial footage — this project has twice rejected real footage on
+  brand-safety grounds (see the lap-preview entry above and `docs/BRAND.md`'s
+  Imagery section) — generated against the explicit negative-prompt checklist
+  `docs/BRAND.md` now codifies, and verified frame-by-frame before use (one
+  AI-generated trackside sign with garbled, real-signage-like lettering was
+  found and blurred out; see `frontend/public/videos/README.md` for the exact
+  fix and verification). It ships as two actually-different renders rather
+  than one clip CSS-cropped: a 9:16 center crop for narrow viewports and the
+  native 16:9 otherwise, picked via `<source media>` art-direction (same
+  mechanism as `<picture>` — the browser picks once at load, not on resize).
+  A "3D flyover" toggle in the landing hero's link row swaps the video for an
+  opt-in alternative (`CircuitFlyoverHero`) instead — a continuously-looping
+  procedural three.js scene, built from the same real apex-point centreline as
+  `sepang.glb` and the map (`lib/circuitFlyoverTrack.ts`), running the
+  unbranded `car.glb` around the loop forever and easing from a high aerial
+  establishing shot into a low chase cam on toggle-in. Off by default so the
+  video is still what visitors see first.
+  The shared `ScrollFrameSequence` component (still used by the landing page's
+  "The lap" section below) had two real bugs surfaced and fixed while it was
+  still driving both hero sections: it never set a loaded texture's
+  `colorSpace`, shifting colors once real frames replaced the solid fallback;
+  and it mapped scroll progress to the whole document's scroll height, so
+  stacking a second full-bleed section on one page (or adding content below a
+  single one) started or ended its frame scrub off from where the section
+  itself was actually pinned. Fixed by measuring progress against each
+  section's own sticky-plus-spacer wrapper instead (`rangeRef`).
 - **Strategy simulator** (`/predict`) — session picker, dual strategy cards
   with distinct conservative/aggressive accents, confidence bars, a lap-by-lap
   stint plan, a pit-window band derived from modelled tyre life, reasoning +

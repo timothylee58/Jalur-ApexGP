@@ -81,13 +81,16 @@ explicit about being a heuristic, not a black box.
 - Attraction photos: Unsplash only, fetched at build time
   (`scripts/fetch-attraction-images.ts`), never hotlinked or scraped from
   tourism sites.
-- Circuit hero: the landing page background is a static SVG map by
-  default, with an opt-in procedural 3D flyover (`CircuitFlyoverHero`) —
-  neither is footage, so this rule doesn't constrain them. Any
-  frame-sequence hero (`/apple-design` still is one) must use originally
-  captured/extracted frames only (`scripts/extract-frames.py`) — never
-  official F1 broadcast footage, team media, or licensed circuit
-  photography.
+- Circuit hero: the landing page background and `/apple-design` both default
+  to `CircuitVideoHero`, a muted/looping/controls-free AI-generated video
+  (see `frontend/public/videos/README.md` for provenance and the
+  checklist below it was generated against), with an opt-in procedural 3D
+  flyover (`CircuitFlyoverHero`) as the landing page's alternate view —
+  neither is real footage, so the frame-sequence rule below doesn't
+  constrain them. Any frame-sequence hero (the landing page's "The lap"
+  section still is one) must use originally captured/extracted frames only
+  (`scripts/extract-frames.py`) — never official F1 broadcast footage, team
+  media, or licensed circuit photography.
 - No driver photos, no team liveries, no sponsor logos, anywhere.
 - Any AI-generated or synthetic motorsport imagery (e.g. a text-to-image
   prompt standing in for footage that can't be used) must exclude, as a

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { SepangCircuitMap } from "@/components/circuit/SepangCircuitMap";
 import { CircuitFlyoverHero } from "@/components/hero/CircuitFlyoverHero";
+import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
 import { SessionPicker } from "@/components/hero/SessionPicker";
 import { WATCH_THIS_WEEKEND } from "@/data/news";
 
@@ -20,13 +20,13 @@ const fadeUp = {
 };
 
 export function LandingHero() {
-  // Static SVG map is the default backdrop (see SepangCircuitMap below) —
-  // the landing hero's earlier scroll-scrubbed video flyover was retired
-  // for good reasons (see README). This 3D flyover is a from-scratch,
-  // opt-in alternative built on the same real apex-point centreline as
-  // sepang.glb and the map itself, not video, so none of those reasons
-  // apply to it — off by default so the calmer static map stays what
-  // visitors see first.
+  // Original synthetic video is the default backdrop (CircuitVideoHero) —
+  // the landing hero's earlier *real* scroll-scrubbed flyover was retired
+  // for good reasons (see README/BRAND.md): real broadcast/aerial footage
+  // twice failed the brand-safety bar. This clip is AI-generated against
+  // that same checklist instead, so none of those reasons apply to it.
+  // The 3D flyover stays as an opt-in alternate view, built on the same
+  // real apex-point centreline as sepang.glb and the 2D map.
   const [show3D, setShow3D] = useState(false);
 
   return (
@@ -46,14 +46,14 @@ export function LandingHero() {
             </motion.div>
           ) : (
             <motion.div
-              key="map"
-              className="flex h-full items-center justify-center"
+              key="video"
+              className="absolute inset-0"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <SepangCircuitMap muted className="h-[80%] max-h-[720px] w-auto opacity-30" />
+              <CircuitVideoHero className="pointer-events-none absolute inset-0" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -117,7 +117,7 @@ export function LandingHero() {
             aria-pressed={show3D}
             className="hover:text-paper"
           >
-            {show3D ? "Static map" : "3D flyover"}
+            {show3D ? "Lap video" : "3D flyover"}
           </button>
         </motion.div>
         <motion.p
