@@ -18,20 +18,35 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 
 ## Features
 
-- **Landing page lap preview** — a stylized, desaturated mosaic loop of a
-  car in motion at the circuit, sitting between the hero and the 3D track
-  model. Sourced from a user-supplied clip that showed real sponsor decals
-  and team livery colors; treated (grayscale, coarse-mosaic downsample) to
-  destroy every decal's legibility and strip the livery's color identity
-  before it went anywhere near the page — see `docs/BRAND.md`.
-- **Product reveal** (`/apple-design`) — the same scroll-scrubbed
-  frame-sequence mechanism as the landing page hero, now actually populated
-  (48 frames, same source clip and treatment as the lap preview above, via
-  `scripts/extract-frames.py --stylize`). Fixed a real bug this surfaced:
-  `ScrollFrameSequence` never set a texture's `colorSpace`, which shifted
-  colors once real (not fallback-color) frames finally loaded through it —
-  fixed at the shared component, so it also applies to `CircuitFrameSequence`
-  whenever the landing-page hero gets its own frames.
+- **Landing page lap preview** ("The lap") — a second full-bleed,
+  scroll-scrubbed hero, same mechanism as the circuit flyover above it,
+  stacked directly beneath it on the landing page. Source clip is a
+  generic, unbranded single-seater (no team livery, no sponsor decals) —
+  genuinely clean, so unlike the flyover and `/apple-design` it skips
+  `scripts/extract-frames.py --stylize` entirely; a background trackside
+  sign board in some shots was checked at native resolution and confirmed
+  not legible, not stylized to destroy it — see
+  `frontend/public/lap-preview-frames/README.md`. Replaced an earlier
+  compact-GIF-card version of this section, and an earlier still that used
+  real official F1 broadcast footage of the 2016 Malaysian Grand Prix — a
+  bird's-eye clip with a burned-in F1 logo watermark and a live telemetry
+  graphic, which docs/BRAND.md explicitly rules out and no amount of
+  mosaic-ing fixes (the whole clip is FOM's copyrighted broadcast, not an
+  incidental decal).
+- **Circuit hero flyover** (landing page background) and **Product reveal**
+  (`/apple-design`) — the same scroll-scrubbed frame-sequence mechanism,
+  both populated (48 frames each) with a time-windowed sharp/mosaic
+  treatment for a source clip with a sponsor mark partway through. Two real
+  bugs surfaced and fixed at the shared `ScrollFrameSequence` component
+  itself (so every section built on it benefits): it never set a loaded
+  texture's `colorSpace`, shifting colors once real frames replaced the
+  solid fallback; and it mapped scroll progress to the whole document's
+  scroll height, so stacking a second full-bleed section on one page (or
+  adding content below a single one) started or ended its frame scrub off
+  from where the section itself was actually pinned. Fixed by measuring
+  progress against each section's own sticky-plus-spacer wrapper instead
+  (`rangeRef`), verified by scrolling both the landing page (two stacked
+  sequences) and `/apple-design` (one, plus content below it) end-to-end.
 - **Predict flow** (`/predict`) — session picker, dual strategy cards with
   distinct conservative/aggressive accents, confidence bars, pit-window lap
   band, reasoning + key risk, a confidence-delta headline backed by the
@@ -51,7 +66,23 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 - **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
   (22 drivers, 11 teams, career stats through the 2025 season close) and a
   second "Sepang history" set tied to three moments in `/lore`. Initials-only
-  markers, no photos or team liveries — see `docs/BRAND.md`.
+  markers, no photos or team liveries — see `docs/BRAND.md`. Each 2026-grid
+  driver also carries a "last time out" recap of the 2026 Dutch Grand
+  Prix at Zandvoort — the most recently completed real round — WebSearch-
+  verified rather than invented; deep-linkable via `/drivers?driver=<id>`.
+- **Teams** (`/teams`) — all 11 constructors (base, 2026 power unit,
+  constructors' titles, roster, and the same Zandvoort recap from the
+  team's side), one neutral card style for every team rather than color-
+  coding by team — a fixed team→color mapping reads as a livery reference
+  once you know which team is which, exactly what `docs/BRAND.md` rules
+  out.
+- **News** (`/news`) — curated links to real F1 reporting, filterable by
+  category. Titles, sources, and this app's own one-line framing only —
+  never reproduced article text, per `docs/BRAND.md`. A live-session
+  ticker at the top shows synthetic, schedule-derived markers ("Lights
+  out", "Chequered flag imminent") only while `now` genuinely falls inside
+  the fixed Sepang weekend window; otherwise it says so plainly rather
+  than faking a live feed this app has no telemetry source for.
 
 ## Brand
 
@@ -66,12 +97,6 @@ Design tokens, voice/tone rules, and component patterns are documented in
   an empty placeholder. `scripts/fetch-attraction-images.ts` exists and is
   idempotent, but hasn't been run yet — needs `UNSPLASH_ACCESS_KEY` and
   outbound access to `api.unsplash.com`.
-- Circuit hero frames are not extracted yet, so `CircuitFrameSequence`
-  (the landing page's own flyover, distinct from `/apple-design`'s now-populated
-  sequence) still renders its solid-color fallback instead of real footage.
-  See `scripts/extract-frames.py` — needs a locally downloaded source video,
-  and `--stylize` if it shows any sponsor marks or team livery (see
-  `docs/BRAND.md`).
 - `eslint.config.mjs` imports `eslint-config-next/core-web-vitals` without
   the `.js` extension, so `next build` skips linting with a resolution
   error.
