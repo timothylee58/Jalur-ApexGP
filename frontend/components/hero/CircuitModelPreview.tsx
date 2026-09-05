@@ -146,15 +146,16 @@ export function CircuitModelPreview() {
         Orbit Sepang
       </h2>
       <p className="mt-2 max-w-xl text-sm text-paper-dim">
-        A 3D model of Sepang generated from the circuit&apos;s own apex +
-        elevation data (<code className="text-amber">scripts/generate_circuit_models.py</code>),
-        so the shape and its ~22&nbsp;m elevation change are real — vertical is
+        A 3D model of Sepang swept from shared apex + elevation data in{" "}
+        <code className="text-amber">frontend/data/sepang.json</code> via{" "}
+        <code className="text-amber">scripts/generate_circuit_models.py</code>
+        — same centreline as the 2D map and flyover. Vertical relief is
         exaggerated for readability. Drag to orbit.
       </p>
 
       <div
         ref={mountRef}
-        className="relative mt-6 h-64 overflow-hidden rounded-lg border border-paper/10 bg-asphalt sm:h-80"
+        className="relative mt-6 aspect-[16/10] min-h-56 w-full overflow-hidden rounded-lg border border-paper/10 bg-asphalt sm:min-h-72 md:min-h-80"
       >
         {status === "missing" ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center">

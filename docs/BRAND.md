@@ -15,13 +15,16 @@ into it is the opposite of what "no official misuse" is asking for.
 
 ## Wordmark
 
-There's no logo asset — the wordmark is the typography itself:
-**JALUR APEXGP**, set in Bebas Neue, uppercase, tracked wide
-(`tracking-wide` / `tracking-[0.35em]` for the smaller eyebrow use). Never
-add a logomark, icon badge, or checkered-flag motif — those read as
-borrowed motorsport iconography rather than an original mark, and the
-wordmark-only treatment is what keeps this visually distinct from any
-official F1 property.
+The landing hero uses the brand mark at `frontend/public/brand/jalur-apexgp.png`
+(white on transparent/black) as the primary headline — not Bebas Neue text.
+Keep the wordmark graphic large and above the supporting sentence. A circuit-
+outline variant also lives at `jalur-apexgp-circuit.png` for places that need
+a quieter mark.
+
+Elsewhere (nav, page titles), **JALUR APEXGP** can still be set in Bebas Neue,
+uppercase, tracked wide (`tracking-wide` / `tracking-[0.35em]` for smaller
+eyebrow use). Prefer the brand PNG on promotional surfaces; don't invent a
+third mark or borrow official F1 broadcast graphics.
 
 ## Color
 
@@ -170,7 +173,7 @@ area to keep "originally made," not less.
 
 - Don't use F1's red as a primary or accent color, even unintentionally —
   check any new accent against it before shipping.
-- Don't add a logomark, badge, or checkered/flag motif.
+- Prefer the supplied brand PNG over inventing new marks; avoid official F1 broadcast motifs.
 - Don't reproduce official grandstand pricing, team colors, or driver
   imagery.
 - Don't rewrite or excerpt real outlets' news articles as this app's own

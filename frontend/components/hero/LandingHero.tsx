@@ -77,16 +77,24 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-3 max-w-2xl font-display text-5xl uppercase tracking-wide sm:text-6xl md:text-7xl"
+          className="mt-3 max-w-3xl"
         >
-          Jalur APEXGP
+          <img
+            src="/brand/jalur-apexgp.png"
+            alt="Jalur APEXGP"
+            width={460}
+            height={180}
+            className="h-auto w-[min(100%,22rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
+            decoding="async"
+            fetchPriority="high"
+          />
         </motion.h1>
         <motion.p
           custom={0.28}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-4 max-w-xl text-sm text-paper-dim md:text-base"
+          className="mt-2 max-w-xl text-sm text-paper-dim md:text-base"
         >
           Unofficial race-engineer strategy simulator for the Sepang weekend. Pick a session, get
           conservative vs aggressive reads from a live weather blend, then run your own what-if

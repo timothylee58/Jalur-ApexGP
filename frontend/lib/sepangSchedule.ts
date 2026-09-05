@@ -15,13 +15,16 @@ interface ScheduledSession {
  * convention the old hand-written April stub used. Re-fetch via
  * `GET /api/schedule` if you need to confirm the upstream hasn't moved.
  */
-const SEPANG_2026: ScheduledSession[] = [
+/** Public schedule list — MYT (+08) windows for countdown, .ics, and checklist. */
+export const SEPANG_2026_SESSIONS: ScheduledSession[] = [
   { session: "FP1", start: "2026-10-02T12:30:00+08:00", end: "2026-10-02T13:30:00+08:00" },
   { session: "FP2", start: "2026-10-02T16:00:00+08:00", end: "2026-10-02T17:00:00+08:00" },
   { session: "FP3", start: "2026-10-03T12:30:00+08:00", end: "2026-10-03T13:30:00+08:00" },
   { session: "Quali", start: "2026-10-03T16:00:00+08:00", end: "2026-10-03T17:00:00+08:00" },
   { session: "Race", start: "2026-10-04T15:00:00+08:00", end: "2026-10-04T17:00:00+08:00" },
 ];
+
+const SEPANG_2026 = SEPANG_2026_SESSIONS;
 
 const SESSION_ORDER: Session[] = ["FP1", "FP2", "FP3", "Quali", "Race"];
 
