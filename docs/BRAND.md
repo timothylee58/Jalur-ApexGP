@@ -85,6 +85,22 @@ explicit about being a heuristic, not a black box.
   (`scripts/extract-frames.py`) — never official F1 broadcast footage,
   team media, or licensed circuit photography.
 - No driver photos, no team liveries, no sponsor logos, anywhere.
+- No per-team color coding, even with brand-neutral-looking hex values — a
+  fixed team→color mapping reads as a livery reference once you know which
+  team is which (Ferrari-and-red, Mercedes-and-teal are the obvious traps).
+  `/teams` uses one neutral card style for all 11 teams for this reason.
+
+## External content
+
+- `/news` links out to real outlets rather than hosting rewritten
+  coverage — title, source, and this app's own one-line framing only,
+  never reproduced article text or photos. See `data/news.ts`.
+- Data drawn from real, current-season results (driver/team "last time
+  out" recaps) is WebSearch-verified against actual reporting, not
+  invented — same standard the driver career stats already hold
+  themselves to. Where a specific detail wasn't confirmed by any source
+  found, say so plainly (e.g. "finished outside the points" as an
+  inference, not a fabricated exact position) rather than making one up.
 
 ## Iconography
 
@@ -123,5 +139,7 @@ area to keep "originally made," not less.
 - Don't add a logomark, badge, or checkered/flag motif.
 - Don't reproduce official grandstand pricing, team colors, or driver
   imagery.
+- Don't rewrite or excerpt real outlets' news articles as this app's own
+  content — link out instead (see External content above).
 - Don't let marketing-voice copy creep into strategy card text — if it
   wouldn't sound right said over a radio, rewrite it.

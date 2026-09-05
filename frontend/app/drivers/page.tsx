@@ -1,12 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { DriverAvatar } from "@/components/drivers/DriverAvatar";
 import { DriverGridScene } from "@/components/drivers/DriverGridScene";
 import { SiteHeader } from "@/components/site-chrome";
 import { drivers, type DriverEra } from "@/data/drivers";
+import { teams } from "@/data/teams";
 
 const ERA_LABEL: Record<DriverEra, string> = {
   "2026-grid": "2026 grid",
@@ -20,12 +22,28 @@ const STAT_LABELS: Array<{ key: "championships" | "wins" | "podiums" | "poles"; 
   { key: "poles", label: "Poles" },
 ];
 
-export default function DriversPage() {
-  const [era, setEra] = useState<DriverEra>("2026-grid");
+function DriversView() {
+  const searchParams = useSearchParams();
+  const paramDriverId = searchParams.get("driver");
+  const paramDriver = paramDriverId ? drivers.find((driver) => driver.id === paramDriverId) : undefined;
+
+  const [era, setEra] = useState<DriverEra>(paramDriver?.era ?? "2026-grid");
   const filtered = useMemo(() => drivers.filter((driver) => driver.era === era), [era]);
-  const [selectedId, setSelectedId] = useState<string>(filtered[0].id);
+  const [selectedId, setSelectedId] = useState<string>(paramDriver?.id ?? filtered[0].id);
+
+  // A `?driver=` link (from /teams) should win over whatever era/selection
+  // was already on screen — same "param always resolves fresh" reasoning
+  // /predict's session param uses, so an incoming link never silently
+  // lands on stale state from a previous visit.
+  useEffect(() => {
+    if (paramDriver) {
+      setEra(paramDriver.era);
+      setSelectedId(paramDriver.id);
+    }
+  }, [paramDriver]);
 
   const selected = filtered.find((driver) => driver.id === selectedId) ?? filtered[0];
+  const selectedTeam = selected ? teams.find((team) => team.driverIds.includes(selected.id)) : undefined;
 
   function selectEra(next: DriverEra) {
     setEra(next);
@@ -34,8 +52,6 @@ export default function DriversPage() {
   }
 
   return (
-    <>
-      <SiteHeader />
       <main className="mx-auto max-w-md px-4 py-6 sm:max-w-3xl">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Driver grid
@@ -150,19 +166,52 @@ export default function DriversPage() {
               ))}
             </div>
 
-            {selected.loreId ? (
-              <Link
-                href={`/lore#${selected.loreId}`}
-                className="mt-4 inline-block font-mono text-xs uppercase tracking-wide text-amber hover:underline"
-              >
-                See this moment in Circuit Lore →
-              </Link>
+            {selected.recap ? (
+              <p className="mt-4 border-t border-paper/10 pt-3 text-xs leading-relaxed text-paper-dim">
+                <span className="font-mono text-[10px] uppercase tracking-wide text-amber">
+                  Last time out ·{" "}
+                </span>
+                {selected.recap}
+              </p>
             ) : null}
+
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
+              {selected.loreId ? (
+                <Link
+                  href={`/lore#${selected.loreId}`}
+                  className="font-mono text-xs uppercase tracking-wide text-amber hover:underline"
+                >
+                  See this moment in Circuit Lore →
+                </Link>
+              ) : null}
+              {selectedTeam ? (
+                <Link
+                  href={`/teams#${selectedTeam.id}`}
+                  className="font-mono text-xs uppercase tracking-wide text-amber hover:underline"
+                >
+                  {selectedTeam.name} team page →
+                </Link>
+              ) : null}
+            </div>
           </div>
         ) : null}
 
         <AboutNote />
       </main>
+  );
+}
+
+export default function DriversPage() {
+  return (
+    <>
+      <SiteHeader />
+      <Suspense
+        fallback={
+          <p className="py-10 text-center font-mono text-sm text-paper-dim">Loading grid…</p>
+        }
+      >
+        <DriversView />
+      </Suspense>
     </>
   );
 }

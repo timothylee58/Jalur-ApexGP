@@ -66,7 +66,23 @@ trained ML model. MLflow is used for experiment lifecycle tracking.
 - **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
   (22 drivers, 11 teams, career stats through the 2025 season close) and a
   second "Sepang history" set tied to three moments in `/lore`. Initials-only
-  markers, no photos or team liveries — see `docs/BRAND.md`.
+  markers, no photos or team liveries — see `docs/BRAND.md`. Each 2026-grid
+  driver also carries a "last time out" recap of the 2026 Dutch Grand
+  Prix at Zandvoort — the most recently completed real round — WebSearch-
+  verified rather than invented; deep-linkable via `/drivers?driver=<id>`.
+- **Teams** (`/teams`) — all 11 constructors (base, 2026 power unit,
+  constructors' titles, roster, and the same Zandvoort recap from the
+  team's side), one neutral card style for every team rather than color-
+  coding by team — a fixed team→color mapping reads as a livery reference
+  once you know which team is which, exactly what `docs/BRAND.md` rules
+  out.
+- **News** (`/news`) — curated links to real F1 reporting, filterable by
+  category. Titles, sources, and this app's own one-line framing only —
+  never reproduced article text, per `docs/BRAND.md`. A live-session
+  ticker at the top shows synthetic, schedule-derived markers ("Lights
+  out", "Chequered flag imminent") only while `now` genuinely falls inside
+  the fixed Sepang weekend window; otherwise it says so plainly rather
+  than faking a live feed this app has no telemetry source for.
 
 ## Brand
 

@@ -47,6 +47,30 @@ export function getLiveOrNextSession(now = new Date()): Session {
   return "Race";
 }
 
+export interface LiveSessionWindow {
+  session: Session;
+  startMs: number;
+  endMs: number;
+}
+
+/** Non-null only while `now` actually falls inside one of the hardcoded
+ * SEPANG_2026 windows — real, not synthesized. Since that weekend is a
+ * fixed April 2026 date, this returns null for the overwhelming majority of
+ * real visits (any date outside those three days), same honesty tradeoff
+ * `getLiveOrNextSession`'s "Race" fallback already makes. Callers should
+ * treat null as the expected default, not an error case. */
+export function getLiveSessionWindow(now = new Date()): LiveSessionWindow | null {
+  const ms = now.getTime();
+  for (const item of SEPANG_2026) {
+    const startMs = new Date(item.start).getTime();
+    const endMs = new Date(item.end).getTime();
+    if (ms >= startMs && ms <= endMs) {
+      return { session: item.session, startMs, endMs };
+    }
+  }
+  return null;
+}
+
 export function isRaceWeekend(now = new Date()): boolean {
   const first = new Date(SEPANG_2026[0].start).getTime();
   const last = new Date(SEPANG_2026[SEPANG_2026.length - 1].end).getTime();
