@@ -3,12 +3,23 @@
 `sepang.glb` (served at `/models/sepang.glb`) and `car.glb` are
 **procedurally generated** by `scripts/generate_circuit_models.py`
 (regenerate with `python scripts/generate_circuit_models.py`).
-`sepang.glb` is a spline-swept track ribbon projected from the circuit's
-own 18-point apex + elevation data (the same centreline as
-`scripts/blender/sepang_circuit_scene.py` and
+`sepang.glb` is a spline-swept track *slab* — a real extrusion (top +
+two side walls + bottom), not a flat zero-thickness plane — projected
+from the circuit's own 18-point apex + elevation data (the same
+centreline as `scripts/blender/sepang_circuit_scene.py` and
 `frontend/data/sepangCircuit.ts`), so its shape and ~22&nbsp;m elevation
 change are real (vertical exaggerated ~6× for readability), not a
-traced-by-eye loop. `car.glb` is box/cylinder primitives, no scanned or
+traced-by-eye loop. The top face's normals follow the actual 3D tangent
+rather than a hardcoded straight-up vector, so a directional light
+visibly shades the climbs/descents instead of lighting the whole loop
+identically; the top (road) and walls/bottom use two different vertex
+colors so the ribbon reads as a raised shape even before lighting. Both
+`sepang.glb` and the client-side scene in `CircuitModelPreview.tsx`
+matter for how this actually looks — the component overrides the
+mesh's material on load (see the comment there) since three.js's
+`GLTFLoader` default material for a mesh with no material index
+(`metalness:1, roughness:1`) reads as flat and washed-out under this
+scene's lighting. `car.glb` is box/cylinder primitives, no scanned or
 reference geometry.
 `sepang.glb` powers the landing page's "Orbit Sepang" stage
 (`CircuitModelPreview.tsx`, which auto-detects it and otherwise links to

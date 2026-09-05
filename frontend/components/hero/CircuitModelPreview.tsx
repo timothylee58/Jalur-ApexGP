@@ -71,10 +71,35 @@ export function CircuitModelPreview() {
       renderer.setSize(mount.clientWidth, mount.clientHeight);
       mount.appendChild(renderer.domElement);
 
-      scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-      const sun = new THREE.DirectionalLight(0xfff4e0, 1);
+      // PCFSoftShadowMap + a ground-catcher plane below the model (added
+      // once the model's real extent is known, in the loader callback)
+      // give the ribbon a soft contact shadow — the cheapest way to read
+      // "this is a solid object sitting on a surface" rather than a shape
+      // floating in a void.
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+      const sun = new THREE.DirectionalLight(0xfff4e0, 1.4);
       sun.position.set(5, 8, 3);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.near = 1;
+      sun.shadow.camera.far = 20;
+      sun.shadow.camera.left = -5;
+      sun.shadow.camera.right = 5;
+      sun.shadow.camera.top = 5;
+      sun.shadow.camera.bottom = -5;
       scene.add(sun);
+
+      const ground = new THREE.Mesh(
+        new THREE.CircleGeometry(6, 64),
+        new THREE.ShadowMaterial({ opacity: 0.45 })
+      );
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      ground.visible = false; // repositioned under the model once it loads
+      scene.add(ground);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
@@ -92,8 +117,34 @@ export function CircuitModelPreview() {
           const size = box.getSize(new THREE.Vector3());
           const center = box.getCenter(new THREE.Vector3());
           const scale = 4 / Math.max(size.x, size.y, size.z, 0.001);
+          const lowestY = (box.min.y - center.y) * scale;
           root.scale.setScalar(scale);
           root.position.sub(center.multiplyScalar(scale));
+
+          // three.js's GLTFLoader falls back to metalness:1/roughness:1 for
+          // any mesh whose glTF has no material (true here — trimesh never
+          // attaches one to a pure-vertex-color export, see
+          // scripts/generate_circuit_models.py). A fully metallic, fully
+          // rough material has almost no diffuse response under plain
+          // ambient+directional light with no environment map, which is
+          // why the track rendered as a flat, washed-out gray regardless
+          // of its actual vertex colors — this was the main cause of the
+          // "looks bad" report, more than the geometry itself.
+          root.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+              child.material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.65,
+                metalness: 0.05,
+                side: THREE.DoubleSide,
+              });
+              child.castShadow = true;
+              child.receiveShadow = true;
+            }
+          });
+
+          ground.position.y = lowestY - 0.02;
+          ground.visible = true;
           scene.add(root);
           setStatus("ready");
         },
