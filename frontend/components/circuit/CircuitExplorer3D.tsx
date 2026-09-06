@@ -11,7 +11,6 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
-import { applyTerrainRegistration } from "@/lib/circuitTerrainAlign";
 import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
@@ -38,6 +37,8 @@ const TERRAIN_MIRROR_X = true;
 // Fine-tune on top of PCA std ratio — 0.95 keeps the ribbon inside the
 // asphalt loop without spilling onto runoff/grass (0.65 was too tight).
 const TERRAIN_SCALE_CORRECTION = 0.95;
+const TERRAIN_OFFSET_X = 0.3;
+const TERRAIN_OFFSET_Z = -0.3;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -200,21 +201,23 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
         const ribbonPCA = planarPCA(ribbonSamples);
 
-        const registrationKnobs = {
-          rotationRad: TERRAIN_ROTATION_ABS_RAD,
-          scaleMultiplier: TERRAIN_SCALE_CORRECTION,
-          mirrorX: TERRAIN_MIRROR_X,
-        };
-        const error = applyTerrainRegistration(
-          terrain,
-          ribbonSamples,
-          { terrainPCA, ribbonPCA, groundY },
-          registrationKnobs,
-        );
+        const mirror = TERRAIN_MIRROR_X ? -1 : 1;
+        const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
+        const rotationRad = TERRAIN_ROTATION_ABS_RAD;
+        const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
+        const scaledTerrainMean = new THREE.Vector3(
+          terrainPCA.mean.x * terrainScale * mirror,
+          0,
+          terrainPCA.mean.y * terrainScale,
+        ).applyMatrix4(rotationMatrix);
 
-        if (process.env.NODE_ENV === "development") {
-          console.log("[lane-align] registered error:", error.toFixed(4));
-        }
+        terrain.scale.set(terrainScale * mirror, terrainScale, terrainScale);
+        terrain.rotation.y = rotationRad;
+        terrain.position.set(
+          ribbonPCA.mean.x - scaledTerrainMean.x + TERRAIN_OFFSET_X,
+          -0.05 - groundY * terrainScale,
+          ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
+        );
 
         scene.add(terrain);
         ground.visible = false;
