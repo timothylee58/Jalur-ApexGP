@@ -11,6 +11,12 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
+<<<<<<< HEAD
+=======
+import {
+  applyTerrainRegistration,
+} from "@/lib/circuitTerrainAlign";
+>>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
 import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
@@ -26,6 +32,7 @@ const CAR_SRC = "/models/car.glb";
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
+<<<<<<< HEAD
 // Absolute Y rotation matching tools/r3f-sandbox's Circuit explorer
 // `rotationDeg: -28.1` default — NOT `ribbonAngle - terrainAngle ± π`.
 // The sandbox applies this absolute angle while only using PCA for
@@ -40,6 +47,14 @@ const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
 const TERRAIN_SCALE_CORRECTION = 0.65;
 const TERRAIN_OFFSET_X = 0;
 const TERRAIN_OFFSET_Z = 0;
+=======
+// Calibrated offline (scripts/calibrate_lane_align.py) against asphalt texture
+// samples — sandbox -28.1°/0.65 left a parallel grass offset (~0.048 mean
+// ribbon→asphalt error); this pose lands the yellow line on tarmac (~0.030).
+const TERRAIN_ROTATION_ABS_RAD = (-32.6 * Math.PI) / 180;
+const TERRAIN_SCALE_CORRECTION = 0.7475;
+const TERRAIN_MIRROR_X = false;
+>>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -202,6 +217,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
         const ribbonPCA = planarPCA(ribbonSamples);
 
+<<<<<<< HEAD
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
         const rotationRad = TERRAIN_ROTATION_ABS_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
@@ -273,6 +289,23 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
           scene,
         };
 
+=======
+        const registrationKnobs = {
+          rotationRad: TERRAIN_ROTATION_ABS_RAD,
+          scaleMultiplier: TERRAIN_SCALE_CORRECTION,
+          mirrorX: TERRAIN_MIRROR_X,
+        };
+        const error = applyTerrainRegistration(terrain, ribbonSamples, {
+          terrainPCA,
+          ribbonPCA,
+          groundY,
+        }, registrationKnobs);
+
+        if (process.env.NODE_ENV === "development") {
+          console.log("[lane-align] registered error:", error.toFixed(4));
+        }
+
+>>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
         scene.add(terrain);
         ground.visible = false;
         grid.visible = false;
