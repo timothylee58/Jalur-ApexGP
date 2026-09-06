@@ -81,9 +81,11 @@ export default function CircuitPage() {
           <Link href="/#orbit-sepang" className="text-amber hover:underline">
             Orbit Sepang
           </Link>{" "}
-          on the landing page); the two come from unrelated real-world
-          sources with no shared coordinate system, so they&apos;re scaled
-          to roughly match rather than registered corner-for-corner — see{" "}
+          on the landing page), rotated, scaled, and positioned to line up
+          with the real centreline above — the two are still independent
+          real-world sources with no shared coordinate system, so treat it
+          as the same track correctly oriented, not a survey-grade fusion
+          of the two — see{" "}
           <code className="text-amber">frontend/public/models/README.md</code>{" "}
           for the terrain&apos;s CC BY 4.0 attribution.
         </p>
