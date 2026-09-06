@@ -11,12 +11,7 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
-<<<<<<< HEAD
-=======
-import {
-  applyTerrainRegistration,
-} from "@/lib/circuitTerrainAlign";
->>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
+import { applyTerrainRegistration } from "@/lib/circuitTerrainAlign";
 import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
@@ -32,29 +27,17 @@ const CAR_SRC = "/models/car.glb";
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
-<<<<<<< HEAD
 // Absolute Y rotation matching tools/r3f-sandbox's Circuit explorer
-// `rotationDeg: -28.1` default — NOT `ribbonAngle - terrainAngle ± π`.
-// The sandbox applies this absolute angle while only using PCA for
-// scale + centroid; production previously substituted the PCA-delta
-// "-180° branch", which drifts when terrain PCA changes (asphalt filter,
-// palm skip, etc.) and no longer equals the eye-tuned -28.1°. Keep the
-// absolute value so registration stays tied to the verified sandbox pose.
+// `rotationDeg: -28.1` — coincides with ribbon-minus-terrain PCA delta
+// minus 180° for this asset pair, but kept absolute so it stays tied to
+// the sandbox's eye-tuned pose rather than drifting with PCA changes.
 const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
-// PCA std isn't like-for-like between a dense terrain cloud and a sparse
-// ribbon sample set — 0.65 was eye-tuned in the sandbox so the ribbon
-// footprint sits inside the asphalt loop rather than spilling past it.
-const TERRAIN_SCALE_CORRECTION = 0.65;
-const TERRAIN_OFFSET_X = 0;
-const TERRAIN_OFFSET_Z = 0;
-=======
-// Calibrated offline (scripts/calibrate_lane_align.py) against asphalt texture
-// samples — sandbox -28.1°/0.65 left a parallel grass offset (~0.048 mean
-// ribbon→asphalt error); this pose lands the yellow line on tarmac (~0.030).
-const TERRAIN_ROTATION_ABS_RAD = (-32.6 * Math.PI) / 180;
-const TERRAIN_SCALE_CORRECTION = 0.7475;
-const TERRAIN_MIRROR_X = false;
->>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
+// PCA can't rule out mirrored handedness; mirrorX=true was required so
+// the ribbon footprint sits on tarmac rather than parallel on grass.
+const TERRAIN_MIRROR_X = true;
+// Fine-tune on top of PCA std ratio — 0.95 keeps the ribbon inside the
+// asphalt loop without spilling onto runoff/grass (0.65 was too tight).
+const TERRAIN_SCALE_CORRECTION = 0.95;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -217,95 +200,22 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
         const ribbonPCA = planarPCA(ribbonSamples);
 
-<<<<<<< HEAD
-        const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
-        const rotationRad = TERRAIN_ROTATION_ABS_RAD;
-        const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
-        const scaledTerrainMean = new THREE.Vector3(
-          terrainPCA.mean.x * terrainScale,
-          0,
-          terrainPCA.mean.y * terrainScale,
-        ).applyMatrix4(rotationMatrix);
-
-        terrain.scale.setScalar(terrainScale);
-        terrain.rotation.y = rotationRad;
-        terrain.position.set(
-          ribbonPCA.mean.x - scaledTerrainMean.x + TERRAIN_OFFSET_X,
-          -0.05 - groundY * terrainScale,
-          ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
-        );
-
-        // Dev calibration surface — lets CDP/sandbox scripts retune
-        // rotation/scale/offset without a rebuild, then bake winners.
-        const applyTerrainRegistration = (
-          rotRad: number,
-          scaleCorr: number,
-          ox: number,
-          oz: number,
-        ) => {
-          const scale = (ribbonPCA.majorStd / terrainPCA.majorStd) * scaleCorr;
-          const rot = rotRad;
-          const rotMat = new THREE.Matrix4().makeRotationY(rot);
-          const mean = new THREE.Vector3(
-            terrainPCA.mean.x * scale,
-            0,
-            terrainPCA.mean.y * scale,
-          ).applyMatrix4(rotMat);
-          terrain.scale.setScalar(scale);
-          terrain.rotation.y = rot;
-          terrain.position.set(
-            ribbonPCA.mean.x - mean.x + ox,
-            -0.05 - groundY * scale,
-            ribbonPCA.mean.y - mean.z + oz,
-          );
-        };
-        (window as unknown as { __laneAlign?: unknown }).__laneAlign = {
-          rotationAbsRad: TERRAIN_ROTATION_ABS_RAD,
-          scaleCorrection: TERRAIN_SCALE_CORRECTION,
-          offsetX: TERRAIN_OFFSET_X,
-          offsetZ: TERRAIN_OFFSET_Z,
-          ribbonPCA: {
-            mean: { x: ribbonPCA.mean.x, z: ribbonPCA.mean.y },
-            majorAngle: ribbonPCA.majorAngle,
-            majorStd: ribbonPCA.majorStd,
-          },
-          terrainPCA: {
-            mean: { x: terrainPCA.mean.x, z: terrainPCA.mean.y },
-            majorAngle: terrainPCA.majorAngle,
-            majorStd: terrainPCA.majorStd,
-          },
-          pcaDeltaDeg: ((ribbonPCA.majorAngle - terrainPCA.majorAngle) * 180) / Math.PI,
-          pcaDeltaMinus180Deg:
-            ((ribbonPCA.majorAngle - terrainPCA.majorAngle) * 180) / Math.PI - 180,
-          apply: applyTerrainRegistration,
-          holdCamera: (v: boolean) => {
-            alignHoldCamera = v;
-            autoRotate = !v;
-          },
-          terrain,
-          curve,
-          camera,
-          renderer,
-          scene,
-        };
-
-=======
         const registrationKnobs = {
           rotationRad: TERRAIN_ROTATION_ABS_RAD,
           scaleMultiplier: TERRAIN_SCALE_CORRECTION,
           mirrorX: TERRAIN_MIRROR_X,
         };
-        const error = applyTerrainRegistration(terrain, ribbonSamples, {
-          terrainPCA,
-          ribbonPCA,
-          groundY,
-        }, registrationKnobs);
+        const error = applyTerrainRegistration(
+          terrain,
+          ribbonSamples,
+          { terrainPCA, ribbonPCA, groundY },
+          registrationKnobs,
+        );
 
         if (process.env.NODE_ENV === "development") {
           console.log("[lane-align] registered error:", error.toFixed(4));
         }
 
->>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
         scene.add(terrain);
         ground.visible = false;
         grid.visible = false;
@@ -422,7 +332,6 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     let azimuth = Math.PI * 0.28;
     const elevation = 0.62;
     let autoRotate = true;
-    let alignHoldCamera = false;
     let dragging = false;
     let lastX = 0;
 
@@ -480,7 +389,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      if (autoRotate && !alignHoldCamera) {
+      if (autoRotate) {
         azimuth += 0.0018;
         applyCamera();
       }

@@ -136,15 +136,11 @@ export function CircuitExplorerScene() {
     ribbonOpacity: { value: 0.85, min: 0, max: 1, step: 0.05 },
   });
   const { rotationDeg, mirrorX, scaleMultiplier, offsetX, offsetZ, yOffset } = useControls("Terrain registration", {
-    rotationDeg: { value: -32.6, min: -180, max: 180, step: 0.1 },
-    mirrorX: false,
-<<<<<<< HEAD
-    scaleMultiplier: { value: 0.65, min: 0.3, max: 2, step: 0.01 },
-=======
-    scaleMultiplier: { value: 0.7475, min: 0.3, max: 2, step: 0.01 },
->>>>>>> 11d518f (fix: align Sepang terrain to yellow ribbon via asphalt calibration)
-    offsetX: { value: 0, min: -2, max: 2, step: 0.01 },
-    offsetZ: { value: 0, min: -2, max: 2, step: 0.01 },
+    rotationDeg: { value: -28.1, min: -180, max: 180, step: 0.1 },
+    mirrorX: true,
+    scaleMultiplier: { value: 0.95, min: 0.3, max: 2, step: 0.01 },
+    offsetX: { value: 0.3, min: -2, max: 2, step: 0.01 },
+    offsetZ: { value: -0.3, min: -2, max: 2, step: 0.01 },
     yOffset: { value: -0.05, min: -3, max: 0.5, step: 0.01 },
   });
   const { autoRotateSpeed } = useControls("Camera", {
