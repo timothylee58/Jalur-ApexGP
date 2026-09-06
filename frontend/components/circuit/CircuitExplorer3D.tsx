@@ -26,37 +26,27 @@ const CAR_SRC = "/models/car.glb";
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
-// PCA (see lib/pca.ts) gives the terrain's and the ribbon's major axis,
-// each defined only up to a 180° ambiguity (a line has no inherent
-// "direction"), so the raw angle delta between them is one of two
-// candidates 180° apart — and PCA alone can't also rule out the terrain
-// being mirrored (opposite handedness) rather than rotated. Both were
-// resolved by hand in tools/r3f-sandbox's "Circuit explorer" scene:
-// dragging a rotationDeg slider live against the actual rendered shapes
-// showed the "-180°" branch below to be the correct one (the raw delta
-// visibly ran the ribbon backwards around the loop), and no mirror was
-// needed. If this terrain model or the real apex data ever changes,
-// re-verify both in that sandbox rather than assuming this still holds.
-const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
-// Residual fine-tune on top of the asphalt-PCA angle match — the asphalt
-// point cloud (kerbs, pit lane, runoff, and a few unrelated access roads
-// all included, not just the racing surface) isn't a perfect proxy for the
-// centreline itself, so the PCA angle lands close but visibly a few degrees
-// off the real tarmac. Negative here means clockwise on screen; walked in
-// by hand (screenshotting a spread of candidate degrees against the live
-// scene, both at the default oblique camera and a steep near-top-down one,
-// and checking several corners — the T1 hairpin loop and the T9-ish loop on
-// the far side in particular — against their kerb markings) until those
-// corners' asphalt sat under the ribbon rather than beside it; re-verify by
-// the same method if the terrain model or centreline data ever changes.
-const TERRAIN_ROTATION_FINE_TUNE_DEG = -10;
-// Size/translation polish on top of asphalt-vs-ribbon PCA. Registration
-// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only), so the
-// std-ratio already matches track-to-ribbon size — these stay near
-// identity and only mop up residual bias from kerbs/pit-lane gray.
-const TERRAIN_SCALE_CORRECTION = 1.0;
-const TERRAIN_OFFSET_X = 0.15;
-const TERRAIN_OFFSET_Z = 0;
+// PCA (see lib/pca.ts) gives the terrain's own centroid/scale below, but
+// not a usable rotation angle: the raw PCA angle delta between terrain and
+// ribbon is only defined up to a 180° ambiguity, and PCA alone can't also
+// rule out the terrain being mirrored (opposite handedness) rather than
+// rotated — this terrain scan turned out to need both a mirror AND a
+// rotation that PCA's angle-matching alone couldn't reach (the ribbon ran
+// parallel to the tarmac but offset onto grass, not just off by a clean
+// rotation). So rotation/mirror here are a baked absolute pose, found by
+// screenshotting candidate rotation/mirror/scale combinations against the
+// live scene until the ribbon sat on asphalt rather than beside it. If
+// this terrain model or the real apex centreline data ever changes,
+// re-verify by the same method rather than assuming this still holds.
+const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
+const TERRAIN_MIRROR_X = true;
+// Size/translation polish on top of the baked pose above. Registration
+// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only) for the
+// terrain's own centroid/scale, so these stay close to identity and only
+// mop up residual bias from kerbs/pit-lane gray.
+const TERRAIN_SCALE_CORRECTION = 0.95;
+const TERRAIN_OFFSET_X = 0.3;
+const TERRAIN_OFFSET_Z = -0.3;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -222,8 +212,12 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
         const rotationRad = TERRAIN_ROTATION_ABS_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
+        // Mirror applies to the mesh's local X before rotation (same order
+        // terrain.scale.set below applies it in), so it has to be baked into
+        // this mean as well — otherwise the centroid correction below is
+        // computed for the un-mirrored mesh and drifts once the mirror flips it.
         const scaledTerrainMean = new THREE.Vector3(
-          terrainPCA.mean.x * terrainScale,
+          terrainPCA.mean.x * terrainScale * mirror,
           0,
           terrainPCA.mean.y * terrainScale,
         ).applyMatrix4(rotationMatrix);
