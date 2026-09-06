@@ -3,10 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import * as THREE from "three";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 const MODEL_SRC = "/models/sepang.glb";
+// sepang.glb (scripts/blender/build_sepang_from_reference_scan.py) is
+// exported with Draco mesh compression to hit this app's size budget on
+// the real reference scan — GLTFLoader can't decode that without a
+// DRACOLoader wired in. Decoder files are self-hosted (copied from
+// three's own package, not fetched from Google's CDN) at /public/draco/,
+// matching this app's convention of not depending on third-party CDNs
+// for core assets — see /models/README.md.
+const DRACO_DECODER_PATH = "/draco/";
 
 // Initial camera framing mirrors a real establishing shot of the pit
 // straight / main grandstand, from this Google Earth reference view:
@@ -107,7 +116,10 @@ export function CircuitModelPreview() {
       controls.autoRotateSpeed = 0.6;
       controls.maxPolarAngle = Math.PI * 0.49;
 
+      const dracoLoader = new DRACOLoader();
+      dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
       const loader = new GLTFLoader();
+      loader.setDRACOLoader(dracoLoader);
       loader.load(
         MODEL_SRC,
         (gltf) => {
@@ -121,23 +133,36 @@ export function CircuitModelPreview() {
           root.scale.setScalar(scale);
           root.position.sub(center.multiplyScalar(scale));
 
+          // The real scan's footprint is a wide landscape rectangle, not
+          // the old ribbon model's roughly-square bounds the hardcoded
+          // radius-6 shadow catcher was sized for — an oversized catcher
+          // here casts a visible shadow patch well past the mesh's own
+          // edges. Re-size it to the loaded model's actual (scaled)
+          // footprint instead of guessing a constant.
+          const footprintRadius =
+            0.5 * Math.hypot(size.x * scale, size.z * scale) * 1.15;
+          ground.geometry.dispose();
+          ground.geometry = new THREE.CircleGeometry(footprintRadius, 64);
+
           // three.js's GLTFLoader falls back to metalness:1/roughness:1 for
-          // any mesh whose glTF has no material (true here — trimesh never
-          // attaches one to a pure-vertex-color export, see
-          // scripts/generate_circuit_models.py). A fully metallic, fully
-          // rough material has almost no diffuse response under plain
-          // ambient+directional light with no environment map, which is
-          // why the track rendered as a flat, washed-out gray regardless
-          // of its actual vertex colors — this was the main cause of the
-          // "looks bad" report, more than the geometry itself.
+          // any mesh whose glTF has no material at all (a real past bug
+          // here — see git history — for the old trimesh-exported
+          // vertex-color-only ribbon, which never attached a material).
+          // The current model (scripts/blender/build_sepang_from_reference_scan.py)
+          // has real Blender-exported materials with real baseColor
+          // textures and metalness:0, so this only needs to step in for a
+          // mesh that genuinely has none — never overwrite a real texture.
           root.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-              child.material = new THREE.MeshStandardMaterial({
-                vertexColors: true,
-                roughness: 0.65,
-                metalness: 0.05,
-                side: THREE.DoubleSide,
-              });
+              const material = child.material as THREE.MeshStandardMaterial | undefined;
+              if (!material?.map) {
+                child.material = new THREE.MeshStandardMaterial({
+                  vertexColors: true,
+                  roughness: 0.65,
+                  metalness: 0.05,
+                  side: THREE.DoubleSide,
+                });
+              }
               child.castShadow = true;
               child.receiveShadow = true;
             }
@@ -175,6 +200,7 @@ export function CircuitModelPreview() {
         window.removeEventListener("resize", onResize);
         controls.dispose();
         renderer.dispose();
+        dracoLoader.dispose(); // tears down its decoder worker pool
         if (mount.contains(renderer.domElement)) {
           mount.removeChild(renderer.domElement);
         }
@@ -189,7 +215,7 @@ export function CircuitModelPreview() {
   }, []);
 
   return (
-    <section className="relative z-20 mx-auto max-w-5xl px-4 py-12 sm:px-6">
+    <section id="orbit-sepang" className="relative z-20 mx-auto max-w-5xl px-4 py-12 sm:px-6">
       <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-paper-dim">
         Track model
       </p>
@@ -197,11 +223,11 @@ export function CircuitModelPreview() {
         Orbit Sepang
       </h2>
       <p className="mt-2 max-w-xl text-sm text-paper-dim">
-        A 3D model of Sepang swept from shared apex + elevation data in{" "}
-        <code className="text-amber">frontend/data/sepang.json</code> via{" "}
-        <code className="text-amber">scripts/generate_circuit_models.py</code>
-        — same centreline as the 2D map and flyover. Vertical relief is
-        exaggerated for readability. Drag to orbit.
+        A real photogrammetry scan of Sepang — track surface, curbs,
+        grandstands, and elevation as-built, not a traced-by-eye or
+        procedural approximation. Sourced under CC BY 4.0; see{" "}
+        <code className="text-amber">frontend/public/models/README.md</code>{" "}
+        for the full attribution and pipeline. Drag to orbit.
       </p>
 
       <div

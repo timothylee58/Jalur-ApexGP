@@ -158,6 +158,20 @@ explicit about being a heuristic, not a black box.
   module docstring for the two honesty gaps this is built around: no
   official 2026 race-weekend shuttle exists yet, and no standing route
   reaches the circuit gate itself.
+- The landing page's "Orbit Sepang" 3D model (`frontend/public/models/sepang.glb`)
+  is built from a real photogrammetry/reference scan of the actual
+  circuit — **"Sepang International Circuit 2025 layout"** by Dave Love
+  ([Sketchfab: @Tyler_Dave](https://sketchfab.com/Tyler_Dave)),
+  <https://sketchfab.com/3d-models/sepang-international-circuit-2025-layout-590bf243480e43f18e588a3908daa4df>,
+  licensed [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/). Real
+  track shape, curbs, grandstands, pit building, and terrain elevation;
+  only mesh density was reduced and palm trees added. The source file
+  baked in real PETRONAS, PETRONAS PRIMAX, and ROLEX sponsor-board
+  trademarks plus an unrelated racing-sim game logo board — all stripped
+  before export, same standard the "no sponsor marks" rule below already
+  holds `car.glb` to. This attribution must travel with the model — see
+  `frontend/public/models/README.md` for the full pipeline and the exact
+  list of what was removed.
 
 ## Iconography
 

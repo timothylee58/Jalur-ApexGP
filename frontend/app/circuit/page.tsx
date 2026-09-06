@@ -71,10 +71,21 @@ export default function CircuitPage() {
           Sepang, corner by corner
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Drag to orbit, or tap a corner below. Built from the circuit's
-          real apex-point centreline — the same geometry behind the
-          landing page's flyover hero and the 2D strategy map — covering
-          all 15 named corners, not a stylized subset.
+          Drag to orbit, or tap a corner below. The amber racing line is
+          built from the circuit&apos;s real apex-point centreline — the
+          same geometry behind the landing page&apos;s flyover hero and the
+          2D strategy map — covering all 15 named corners, with Turns 5–7,
+          9, and 15 carrying the strategy engine&apos;s own reasoning. The
+          terrain underneath is a separate real photogrammetry scan (the
+          same one as{" "}
+          <Link href="/#orbit-sepang" className="text-amber hover:underline">
+            Orbit Sepang
+          </Link>{" "}
+          on the landing page); the two come from unrelated real-world
+          sources with no shared coordinate system, so they&apos;re scaled
+          to roughly match rather than registered corner-for-corner — see{" "}
+          <code className="text-amber">frontend/public/models/README.md</code>{" "}
+          for the terrain&apos;s CC BY 4.0 attribution.
         </p>
 
         <label className="mt-4 flex items-center gap-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
