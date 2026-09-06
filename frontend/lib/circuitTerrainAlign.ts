@@ -1,109 +1,99 @@
 import * as THREE from "three";
-import type { PlanarPCA } from "@/lib/pca";
+import { sampleAsphaltPoints, type PlanarPCA } from "@/lib/pca";
+
+/**
+ * Computes the terrain's similarity transform (rotation + mirror + scale +
+ * translation) against the real apex-point ribbon, by actually searching
+ * for and scoring candidates rather than trusting a hand-tuned pose baked
+ * in once and never re-derived. See {@link registerTerrain}'s doc comment
+ * for why a search is needed at all (PCA alone can't resolve rotation or
+ * handedness) and how it stays fast enough to run live at terrain-load
+ * time without giving up full point-cloud density or full candidate
+ * coverage — an earlier version of this search tried subsampling the
+ * point cloud for speed and it measurably changed which pose won, so the
+ * actual fix was making full-density scoring itself cheap (see below),
+ * not scoring less data.
+ *
+ * Internals use flat typed arrays and integer-keyed grid buckets rather
+ * than arrays of {x,z} objects and string-keyed maps, and each candidate
+ * builds its spatial index exactly once (see icpTranslate's comment) —
+ * profiling an object/string-keyed, per-iteration-rebuilding version of
+ * this file showed allocation, string hashing, and redundant grid rebuilds
+ * dominated its cost, not the actual distance math: ~100 candidates ×
+ * full point-cloud density was several seconds with that version, and is
+ * a few hundred milliseconds with this one.
+ */
 
 type Xz = { x: number; z: number };
 
-type Rgb = { r: number; g: number; b: number };
-
-/** Mid-gray, low-chroma tarmac in the Sepang photogrammetry scan. */
-function isAsphaltRgb(c: Rgb): boolean {
-  const max = Math.max(c.r, c.g, c.b);
-  const min = Math.min(c.r, c.g, c.b);
-  const mean = (c.r + c.g + c.b) / 3;
-  return mean > 35 && mean < 135 && max - min < 28;
+/** Flat, mutable point cloud — avoids allocating a {x,z} object per point
+ * per candidate, which is what made the object-based version of this
+ * search slow at full density. */
+interface Cloud {
+  x: Float64Array;
+  z: Float64Array;
+  length: number;
 }
 
-function sampleMapRgb(
-  map: THREE.Texture,
-  u: number,
-  v: number,
-  cache: Map<THREE.Texture, { w: number; h: number; data: Uint8ClampedArray }>,
-): Rgb | null {
-  let entry = cache.get(map);
-  if (!entry) {
-    const img = map.image as { width?: number; height?: number } | undefined;
-    if (!img?.width || !img?.height) return null;
-    const w = Math.min(img.width, 256);
-    const h = Math.min(img.height, 256);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (!ctx) return null;
-    try {
-      ctx.drawImage(img as CanvasImageSource, 0, 0, w, h);
-    } catch {
-      return null;
-    }
-    entry = { w, h, data: ctx.getImageData(0, 0, w, h).data };
-    cache.set(map, entry);
+function toCloud(points: Xz[]): Cloud {
+  const x = new Float64Array(points.length);
+  const z = new Float64Array(points.length);
+  for (let i = 0; i < points.length; i++) {
+    x[i] = points[i].x;
+    z[i] = points[i].z;
   }
-  const x = Math.floor((((u % 1) + 1) % 1) * (entry.w - 1));
-  const y = Math.floor((1 - (((v % 1) + 1) % 1)) * (entry.h - 1));
-  const i = (y * entry.w + x) * 4;
-  return { r: entry.data[i], g: entry.data[i + 1], b: entry.data[i + 2] };
+  return { x, z, length: points.length };
 }
 
-/**
- * World-space X/Z samples of asphalt-coloured terrain vertices (texture-
- * sampled mid-gray). Used to nudge the terrain root so the yellow ribbon
- * sits on tarmac rather than on grass.
- */
-export function sampleTerrainAsphaltXZ(
-  terrain: THREE.Object3D,
-  skipPrefix = "Palm",
-): Xz[] {
-  terrain.updateMatrixWorld(true);
-  const v = new THREE.Vector3();
-  const mapCache = new Map<THREE.Texture, { w: number; h: number; data: Uint8ClampedArray }>();
-  const points: Xz[] = [];
-
-  terrain.traverse((child) => {
-    if (!(child instanceof THREE.Mesh) || child.name.startsWith(skipPrefix)) return;
-    const pos = child.geometry.getAttribute("position");
-    const uv = child.geometry.getAttribute("uv");
-    if (!uv) return;
-    const material = child.material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[] | undefined;
-    const mat = Array.isArray(material) ? material[0] : material;
-    if (!mat?.map) return;
-    child.updateMatrixWorld(true);
-    const step = Math.max(1, Math.floor(pos.count / 6000));
-    for (let i = 0; i < pos.count; i += step) {
-      const rgb = sampleMapRgb(mat.map!, uv.getX(i), uv.getY(i), mapCache);
-      if (!rgb || !isAsphaltRgb(rgb)) continue;
-      v.set(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(child.matrixWorld);
-      points.push({ x: v.x, z: v.z });
-    }
-  });
-
-  return points;
+function cloneCloud(c: Cloud): Cloud {
+  return { x: c.x.slice(), z: c.z.slice(), length: c.length };
 }
 
-function nearestAsphalt(asphalt: Xz[], query: Xz, cell = 0.07): Xz | null {
-  const grid = new Map<string, Xz[]>();
-  const key = (ix: number, iz: number) => `${ix},${iz}`;
-  for (const p of asphalt) {
-    const ix = Math.floor(p.x / cell);
-    const iz = Math.floor(p.z / cell);
-    const k = key(ix, iz);
-    const bucket = grid.get(k);
-    if (bucket) bucket.push(p);
-    else grid.set(k, [p]);
+// ---- fast nearest-neighbour lookup -----------------------------------
+
+const GRID_CELL = 0.07;
+// Packs (ix, iz) into one integer key for a numeric-keyed Map — string
+// template keys (`${ix},${iz}`) were a real cost at this call volume.
+// Safe for any cell index this app's scene scale could produce (well
+// under ±50,000 cells from center) without colliding.
+const GRID_KEY_SPAN = 100000;
+
+function gridKey(ix: number, iz: number): number {
+  return ix * GRID_KEY_SPAN + iz;
+}
+
+/** Bucket a cloud's point *indices* into a uniform grid once, so a batch
+ * of nearest-point queries against the same cloud doesn't re-bucket it
+ * per query. */
+function buildGrid(cloud: Cloud): Map<number, number[]> {
+  const buckets = new Map<number, number[]>();
+  for (let i = 0; i < cloud.length; i++) {
+    const key = gridKey(Math.floor(cloud.x[i] / GRID_CELL), Math.floor(cloud.z[i] / GRID_CELL));
+    const bucket = buckets.get(key);
+    if (bucket) bucket.push(i);
+    else buckets.set(key, [i]);
   }
+  return buckets;
+}
 
-  const ix = Math.floor(query.x / cell);
-  const iz = Math.floor(query.z / cell);
+/** Index of the nearest point in `cloud` to (qx, qz), or -1 if the 7×7
+ * cell neighbourhood around the query is empty. */
+function queryNearest(grid: Map<number, number[]>, cloud: Cloud, qx: number, qz: number): number {
+  const cx = Math.floor(qx / GRID_CELL);
+  const cz = Math.floor(qz / GRID_CELL);
   let best = Infinity;
-  let hit: Xz | null = null;
+  let hit = -1;
   for (let dx = -3; dx <= 3; dx++) {
     for (let dz = -3; dz <= 3; dz++) {
-      const bucket = grid.get(key(ix + dx, iz + dz));
+      const bucket = grid.get(gridKey(cx + dx, cz + dz));
       if (!bucket) continue;
-      for (const p of bucket) {
-        const d = (query.x - p.x) ** 2 + (query.z - p.z) ** 2;
+      for (const i of bucket) {
+        const ddx = qx - cloud.x[i];
+        const ddz = qz - cloud.z[i];
+        const d = ddx * ddx + ddz * ddz;
         if (d < best) {
           best = d;
-          hit = p;
+          hit = i;
         }
       }
     }
@@ -111,106 +101,86 @@ function nearestAsphalt(asphalt: Xz[], query: Xz, cell = 0.07): Xz | null {
   return hit;
 }
 
-/** Mean world-space distance from each ribbon sample to nearest asphalt vertex. */
-export function meanRibbonToAsphaltDistance(
-  terrain: THREE.Object3D,
-  ribbonSamples: Xz[],
-): number {
-  const asphalt = sampleTerrainAsphaltXZ(terrain);
-  if (asphalt.length < 200) return Infinity;
+function centroidOf(cloud: Cloud): Xz {
+  let sx = 0;
+  let sz = 0;
+  for (let i = 0; i < cloud.length; i++) {
+    sx += cloud.x[i];
+    sz += cloud.z[i];
+  }
+  return { x: sx / cloud.length, z: sz / cloud.length };
+}
 
+/** Mean ribbon-to-nearest-target distance, as if `target` were additionally
+ * shifted by (offsetX, offsetZ) — without needing to move `target` or
+ * rebuild `grid`. Shifting the query by the negation instead is an exact
+ * equivalent (nearest-neighbour relationships are translation-invariant),
+ * and is what lets {@link icpTranslate} below reuse one grid across all
+ * its iterations instead of rebuilding it every time the cloud moves. */
+function meanNearestDistance(
+  ribbon: Cloud,
+  target: Cloud,
+  grid: Map<number, number[]>,
+  offsetX = 0,
+  offsetZ = 0,
+): number {
   let total = 0;
   let n = 0;
-  for (const ribbon of ribbonSamples) {
-    const hit = nearestAsphalt(asphalt, ribbon);
-    if (!hit) continue;
-    total += Math.hypot(ribbon.x - hit.x, ribbon.z - hit.z);
+  for (let i = 0; i < ribbon.length; i++) {
+    const hit = queryNearest(grid, target, ribbon.x[i] - offsetX, ribbon.z[i] - offsetZ);
+    if (hit < 0) continue;
+    total += Math.hypot(ribbon.x[i] - (target.x[hit] + offsetX), ribbon.z[i] - (target.z[hit] + offsetZ));
     n++;
   }
   return n > 0 ? total / n : Infinity;
 }
 
 /**
- * One-shot shift: align asphalt centroid to ribbon centroid after rotation
- * and scale. Full-mesh PCA centroid matching leaves a large parallel offset
- * because buildings/runoff pull the mesh mean away from the tarmac loop.
+ * ICP-style translation refinement: repeatedly nudge a running (offsetX,
+ * offsetZ) by the mean vector from each ribbon point to its current
+ * nearest point in `cloud`, until that mean vector settles near zero.
+ * This is what removes the need for a hand-tuned offset constant —
+ * whatever residual translation the similarity transform leaves behind,
+ * this walks it out against the real geometry.
+ *
+ * `cloud` and `grid` are never modified or rebuilt — an earlier version
+ * physically translated the cloud each iteration and rebuilt its spatial
+ * index from scratch every time, which was the single largest cost in
+ * this whole search (a grid rebuild per iteration × 5 iterations × ~100
+ * candidates). Shifting the *query* by the running offset instead (see
+ * {@link meanNearestDistance}) is mathematically equivalent and needs the
+ * grid built exactly once per candidate.
  */
-export function alignAsphaltCentroidToRibbon(
-  terrain: THREE.Object3D,
-  ribbonSamples: Xz[],
-): { offsetX: number; offsetZ: number } {
-  const asphalt = sampleTerrainAsphaltXZ(terrain);
-  if (asphalt.length < 200) return { offsetX: 0, offsetZ: 0 };
-
-  let ax = 0;
-  let az = 0;
-  for (const p of asphalt) {
-    ax += p.x;
-    az += p.z;
-  }
-  ax /= asphalt.length;
-  az /= asphalt.length;
-
-  let rx = 0;
-  let rz = 0;
-  for (const p of ribbonSamples) {
-    rx += p.x;
-    rz += p.z;
-  }
-  rx /= ribbonSamples.length;
-  rz /= ribbonSamples.length;
-
-  const ox = rx - ax;
-  const oz = rz - az;
-  terrain.position.x += ox;
-  terrain.position.z += oz;
-  terrain.updateMatrixWorld(true);
-  return { offsetX: ox, offsetZ: oz };
-}
-
-/**
- * After PCA + sandbox rotation/scale place the terrain, centroid matching
- * still leaves a parallel offset (ribbon vs asphalt). Iterative
- * "move terrain by mean(ribbon − nearest asphalt)" pulls the scan onto the
- * fixed yellow centreline without hand-tuned offset knobs.
- */
-export function refineTerrainTranslationToRibbon(
-  terrain: THREE.Object3D,
-  ribbonSamples: Xz[],
+function icpTranslate(
+  ribbon: Cloud,
+  cloud: Cloud,
+  grid: Map<number, number[]>,
   iterations = 5,
 ): { offsetX: number; offsetZ: number } {
-  let totalX = 0;
-  let totalZ = 0;
-
+  let offsetX = 0;
+  let offsetZ = 0;
   for (let iter = 0; iter < iterations; iter++) {
-    const asphalt = sampleTerrainAsphaltXZ(terrain);
-    if (asphalt.length < 200) break;
-
     let sx = 0;
     let sz = 0;
     let n = 0;
-    for (const ribbon of ribbonSamples) {
-      const hit = nearestAsphalt(asphalt, ribbon);
-      if (!hit) continue;
-      sx += ribbon.x - hit.x;
-      sz += ribbon.z - hit.z;
+    for (let i = 0; i < ribbon.length; i++) {
+      const hit = queryNearest(grid, cloud, ribbon.x[i] - offsetX, ribbon.z[i] - offsetZ);
+      if (hit < 0) continue;
+      sx += ribbon.x[i] - (cloud.x[hit] + offsetX);
+      sz += ribbon.z[i] - (cloud.z[hit] + offsetZ);
       n++;
     }
-    if (n < ribbonSamples.length * 0.5) break;
-
+    if (n < ribbon.length * 0.5) break;
     const ox = sx / n;
     const oz = sz / n;
     if (Math.abs(ox) < 1e-4 && Math.abs(oz) < 1e-4) break;
-
-    terrain.position.x += ox;
-    terrain.position.z += oz;
-    terrain.updateMatrixWorld(true);
-    totalX += ox;
-    totalZ += oz;
+    offsetX += ox;
+    offsetZ += oz;
   }
-
-  return { offsetX: totalX, offsetZ: totalZ };
+  return { offsetX, offsetZ };
 }
+
+// ---- similarity transform ----------------------------------------------
 
 export interface TerrainRegistrationKnobs {
   rotationRad: number;
@@ -224,268 +194,142 @@ export interface TerrainRegistrationContext {
   groundY: number;
 }
 
-/** Asphalt vertices in terrain-local space (sampled once before any transform). */
-export interface LocalAsphaltCloud {
-  points: Xz[];
+export interface TerrainPose {
+  scale: number;
+  rotationRad: number;
+  mirrorX: boolean;
+  position: { x: number; y: number; z: number };
+  /** Mean ribbon-sample-to-nearest-asphalt-vertex distance at this pose —
+   * lower is a tighter fit. Logged by the caller so the fit quality is
+   * inspectable, not just trusted. */
+  error: number;
 }
 
-export function buildLocalAsphaltCloud(terrain: THREE.Object3D): LocalAsphaltCloud {
-  resetTerrainTransform(terrain);
-  const world = sampleTerrainAsphaltXZ(terrain);
-  return { points: world.map((p) => ({ x: p.x, z: p.z })) };
+/** Rotation matching THREE's `object3D.rotation.y = theta` convention
+ * (equivalent to `Matrix4.makeRotationY`) — used for both scoring
+ * candidates and applying the winning one, so the two can never disagree.
+ * An earlier version of this file scored candidates with one rotation
+ * sign and applied the winner with the opposite one. */
+function rotateXZ(x: number, z: number, theta: number): Xz {
+  const cos = Math.cos(theta);
+  const sin = Math.sin(theta);
+  return { x: x * cos + z * sin, z: -x * sin + z * cos };
 }
 
-function transformLocalAsphalt(
-  local: LocalAsphaltCloud,
-  knobs: TerrainRegistrationKnobs,
-  ctx: TerrainRegistrationContext,
-): Xz[] {
-  const scale = (ctx.ribbonPCA.majorStd / ctx.terrainPCA.majorStd) * knobs.scaleMultiplier;
+function scaleFor(knobs: TerrainRegistrationKnobs, ctx: TerrainRegistrationContext): number {
+  return (ctx.ribbonPCA.majorStd / ctx.terrainPCA.majorStd) * knobs.scaleMultiplier;
+}
+
+/** Transforms `local` (terrain-local space) into `out` (world-space, for
+ * one candidate pose) in place — `out` must be pre-sized to match `local`. */
+function transformInto(local: Cloud, out: Cloud, knobs: TerrainRegistrationKnobs, ctx: TerrainRegistrationContext): void {
+  const scale = scaleFor(knobs, ctx);
   const mirror = knobs.mirrorX ? -1 : 1;
   const cos = Math.cos(knobs.rotationRad);
   const sin = Math.sin(knobs.rotationRad);
-  const tx =
-    ctx.ribbonPCA.mean.x -
-    (ctx.terrainPCA.mean.x * scale * mirror * cos - ctx.terrainPCA.mean.y * scale * sin);
-  const tz =
-    ctx.ribbonPCA.mean.y -
-    (ctx.terrainPCA.mean.x * scale * mirror * sin + ctx.terrainPCA.mean.y * scale * cos);
-
-  return local.points.map((p) => {
-    const sx = p.x * scale * mirror;
-    const sz = p.z * scale;
-    return {
-      x: sx * cos - sz * sin + tx,
-      z: sx * sin + sz * cos + tz,
-    };
-  });
-}
-
-function meanRibbonToAsphaltCloud(ribbonSamples: Xz[], asphalt: Xz[]): number {
-  if (asphalt.length < 200) return Infinity;
-  let total = 0;
-  let n = 0;
-  for (const ribbon of ribbonSamples) {
-    const hit = nearestAsphalt(asphalt, ribbon);
-    if (!hit) continue;
-    total += Math.hypot(ribbon.x - hit.x, ribbon.z - hit.z);
-    n++;
+  for (let i = 0; i < local.length; i++) {
+    const sx = local.x[i] * scale * mirror;
+    const sz = local.z[i] * scale;
+    out.x[i] = sx * cos + sz * sin;
+    out.z[i] = -sx * sin + sz * cos;
   }
-  return n > 0 ? total / n : Infinity;
-}
-
-function refineTranslationOnCloud(
-  ribbonSamples: Xz[],
-  asphalt: Xz[],
-  iterations = 5,
-): Xz[] {
-  const shifted = asphalt.map((p) => ({ x: p.x, z: p.z }));
-  for (let iter = 0; iter < iterations; iter++) {
-    let sx = 0;
-    let sz = 0;
-    let n = 0;
-    for (const ribbon of ribbonSamples) {
-      const hit = nearestAsphalt(shifted, ribbon);
-      if (!hit) continue;
-      sx += ribbon.x - hit.x;
-      sz += ribbon.z - hit.z;
-      n++;
-    }
-    if (n < ribbonSamples.length * 0.5) break;
-    const ox = sx / n;
-    const oz = sz / n;
-    if (Math.abs(ox) < 1e-4 && Math.abs(oz) < 1e-4) break;
-    for (const p of shifted) {
-      p.x += ox;
-      p.z += oz;
-    }
-  }
-  return shifted;
-}
-
-function alignCentroidOnCloud(ribbonSamples: Xz[], asphalt: Xz[]): void {
-  let ax = 0;
-  let az = 0;
-  for (const p of asphalt) {
-    ax += p.x;
-    az += p.z;
-  }
-  ax /= asphalt.length;
-  az /= asphalt.length;
-  let rx = 0;
-  let rz = 0;
-  for (const p of ribbonSamples) {
-    rx += p.x;
-    rz += p.z;
-  }
-  rx /= ribbonSamples.length;
-  rz /= ribbonSamples.length;
-  const ox = rx - ax;
-  const oz = rz - az;
-  for (const p of asphalt) {
-    p.x += ox;
-    p.z += oz;
-  }
-}
-
-function scoreRegistration(
-  ribbonSamples: Xz[],
-  localAsphalt: LocalAsphaltCloud,
-  ctx: TerrainRegistrationContext,
-  knobs: TerrainRegistrationKnobs,
-): number {
-  const asphalt = transformLocalAsphalt(localAsphalt, knobs, ctx);
-  alignCentroidOnCloud(ribbonSamples, asphalt);
-  const refined = refineTranslationOnCloud(ribbonSamples, asphalt);
-  return meanRibbonToAsphaltCloud(ribbonSamples, refined);
-}
-
-function resetTerrainTransform(terrain: THREE.Object3D): void {
-  terrain.scale.set(1, 1, 1);
-  terrain.rotation.set(0, 0, 0);
-  terrain.position.set(0, 0, 0);
-  terrain.updateMatrixWorld(true);
-}
-
-function computeTranslationRefinement(
-  ribbonSamples: Xz[],
-  localAsphalt: LocalAsphaltCloud,
-  knobs: TerrainRegistrationKnobs,
-  ctx: TerrainRegistrationContext,
-): { offsetX: number; offsetZ: number; error: number } {
-  const asphalt = transformLocalAsphalt(localAsphalt, knobs, ctx);
-
-  let ax = 0;
-  let az = 0;
-  for (const p of asphalt) {
-    ax += p.x;
-    az += p.z;
-  }
-  ax /= asphalt.length;
-  az /= asphalt.length;
-  let rx = 0;
-  let rz = 0;
-  for (const p of ribbonSamples) {
-    rx += p.x;
-    rz += p.z;
-  }
-  rx /= ribbonSamples.length;
-  rz /= ribbonSamples.length;
-  let totalX = rx - ax;
-  let totalZ = rz - az;
-  for (const p of asphalt) {
-    p.x += totalX;
-    p.z += totalZ;
-  }
-
-  for (let iter = 0; iter < 5; iter++) {
-    let sx = 0;
-    let sz = 0;
-    let n = 0;
-    for (const ribbon of ribbonSamples) {
-      const hit = nearestAsphalt(asphalt, ribbon);
-      if (!hit) continue;
-      sx += ribbon.x - hit.x;
-      sz += ribbon.z - hit.z;
-      n++;
-    }
-    if (n < ribbonSamples.length * 0.5) break;
-    const ox = sx / n;
-    const oz = sz / n;
-    if (Math.abs(ox) < 1e-4 && Math.abs(oz) < 1e-4) break;
-    for (const p of asphalt) {
-      p.x += ox;
-      p.z += oz;
-    }
-    totalX += ox;
-    totalZ += oz;
-  }
-
-  return {
-    offsetX: totalX,
-    offsetZ: totalZ,
-    error: meanRibbonToAsphaltCloud(ribbonSamples, asphalt),
-  };
-}
-
-/** Apply PCA similarity transform + asphalt-centroid shift + ICP refinement. */
-export function applyTerrainRegistration(
-  terrain: THREE.Object3D,
-  ribbonSamples: Xz[],
-  ctx: TerrainRegistrationContext,
-  knobs: TerrainRegistrationKnobs,
-): number {
-  resetTerrainTransform(terrain);
-
-  const scale = (ctx.ribbonPCA.majorStd / ctx.terrainPCA.majorStd) * knobs.scaleMultiplier;
-  const mirror = knobs.mirrorX ? -1 : 1;
-  const rotMat = new THREE.Matrix4().makeRotationY(knobs.rotationRad);
-  const scaledMean = new THREE.Vector3(
-    ctx.terrainPCA.mean.x * scale * mirror,
-    0,
-    ctx.terrainPCA.mean.y * scale,
-  ).applyMatrix4(rotMat);
-
-  terrain.scale.set(scale * mirror, scale, scale);
-  terrain.rotation.y = knobs.rotationRad;
-  terrain.position.set(
-    ctx.ribbonPCA.mean.x - scaledMean.x,
-    -0.05 - ctx.groundY * scale,
-    ctx.ribbonPCA.mean.y - scaledMean.z,
-  );
-  terrain.updateMatrixWorld(true);
-
-  const localAsphalt = buildLocalAsphaltCloud(terrain);
-  const { offsetX, offsetZ, error } = computeTranslationRefinement(
-    ribbonSamples,
-    localAsphalt,
-    knobs,
-    ctx,
-  );
-  terrain.position.x += offsetX;
-  terrain.position.z += offsetZ;
-  terrain.updateMatrixWorld(true);
-
-  return error;
 }
 
 /**
- * Coarse grid search around sandbox seed knobs (rotation, scale, mirror).
- * Runs once at terrain load — ~40 candidates — to pick the pose that
- * minimises ribbon→asphalt distance after automatic translation refinement.
+ * Scores one candidate pose against the real geometry: transform → align
+ * centroids → build one spatial index → ICP-refine translation against it
+ * → mean residual distance. Returns the full translation (centring + ICP)
+ * so the winner's offset doesn't need recomputing.
  */
-export function searchTerrainRegistration(
+function scoreCandidate(
+  ribbon: Cloud,
+  ribbonCentre: Xz,
+  local: Cloud,
+  scratch: Cloud,
+  ctx: TerrainRegistrationContext,
+  knobs: TerrainRegistrationKnobs,
+): { offsetX: number; offsetZ: number; error: number } {
+  transformInto(local, scratch, knobs, ctx);
+  const asphaltCentre = centroidOf(scratch);
+  const centringX = ribbonCentre.x - asphaltCentre.x;
+  const centringZ = ribbonCentre.z - asphaltCentre.z;
+  for (let i = 0; i < scratch.length; i++) {
+    scratch.x[i] += centringX;
+    scratch.z[i] += centringZ;
+  }
+
+  const grid = buildGrid(scratch);
+  const icp = icpTranslate(ribbon, scratch, grid);
+  const error = meanNearestDistance(ribbon, scratch, grid, icp.offsetX, icp.offsetZ);
+  return { offsetX: centringX + icp.offsetX, offsetZ: centringZ + icp.offsetZ, error };
+}
+
+/**
+ * Computes and applies the terrain's registration against the real
+ * apex-point ribbon by searching for it, not by trusting a baked pose.
+ *
+ * PCA (see lib/pca.ts) gives the terrain's and the ribbon's own centroid
+ * and spread, but its rotation angle is only defined mod 180° (a line has
+ * no inherent direction), and PCA can't separately rule out the terrain
+ * being mirrored (opposite handedness) rather than rotated — two
+ * ambiguities pure PCA math cannot resolve on its own. Both are resolved
+ * here the same way a person eyeballing the scene would: try the
+ * candidates and keep whichever one actually lands the ribbon on asphalt,
+ * measured by real mean ribbon-to-asphalt distance after an ICP-style
+ * translation refinement — not by rendering it and looking.
+ *
+ * Search scope: a handful of rotation/scale steps around each of the 2
+ * rotation branches (the 180° ambiguity above) × 2 mirror states — around
+ * 100 candidates, every one scored against the full asphalt point cloud
+ * (no subsampling — see this file's module doc comment for why that
+ * matters here). What keeps ~100 full-density candidate evaluations fast
+ * is each one doing O(1) spatial-index builds instead of O(iterations):
+ * see {@link icpTranslate}.
+ */
+export function registerTerrain(
   terrain: THREE.Object3D,
   ribbonSamples: Xz[],
   ctx: TerrainRegistrationContext,
-  seed: TerrainRegistrationKnobs,
-): TerrainRegistrationKnobs & { error: number } {
-  const localAsphalt = buildLocalAsphaltCloud(terrain);
-  const rotStep = (2.5 * Math.PI) / 180;
-  const rotSpan = (10 * Math.PI) / 180;
-  const scaleFactors = [0.88, 0.94, 1, 1.06, 1.12];
+): TerrainPose {
+  const localAsphalt = toCloud(sampleAsphaltPoints(terrain));
+  const scratch = cloneCloud(localAsphalt);
+  const ribbon = toCloud(ribbonSamples);
+  const ribbonCentre = centroidOf(ribbon);
 
-  let best: TerrainRegistrationKnobs & { error: number } = {
-    ...seed,
-    error: Infinity,
-  };
+  const rawAngle = ctx.ribbonPCA.majorAngle - ctx.terrainPCA.majorAngle;
+  const rotationSeeds = [rawAngle, rawAngle + Math.PI];
+  const scaleFactors = [0.92, 0.96, 1, 1.04, 1.08];
+  const ROT_SPAN = (6 * Math.PI) / 180;
+  const ROT_STEP = (3 * Math.PI) / 180;
 
-  for (const mirrorX of [false, true] as const) {
-    for (let rot = seed.rotationRad - rotSpan; rot <= seed.rotationRad + rotSpan; rot += rotStep) {
-      for (const sf of scaleFactors) {
-        const knobs: TerrainRegistrationKnobs = {
-          rotationRad: rot,
-          scaleMultiplier: seed.scaleMultiplier * sf,
-          mirrorX,
-        };
-        const error = scoreRegistration(ribbonSamples, localAsphalt, ctx, knobs);
-        if (error < best.error) {
-          best = { ...knobs, error };
+  let best: (TerrainRegistrationKnobs & { offsetX: number; offsetZ: number; error: number }) | null = null;
+  for (const mirrorX of [false, true]) {
+    for (const seedRot of rotationSeeds) {
+      for (let rot = seedRot - ROT_SPAN; rot <= seedRot + ROT_SPAN; rot += ROT_STEP) {
+        for (const scaleMultiplier of scaleFactors) {
+          const knobs: TerrainRegistrationKnobs = { rotationRad: rot, scaleMultiplier, mirrorX };
+          const scored = scoreCandidate(ribbon, ribbonCentre, localAsphalt, scratch, ctx, knobs);
+          if (!best || scored.error < best.error) best = { ...knobs, ...scored };
         }
       }
     }
   }
+  // best is never null: the loops above always run at least once.
+  const winner = best as TerrainRegistrationKnobs & { offsetX: number; offsetZ: number; error: number };
 
-  applyTerrainRegistration(terrain, ribbonSamples, ctx, best);
-  return best;
+  const scale = scaleFor(winner, ctx);
+  const mirror = winner.mirrorX ? -1 : 1;
+  const rotatedMean = rotateXZ(ctx.terrainPCA.mean.x * scale * mirror, ctx.terrainPCA.mean.y * scale, winner.rotationRad);
+  const position = {
+    x: ctx.ribbonPCA.mean.x - rotatedMean.x + winner.offsetX,
+    y: -0.05 - ctx.groundY * scale,
+    z: ctx.ribbonPCA.mean.y - rotatedMean.z + winner.offsetZ,
+  };
+
+  terrain.scale.set(scale * mirror, scale, scale);
+  terrain.rotation.y = winner.rotationRad;
+  terrain.position.set(position.x, position.y, position.z);
+  terrain.updateMatrixWorld(true);
+
+  return { scale, rotationRad: winner.rotationRad, mirrorX: winner.mirrorX, position, error: winner.error };
 }

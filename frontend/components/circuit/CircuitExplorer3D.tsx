@@ -5,84 +5,30 @@ import * as THREE from "three";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { circuitCorners } from "@/data/circuitCorners";
-import {
-  buildFlyoverCurve,
-  buildFlyoverRibbon,
-  FLYOVER_GRANDSTANDS,
-  grandstandPosition,
-} from "@/lib/circuitFlyoverTrack";
+import { registerTerrain } from "@/lib/circuitTerrainAlign";
+import { buildFlyoverCurve, FLYOVER_GRANDSTANDS, grandstandPosition } from "@/lib/circuitFlyoverTrack";
 import { meshAsphaltPointCloudPCA, planarPCA } from "@/lib/pca";
-import { progressFractionAt } from "@/lib/telemetry";
-import type { TelemetrySample } from "@/types/telemetry";
 
-const CAR_SRC = "/models/car.glb";
 // Same real reference scan CircuitModelPreview.tsx uses for "Orbit Sepang"
 // — see frontend/public/models/README.md for provenance/attribution and
-// what was stripped from it. Loaded here as ground-level dressing (real
-// curbs, grandstands, terrain, palms) underneath this component's own
-// curve — registered against it via a similarity transform (rotation +
-// scale + translation), not just a bounding-box auto-fit; see the loader
-// callback below for how, and TERRAIN_ROTATION_ABS_RAD's comment for
-// why that transform needs one further manual decision PCA can't make.
+// what was stripped from it. Loaded here as the real ground surface (curbs,
+// grandstands, terrain, palms) under this component's own corner markers —
+// registered against them by an actual similarity-transform search (see
+// lib/circuitTerrainAlign.ts's registerTerrain), not a bounding-box
+// auto-fit or a hand-tuned pose.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
-// PCA (see lib/pca.ts) gives the terrain's own centroid/scale below, but
-// not a usable rotation angle: the raw PCA angle delta between terrain and
-// ribbon is only defined up to a 180° ambiguity, and PCA alone can't also
-// rule out the terrain being mirrored (opposite handedness) rather than
-// rotated — this terrain scan turned out to need both a mirror AND a
-// rotation that PCA's angle-matching alone couldn't reach (the ribbon ran
-// parallel to the tarmac but offset onto grass, not just off by a clean
-// rotation). So rotation/mirror here are a baked absolute pose, found by
-// screenshotting candidate rotation/mirror/scale combinations against the
-// live scene until the ribbon sat on asphalt rather than beside it. If
-// this terrain model or the real apex centreline data ever changes,
-// re-verify by the same method rather than assuming this still holds.
-const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
-const TERRAIN_MIRROR_X = true;
-// Size/translation polish on top of the baked pose above. Registration
-// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only) for the
-// terrain's own centroid/scale, so these stay close to identity and only
-// mop up residual bias from kerbs/pit-lane gray.
-const TERRAIN_SCALE_CORRECTION = 0.95;
-const TERRAIN_OFFSET_X = 0.3;
-const TERRAIN_OFFSET_Z = -0.3;
-// Seconds for one lap of the traced curve — arbitrary showcase pacing, used
-// whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
-// from any real lap time.
-const LAP_SECONDS = 14;
-
-export interface RealLapPacing {
-  samples: TelemetrySample[];
-  /** Same length/order as samples — see lib/telemetry.ts's buildDistanceProgress. */
-  distanceProgress: number[];
-  /** Seconds into the real lap right now, driven by a playback clock the
-   * caller owns (e.g. useTelemetryPlayback) — read every animation frame
-   * via a ref, not by re-running this component's three.js setup effect. */
-  currentTime: number;
-}
 
 interface CircuitExplorer3DProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-  /** When present, paces the car by a real lap's actual speed rhythm
-   * instead of the arbitrary constant-time loop — see the module-level
-   * RealLapPacing doc comment. */
-  realLap?: RealLapPacing | null;
 }
 
-
-export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: CircuitExplorer3DProps) {
+export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const hotspotMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
-  // Read inside the rAF loop below rather than closed over at effect-setup
-  // time — that effect only runs once (empty dep array, same as the rest
-  // of this component's setup), so a plain closure would freeze whatever
-  // realLap was on first mount.
-  const realLapRef = useRef(realLap);
-  realLapRef.current = realLap;
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -104,7 +50,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     mount.appendChild(renderer.domElement);
 
     // Lighting — soft ambient plus a single raking directional light so the
-    // track ribbon reads with some depth without needing shadow maps.
+    // real terrain reads with some depth without needing shadow maps.
     scene.add(new THREE.AmbientLight(0xffffff, 0.65));
     const sun = new THREE.DirectionalLight(0xfff4e0, 0.9);
     sun.position.set(4, 6, 2);
@@ -122,40 +68,28 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     const grid = new THREE.GridHelper(20, 40, 0x2a3036, 0x1c2126);
     scene.add(grid);
 
-    // Track curve + ribbon — the real apex-point centreline
-    // (data/sepang.json via lib/circuitFlyoverTrack), the same source
-    // CircuitFlyoverHero builds its own curve from, rather than a
-    // separately traced-by-eye loop. circuitCorners.ts's hotspot `t`
-    // values are calibrated against this exact curve's point ordering.
-    // Kept narrow and independent of the car's own scale (below) — with
-    // the real terrain model loaded underneath it (below), this reads as
-    // a "racing line" overlay rather than the road surface itself.
-    const ribbonWidth = 0.05;
+    // Real apex-point centreline (data/sepang.json via
+    // lib/circuitFlyoverTrack) — the same source CircuitFlyoverHero builds
+    // its own curve from, rather than a separately traced-by-eye loop.
+    // circuitCorners.ts's hotspot `t` values are calibrated against this
+    // exact curve's point ordering. No visible line is drawn along it
+    // (the real terrain below is the visual now); it exists purely as the
+    // coordinate reference the corner markers, grandstands, start/finish
+    // line, and terrain registration all place themselves against.
+    const markerWidth = 0.05;
     const curve = buildFlyoverCurve();
-    const { geometry: ribbonGeometry } = buildFlyoverRibbon(curve, ribbonWidth);
-    const ribbonMaterial = new THREE.MeshStandardMaterial({
-      color: 0xf5a623,
-      emissive: 0xf5a623,
-      emissiveIntensity: 0.5,
-      roughness: 0.4,
-      transparent: true,
-      opacity: 0.85,
-      side: THREE.DoubleSide,
-    });
-    const ribbon = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
-    scene.add(ribbon);
 
-    // Real terrain (see TERRAIN_SRC above) — loaded as ground-level
-    // dressing under the curve above, registered against it by a real
-    // similarity transform (rotation + scale + translation matching each
-    // one's own PCA major axis — see lib/pca.ts) rather than a bounding-
-    // box auto-fit. The curve comes from this app's own real apex-point
-    // survey (lib/circuitFlyoverTrack.ts) and this terrain from an
-    // independent Sketchfab scan — two unrelated real-world sources with
-    // no shared coordinate system, so this can align them well (verified
-    // visually in tools/r3f-sandbox) but won't land every one of the 15
-    // corners exactly on its real counterpart; treat it as "the same
-    // track, correctly oriented and scaled," not survey-grade fusion.
+    // Real terrain (see TERRAIN_SRC above) — loaded as the real ground
+    // surface under the curve above, registered against it by an actual
+    // similarity-transform search (lib/circuitTerrainAlign.ts's
+    // registerTerrain — rotation, mirror, scale, and translation all
+    // computed from the real geometry, not a hand-tuned pose). The curve
+    // comes from this app's own real apex-point survey and this terrain
+    // from an independent Sketchfab scan — two unrelated real-world
+    // sources with no shared coordinate system, so this can align them
+    // well but won't land every one of the 15 corners exactly on its real
+    // counterpart; treat it as "the same track, correctly oriented and
+    // scaled," not survey-grade fusion.
     const terrainDisposables: Array<{ dispose: () => void }> = [];
     const terrainDracoLoader = new DRACOLoader();
     terrainDracoLoader.setDecoderPath(DRACO_DECODER_PATH);
@@ -185,17 +119,16 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         // space — must happen before any scale/rotation/position is
         // applied to `terrain` itself. Asphalt-only PCA (not every
         // non-palm vertex) so buildings/runoff don't inflate the
-        // footprint the ribbon is registered against.
+        // footprint the centreline is registered against.
         const terrainPCA = meshAsphaltPointCloudPCA(terrain);
 
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
         // sit well below the actual track/grass surface, so that would
-        // bury the real drivable surface (and this ribbon) deep beneath
-        // it. Each individual object's own base *does* sit at its local
-        // ground contact point, though, so the median of those bases
-        // approximates true ground level while ignoring those few deep
-        // outliers.
+        // bury the real drivable surface deep beneath it. Each individual
+        // object's own base *does* sit at its local ground contact point,
+        // though, so the median of those bases approximates true ground
+        // level while ignoring those few deep outliers.
         const objectBaseYs: number[] = [];
         terrain.traverse((child) => {
           if (child instanceof THREE.Mesh && !child.name.startsWith("Palm")) {
@@ -208,26 +141,16 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
         const ribbonPCA = planarPCA(ribbonSamples);
 
-        const mirror = TERRAIN_MIRROR_X ? -1 : 1;
-        const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
-        const rotationRad = TERRAIN_ROTATION_ABS_RAD;
-        const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
-        // Mirror applies to the mesh's local X before rotation (same order
-        // terrain.scale.set below applies it in), so it has to be baked into
-        // this mean as well — otherwise the centroid correction below is
-        // computed for the un-mirrored mesh and drifts once the mirror flips it.
-        const scaledTerrainMean = new THREE.Vector3(
-          terrainPCA.mean.x * terrainScale * mirror,
-          0,
-          terrainPCA.mean.y * terrainScale,
-        ).applyMatrix4(rotationMatrix);
-
-        terrain.scale.set(terrainScale * mirror, terrainScale, terrainScale);
-        terrain.rotation.y = rotationRad;
-        terrain.position.set(
-          ribbonPCA.mean.x - scaledTerrainMean.x + TERRAIN_OFFSET_X,
-          -0.05 - groundY * terrainScale,
-          ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
+        const registrationStart = performance.now();
+        const pose = registerTerrain(terrain, ribbonSamples, { terrainPCA, ribbonPCA, groundY });
+        // Fit quality (and search cost) is inspectable rather than just
+        // trusted — re-run and compare this if the terrain model or apex
+        // data ever changes.
+        console.debug(
+          `[circuit] terrain registered: rotation=${((pose.rotationRad * 180) / Math.PI).toFixed(1)}°` +
+            ` mirror=${pose.mirrorX} scale=${pose.scale.toFixed(3)}` +
+            ` meanError=${pose.error.toFixed(4)}` +
+            ` searchMs=${(performance.now() - registrationStart).toFixed(0)}`,
         );
 
         scene.add(terrain);
@@ -237,7 +160,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
       undefined,
       () => {
         // Real terrain missing — the flat fallback ground/grid above
-        // stays visible, same graceful-degradation the car model gets.
+        // stays visible.
       },
     );
 
@@ -245,7 +168,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     const startPoint = curve.getPointAt(0);
     const startTangent = curve.getTangentAt(0);
     const startLine = new THREE.Mesh(
-      new THREE.BoxGeometry(ribbonWidth, 0.02, 0.05),
+      new THREE.BoxGeometry(markerWidth, 0.02, 0.05),
       new THREE.MeshBasicMaterial({ color: 0xf5a623 }),
     );
     startLine.position.copy(startPoint).setY(0.02);
@@ -255,7 +178,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     // Grandstand blocks — decorative, positioned as fractions along the
     // curve (same spec CircuitFlyoverHero uses) rather than hand-placed
     // world coordinates, so they stay sensible against this real geometry.
-    const grandstandOffset = ribbonWidth * 1.4;
+    const grandstandOffset = markerWidth * 1.4;
     FLYOVER_GRANDSTANDS.forEach((spec) => {
       const position = grandstandPosition(curve, spec, grandstandOffset);
       const box = new THREE.Mesh(
@@ -274,9 +197,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     // Corner hotspots — placed with getPoint (raw parameter), not getPointAt
     // (arc-length): circuitCorners.ts's `t` values are each corner's exact
     // index among the curve's real apex control points, so the un-remapped
-    // parameter lands exactly on that point. getPointAt is reserved for the
-    // car's pacing below, where constant-speed arc-length traversal is what
-    // actually matters.
+    // parameter lands exactly on that point.
     const hotspotGroup = new THREE.Group();
     circuitCorners.forEach((corner) => {
       const point = curve.getPoint(corner.t);
@@ -297,49 +218,11 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     });
     scene.add(hotspotGroup);
 
-    // Animated car — a generic, unbranded model (see
-    // scripts/generate_circuit_models.py) run around the traced curve at
-    // an arbitrary showcase pace, purely decorative. Loaded async, so it
-    // simply never appears if the GLB is missing rather than blocking the
-    // rest of the scene.
-    let car: THREE.Object3D | null = null;
-    const carDisposables: Array<{ dispose: () => void }> = [];
-    const carLoader = new GLTFLoader();
-    carLoader.load(
-      CAR_SRC,
-      (gltf) => {
-        car = gltf.scene;
-        car.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
-            carDisposables.push(child.geometry);
-            if (Array.isArray(child.material)) child.material.forEach((m) => carDisposables.push(m));
-            else carDisposables.push(child.material);
-          }
-        });
-        // Same auto-scale approach as CircuitModelPreview's track model —
-        // this component's own units are small (the curve spans a few
-        // units), so a car authored at roughly real-world scale needs
-        // normalizing down rather than assuming any particular size.
-        // Targets a fixed width rather than a multiple of ribbonWidth so
-        // the car's size doesn't change if the racing-line overlay above
-        // is ever restyled again.
-        const carBox = new THREE.Box3().setFromObject(car);
-        const carSize = carBox.getSize(new THREE.Vector3());
-        const carTargetWidth = 0.16 * 3.2;
-        const carScale = carTargetWidth / Math.max(carSize.x, carSize.z, 0.001);
-        car.scale.setScalar(carScale);
-        scene.add(car);
-      },
-      undefined,
-      () => {
-        car = null;
-      },
-    );
-
-    // Camera framing — isometric-ish, orbiting around the ribbon's bounding
-    // box center rather than the world origin (the traced loop isn't
-    // centered at 0,0).
-    const box = new THREE.Box3().setFromObject(ribbon);
+    // Camera framing — isometric-ish, orbiting around the centreline's
+    // bounding box center rather than the world origin (the traced loop
+    // isn't centered at 0,0). Built straight from the curve's own points
+    // rather than a rendered mesh's geometry.
+    const box = new THREE.Box3().setFromPoints(curve.getSpacedPoints(120));
     const center = box.getCenter(new THREE.Vector3());
     const radius = box.getSize(new THREE.Vector3()).length() * 0.62;
 
@@ -399,23 +282,12 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     };
     window.addEventListener("resize", onResize);
 
-    const clock = new THREE.Clock();
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
       if (autoRotate) {
         azimuth += 0.0018;
         applyCamera();
-      }
-      if (car) {
-        const active = realLapRef.current;
-        const t = active
-          ? progressFractionAt(active.samples, active.distanceProgress, active.currentTime)
-          : (clock.getElapsedTime() % LAP_SECONDS) / LAP_SECONDS;
-        const point = curve.getPointAt(t);
-        const tangent = curve.getTangentAt(t);
-        car.position.copy(point).setY(0.02);
-        car.rotation.y = Math.atan2(tangent.x, tangent.z);
       }
       renderer.render(scene, camera);
     };
@@ -428,11 +300,8 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
       window.removeEventListener("pointerup", onPointerUp);
       renderer.domElement.removeEventListener("click", onClick);
       window.removeEventListener("resize", onResize);
-      ribbonGeometry.dispose();
-      ribbonMaterial.dispose();
       ground.geometry.dispose();
       (ground.material as THREE.Material).dispose();
-      carDisposables.forEach((item) => item.dispose());
       terrainDisposables.forEach((item) => item.dispose());
       terrainDracoLoader.dispose();
       renderer.dispose();
