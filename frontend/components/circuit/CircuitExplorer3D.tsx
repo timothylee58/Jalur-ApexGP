@@ -22,7 +22,7 @@ const CAR_SRC = "/models/car.glb";
 // curbs, grandstands, terrain, palms) underneath this component's own
 // curve — registered against it via a similarity transform (rotation +
 // scale + translation), not just a bounding-box auto-fit; see the loader
-// callback below for how, and TERRAIN_ROTATION_OFFSET_RAD's comment for
+// callback below for how, and TERRAIN_ROTATION_ABS_RAD's comment for
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
@@ -218,12 +218,9 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
         const ribbonPCA = planarPCA(ribbonSamples);
 
+        const mirror = TERRAIN_MIRROR_X ? -1 : 1;
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
-        const rotationRad =
-          ribbonPCA.majorAngle -
-          terrainPCA.majorAngle +
-          TERRAIN_ROTATION_OFFSET_RAD +
-          (TERRAIN_ROTATION_FINE_TUNE_DEG * Math.PI) / 180;
+        const rotationRad = TERRAIN_ROTATION_ABS_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
         const scaledTerrainMean = new THREE.Vector3(
           terrainPCA.mean.x * terrainScale,
@@ -231,13 +228,14 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
           terrainPCA.mean.y * terrainScale,
         ).applyMatrix4(rotationMatrix);
 
-        terrain.scale.setScalar(terrainScale);
+        terrain.scale.set(terrainScale * mirror, terrainScale, terrainScale);
         terrain.rotation.y = rotationRad;
         terrain.position.set(
           ribbonPCA.mean.x - scaledTerrainMean.x + TERRAIN_OFFSET_X,
           -0.05 - groundY * terrainScale,
           ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
         );
+
         scene.add(terrain);
         ground.visible = false;
         grid.visible = false;
