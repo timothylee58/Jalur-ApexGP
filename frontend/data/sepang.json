@@ -3,7 +3,7 @@
   "name": "Sepang International Circuit",
   "lengthKm": 5.543,
   "turns": 15,
-  "source": "Shared centreline for Orbit Sepang (sepang.glb), CircuitFlyoverHero, SepangCircuitMap, and scripts/generate_circuit_models.py. Close honest apex points with elevation — not a laser survey. Same honesty standard as the strategy engine.",
+  "source": "Shared centreline for Orbit Sepang (sepang.glb), CircuitFlyoverHero, SepangCircuitMap, and scripts/generate_circuit_models.py. Close honest apex points with elevation — not a laser survey. Same honesty standard as the strategy engine. 'Back Straight Mid' sits between T4 and T5 Apex, matching Sepang's real ~800m back straight (the track's longest straight other than the pit straight) — it originally shipped with a coordinate near the front straight and out of lap sequence (between T14 and T15), which visibly pinched/self-crossed the derived path; corrected by interpolating between T4 and T5's own existing points rather than inventing a new unverified coordinate.",
   "points": [
     { "name": "Start/Finish", "lat": 2.7607, "lon": 101.7383, "elevM": 27.0 },
     { "name": "T1 Entry", "lat": 2.76455, "lon": 101.73975, "elevM": 26.0 },
@@ -11,6 +11,7 @@
     { "name": "T2 Apex", "lat": 2.76525, "lon": 101.74085, "elevM": 20.0 },
     { "name": "T3 Apex", "lat": 2.7628, "lon": 101.7427, "elevM": 39.0 },
     { "name": "T4 Apex", "lat": 2.7579, "lon": 101.7431, "elevM": 36.0 },
+    { "name": "Back Straight Mid", "lat": 2.7563, "lon": 101.74175, "elevM": 34.5 },
     { "name": "T5 Apex", "lat": 2.7547, "lon": 101.7404, "elevM": 33.0 },
     { "name": "T6 Apex", "lat": 2.75405, "lon": 101.7388, "elevM": 31.0 },
     { "name": "T7 Apex", "lat": 2.7523, "lon": 101.736, "elevM": 28.0 },
@@ -21,7 +22,6 @@
     { "name": "T12 Apex", "lat": 2.7575, "lon": 101.7308, "elevM": 18.0 },
     { "name": "T13 Apex", "lat": 2.7563, "lon": 101.7289, "elevM": 23.0 },
     { "name": "T14 Apex", "lat": 2.7582, "lon": 101.7275, "elevM": 26.0 },
-    { "name": "Back Straight Mid", "lat": 2.7618, "lon": 101.7371, "elevM": 29.0 },
     { "name": "T15 Hairpin", "lat": 2.76495, "lon": 101.73835, "elevM": 26.0 }
   ]
 }

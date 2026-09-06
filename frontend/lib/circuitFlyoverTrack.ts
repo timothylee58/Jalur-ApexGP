@@ -2,12 +2,13 @@ import * as THREE from "three";
 import { circuitPointsMetres } from "@/data/sepangCircuit";
 
 /**
- * 3D track curve for the landing page's opt-in flyover
- * (components/hero/CircuitFlyoverHero.tsx), built from the same real
- * apex-point centreline as the 2D map and `sepang.glb` — not a traced-by-eye
- * loop like CircuitExplorer3D's own separate curve (that page's hotspot `t`
- * values are calibrated against its curve specifically, so it's left alone
- * rather than switched to this one).
+ * 3D track curve built from the same real apex-point centreline as the 2D
+ * map and `sepang.glb` — shared by the landing page's opt-in flyover
+ * (components/hero/CircuitFlyoverHero.tsx) and CircuitExplorer3D.tsx's
+ * corner-by-corner explorer, whose hotspot `t` values (data/circuitCorners.ts)
+ * are calibrated against this exact curve via `getPoint` (raw parameter,
+ * matching each corner's index among sepang.json's 18 points) — see that
+ * file's doc comment.
  */
 
 const TARGET_SPAN = 6; // scene units the longer axis should span, same rough scale CircuitExplorer3D uses
