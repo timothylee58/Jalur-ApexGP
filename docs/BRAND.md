@@ -149,6 +149,15 @@ explicit about being a heuristic, not a black box.
   minutes server-side, not cached indefinitely — see
   `jolpica_service.py`'s `_STANDINGS_CACHE_TTL_SECONDS`), a different
   number those career totals sit next to, not a duplicate of them.
+- `/tickets`' seat finder (`SeatFinder.tsx`) positions each grandstand/
+  hillstand at its real apex-point location (`sepangCircuit.ts`) and
+  states which corners it overlooks — both WebSearch-verified against
+  the stand's own page on [sepangcircuit.com](https://www.sepangcircuit.com)
+  and the grandstand-map pages on malaysiaticketsgp.com/motogpsepang.com
+  (the organiser's own ticketing sites for this venue), not guessed. The
+  schematic itself stays this app's own redrawn map (same centreline as
+  everywhere else) rather than a copy of the organiser's venue-map
+  graphic — see that component's own disclaimer copy.
 - The live public-transit read on `/tickets` (nearest real RapidKL
   service toward Sepang/KLIA) uses Malaysia's official open-data GTFS
   feeds ([developer.data.gov.my](https://developer.data.gov.my)) for
