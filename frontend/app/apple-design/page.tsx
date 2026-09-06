@@ -45,7 +45,7 @@ export default function AppleDesignPage() {
             </div>
           </div>
         </div>
-        <div className="relative z-20 mx-auto max-w-md px-4 pb-10">
+        <div className="relative z-20 mx-auto w-full max-w-5xl px-4 pb-10 sm:px-6">
           <AboutNote />
         </div>
       </main>

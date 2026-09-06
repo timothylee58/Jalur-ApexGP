@@ -84,7 +84,7 @@ export default function AccuracyPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-2xl">
+      <main className="mx-auto w-full max-w-2xl px-4 py-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Track record
         </p>

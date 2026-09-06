@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { BgmPlayer } from "@/components/shared/BgmPlayer";
 import "./globals.css";
@@ -19,6 +19,12 @@ const display = Bebas_Neue({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata: Metadata = {
   title: "Jalur APEXGP — Sepang race engineer",
   description:
@@ -31,9 +37,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="overflow-x-clip">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${display.variable} bg-asphalt font-sans text-paper`}
+        className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-w-0 overflow-x-clip bg-asphalt font-sans text-paper`}
       >
         {children}
         <BgmPlayer />
