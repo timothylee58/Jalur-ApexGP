@@ -11,7 +11,7 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
-import { meshAsphaltPointCloudPCA, planarPCA } from "@/lib/pca";
+import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
@@ -22,28 +22,23 @@ const CAR_SRC = "/models/car.glb";
 // curbs, grandstands, terrain, palms) underneath this component's own
 // curve — registered against it via a similarity transform (rotation +
 // scale + translation), not just a bounding-box auto-fit; see the loader
-// callback below for how, and TERRAIN_ROTATION_OFFSET_RAD's comment for
+// callback below for how, and TERRAIN_ROTATION_ABS_RAD's comment for
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
-// PCA (see lib/pca.ts) gives the terrain's and the ribbon's major axis,
-// each defined only up to a 180° ambiguity (a line has no inherent
-// "direction"), so the raw angle delta between them is one of two
-// candidates 180° apart — and PCA alone can't also rule out the terrain
-// being mirrored (opposite handedness) rather than rotated. Both were
-// resolved by hand in tools/r3f-sandbox's "Circuit explorer" scene:
-// dragging a rotationDeg slider live against the actual rendered shapes
-// showed the "-180°" branch below to be the correct one (the raw delta
-// visibly ran the ribbon backwards around the loop), and no mirror was
-// needed. If this terrain model or the real apex data ever changes,
-// re-verify both in that sandbox rather than assuming this still holds.
-const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
-// Size/translation polish on top of asphalt-vs-ribbon PCA. Registration
-// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only), so the
-// std-ratio already matches track-to-ribbon size — these stay near
-// identity and only mop up residual bias from kerbs/pit-lane gray.
-const TERRAIN_SCALE_CORRECTION = 1.0;
-const TERRAIN_OFFSET_X = 0.15;
+// Absolute Y rotation matching tools/r3f-sandbox's Circuit explorer
+// `rotationDeg: -28.1` default — NOT `ribbonAngle - terrainAngle ± π`.
+// The sandbox applies this absolute angle while only using PCA for
+// scale + centroid; production previously substituted the PCA-delta
+// "-180° branch", which drifts when terrain PCA changes (asphalt filter,
+// palm skip, etc.) and no longer equals the eye-tuned -28.1°. Keep the
+// absolute value so registration stays tied to the verified sandbox pose.
+const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
+// PCA std isn't like-for-like between a dense terrain cloud and a sparse
+// ribbon sample set — 0.65 was eye-tuned in the sandbox so the ribbon
+// footprint sits inside the asphalt loop rather than spilling past it.
+const TERRAIN_SCALE_CORRECTION = 0.65;
+const TERRAIN_OFFSET_X = 0;
 const TERRAIN_OFFSET_Z = 0;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
@@ -181,10 +176,11 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
 
         // Everything below reads the terrain's own untransformed local
         // space — must happen before any scale/rotation/position is
-        // applied to `terrain` itself. Asphalt-only PCA (not every
-        // non-palm vertex) so buildings/runoff don't inflate the
-        // footprint the ribbon is registered against.
-        const terrainPCA = meshAsphaltPointCloudPCA(terrain);
+        // applied to `terrain` itself. Full non-palm mesh PCA (same as
+        // the sandbox) so scale/centroid match the absolute -28.1° pose
+        // that was eye-tuned there — asphalt-only PCA changes the axes
+        // and breaks that absolute angle.
+        const terrainPCA = meshPointCloudPCA(terrain);
 
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
@@ -207,7 +203,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonPCA = planarPCA(ribbonSamples);
 
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
-        const rotationRad = ribbonPCA.majorAngle - terrainPCA.majorAngle + TERRAIN_ROTATION_OFFSET_RAD;
+        const rotationRad = TERRAIN_ROTATION_ABS_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
         const scaledTerrainMean = new THREE.Vector3(
           terrainPCA.mean.x * terrainScale,
@@ -222,6 +218,61 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
           -0.05 - groundY * terrainScale,
           ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
         );
+
+        // Dev calibration surface — lets CDP/sandbox scripts retune
+        // rotation/scale/offset without a rebuild, then bake winners.
+        const applyTerrainRegistration = (
+          rotRad: number,
+          scaleCorr: number,
+          ox: number,
+          oz: number,
+        ) => {
+          const scale = (ribbonPCA.majorStd / terrainPCA.majorStd) * scaleCorr;
+          const rot = rotRad;
+          const rotMat = new THREE.Matrix4().makeRotationY(rot);
+          const mean = new THREE.Vector3(
+            terrainPCA.mean.x * scale,
+            0,
+            terrainPCA.mean.y * scale,
+          ).applyMatrix4(rotMat);
+          terrain.scale.setScalar(scale);
+          terrain.rotation.y = rot;
+          terrain.position.set(
+            ribbonPCA.mean.x - mean.x + ox,
+            -0.05 - groundY * scale,
+            ribbonPCA.mean.y - mean.z + oz,
+          );
+        };
+        (window as unknown as { __laneAlign?: unknown }).__laneAlign = {
+          rotationAbsRad: TERRAIN_ROTATION_ABS_RAD,
+          scaleCorrection: TERRAIN_SCALE_CORRECTION,
+          offsetX: TERRAIN_OFFSET_X,
+          offsetZ: TERRAIN_OFFSET_Z,
+          ribbonPCA: {
+            mean: { x: ribbonPCA.mean.x, z: ribbonPCA.mean.y },
+            majorAngle: ribbonPCA.majorAngle,
+            majorStd: ribbonPCA.majorStd,
+          },
+          terrainPCA: {
+            mean: { x: terrainPCA.mean.x, z: terrainPCA.mean.y },
+            majorAngle: terrainPCA.majorAngle,
+            majorStd: terrainPCA.majorStd,
+          },
+          pcaDeltaDeg: ((ribbonPCA.majorAngle - terrainPCA.majorAngle) * 180) / Math.PI,
+          pcaDeltaMinus180Deg:
+            ((ribbonPCA.majorAngle - terrainPCA.majorAngle) * 180) / Math.PI - 180,
+          apply: applyTerrainRegistration,
+          holdCamera: (v: boolean) => {
+            alignHoldCamera = v;
+            autoRotate = !v;
+          },
+          terrain,
+          curve,
+          camera,
+          renderer,
+          scene,
+        };
+
         scene.add(terrain);
         ground.visible = false;
         grid.visible = false;
@@ -338,6 +389,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     let azimuth = Math.PI * 0.28;
     const elevation = 0.62;
     let autoRotate = true;
+    let alignHoldCamera = false;
     let dragging = false;
     let lastX = 0;
 
@@ -395,7 +447,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     let frameId: number;
     const animate = () => {
       frameId = requestAnimationFrame(animate);
-      if (autoRotate) {
+      if (autoRotate && !alignHoldCamera) {
         azimuth += 0.0018;
         applyCamera();
       }
