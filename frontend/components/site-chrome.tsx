@@ -13,7 +13,7 @@ const NAV = [
   { href: "/news", label: "News" },
   { href: "/telemetry", label: "Telemetry" },
   { href: "/drive", label: "Drive" },
-  { href: "/apple-design", label: "Reveal" },
+  { href: "/product-reveal", label: "Reveal" },
   { href: "/lore", label: "Lore" },
   { href: "/tickets", label: "Seats" },
 ];

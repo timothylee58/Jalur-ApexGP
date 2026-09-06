@@ -1,15 +1,28 @@
 import Link from "next/link";
-import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { SiteHeader } from "@/components/site-chrome";
 
-export default function AppleDesignPage() {
+export default function ProductRevealPage() {
   return (
     <>
       <SiteHeader />
       <main className="relative">
         <div className="relative min-h-[100dvh] overflow-hidden">
-          <CircuitVideoHero className="pointer-events-none absolute inset-0" />
+          {/* Real aerial photo, not the CircuitVideoHero clip this page used
+              before — owner-supplied, used here at their explicit direction
+              (see PR discussion). Unlike the rest of this project's imagery,
+              this one hasn't cleared docs/BRAND.md's signage/rights checklist
+              (the grandstand roof reads "SEPANG CIRCUIT", and the source
+              file's own name matches a motorsport photo agency's press-file
+              pattern) — a deliberate, acknowledged exception for this single
+              image, not a change to that checklist for anything else. */}
+          <img
+            src="/product-reveal/sepang-aerial.jpg"
+            alt="Aerial view of the Sepang International Circuit"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            decoding="async"
+            fetchPriority="high"
+          />
           <div
             className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-asphalt via-asphalt/55 to-asphalt/20"
             aria-hidden
