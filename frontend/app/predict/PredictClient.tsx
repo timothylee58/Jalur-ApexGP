@@ -64,7 +64,7 @@ function PredictView() {
   }, [data]);
 
   return (
-    <main className="mx-auto max-w-md px-4 py-6">
+    <main className="mx-auto w-full max-w-3xl px-4 py-6">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">

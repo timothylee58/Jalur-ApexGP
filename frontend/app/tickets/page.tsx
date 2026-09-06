@@ -13,7 +13,7 @@ export default function TicketsPage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto max-w-md px-4 py-6 sm:max-w-5xl">
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Find your view
         </p>

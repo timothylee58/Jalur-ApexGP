@@ -215,11 +215,14 @@ export function CircuitModelPreview() {
   }, []);
 
   return (
-    <section id="orbit-sepang" className="relative z-20 mx-auto max-w-5xl px-4 py-12 sm:px-6">
+    <section
+      id="orbit-sepang"
+      className="relative z-20 mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-14 md:py-16"
+    >
       <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-paper-dim">
         Track model
       </p>
-      <h2 className="mt-2 font-display text-3xl uppercase tracking-wide text-paper">
+      <h2 className="mt-2 font-display text-[clamp(1.75rem,5vw,2.5rem)] uppercase tracking-wide text-paper">
         Orbit Sepang
       </h2>
       <p className="mt-2 max-w-xl text-sm text-paper-dim">

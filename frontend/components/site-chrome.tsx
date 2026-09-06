@@ -25,7 +25,7 @@ export function SiteHeader() {
     <header className="relative z-20 border-b border-paper/10 bg-asphalt/80 backdrop-blur">
       <nav
         aria-label="Primary"
-        className="mx-auto flex max-w-md items-center gap-3 px-4 py-3 sm:max-w-5xl sm:gap-4 sm:px-6"
+        className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6"
       >
         <Link href="/" className="shrink-0">
           <img

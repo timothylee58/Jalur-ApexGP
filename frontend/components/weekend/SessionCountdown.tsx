@@ -34,28 +34,42 @@ function formatMyt(iso: string): string {
 }
 
 export function SessionCountdown() {
-  const [now, setNow] = useState(() => Date.now());
+  // Null until mount so SSR HTML matches the first client paint — ticking
+  // values only appear after hydration (avoids seconds mismatch).
+  const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
+    setNow(Date.now());
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, []);
 
-  const live = SEPANG_2026_SESSIONS.find(
-    (s) => Date.parse(s.start) <= now && Date.parse(s.end) > now,
-  );
-  const next = live ?? SEPANG_2026_SESSIONS.find((s) => Date.parse(s.start) > now);
+  const clock = now ?? 0;
+  const live =
+    now == null
+      ? undefined
+      : SEPANG_2026_SESSIONS.find(
+          (s) => Date.parse(s.start) <= clock && Date.parse(s.end) > clock,
+        );
+  // SSR/pre-hydration: show the first session label only (stable). After
+  // mount, resolve live/next against the real clock.
+  const next =
+    now == null
+      ? SEPANG_2026_SESSIONS[0]
+      : (live ?? SEPANG_2026_SESSIONS.find((s) => Date.parse(s.start) > clock));
   const targetMs = next
     ? live
       ? Date.parse(next.end)
       : Date.parse(next.start)
     : null;
-  const parts = targetMs != null ? split(targetMs - now) : null;
+  const parts =
+    now != null && targetMs != null ? split(targetMs - clock) : null;
+
 
   return (
-    <section className="border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <section className="min-w-0 w-full overflow-hidden border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-pit-lime">
             {live ? "Live session window · MYT" : "Next session · MYT"}
           </p>
@@ -71,7 +85,7 @@ export function SessionCountdown() {
         <button
           type="button"
           onClick={() => downloadWeekendIcs()}
-          className="min-h-10 border border-amber/40 px-3 font-mono text-[11px] uppercase tracking-wide text-amber hover:bg-amber/10"
+          className="min-h-10 w-full shrink-0 border border-amber/40 px-3 font-mono text-[11px] uppercase tracking-wide text-amber hover:bg-amber/10 sm:w-auto"
         >
           Add weekend to calendar (.ics)
         </button>
@@ -79,7 +93,7 @@ export function SessionCountdown() {
 
       {parts ? (
         <div
-          className="mt-5 grid grid-cols-4 gap-2 font-mono sm:max-w-md"
+          className="mt-5 grid w-full min-w-0 grid-cols-4 gap-2 font-mono sm:max-w-md"
           aria-live="off"
         >
           {(
@@ -96,6 +110,25 @@ export function SessionCountdown() {
             >
               <strong className="block text-2xl tabular-nums text-paper sm:text-3xl">
                 {String(value).padStart(2, "0")}
+              </strong>
+              <span className="text-[10px] uppercase tracking-wide text-paper-dim">
+                {label}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : next ? (
+        <div
+          className="mt-5 grid w-full min-w-0 grid-cols-4 gap-2 font-mono sm:max-w-md"
+          aria-hidden
+        >
+          {(["days", "hours", "mins", "secs"] as const).map((label) => (
+            <div
+              key={label}
+              className="border border-asphalt-line bg-asphalt px-2 py-3 text-center"
+            >
+              <strong className="block text-2xl tabular-nums text-paper/30 sm:text-3xl">
+                --
               </strong>
               <span className="text-[10px] uppercase tracking-wide text-paper-dim">
                 {label}

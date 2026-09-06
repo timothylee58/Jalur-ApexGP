@@ -35,7 +35,17 @@ export function BgmPlayer() {
 
   useEffect(() => {
     try {
-      setMinimized(window.localStorage.getItem(STORAGE_KEY) === "1");
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored === "1" || stored === "0") {
+        setMinimized(stored === "1");
+        return;
+      }
+      // First visit on a narrow viewport: start minimized so the embed
+      // doesn't eat the first screen of content. Desktop stays expanded
+      // once so the player is discoverable.
+      if (window.matchMedia("(max-width: 639px)").matches) {
+        setMinimized(true);
+      }
     } catch {
       // private mode / blocked storage — stays expanded for this visit
     }
@@ -56,7 +66,7 @@ export function BgmPlayer() {
         type="button"
         onClick={() => toggle(false)}
         aria-label="Show Formula 1 playlist player"
-        className="fixed bottom-4 left-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-paper/10 bg-asphalt shadow-lg shadow-black/40 hover:border-amber"
+        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-paper/10 bg-asphalt shadow-lg shadow-black/40 hover:border-amber"
       >
         <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber" fill="currentColor" aria-hidden>
           <path d="M12 3a9 9 0 1 0 9 9 9.01 9.01 0 0 0-9-9Zm4.3 13.1a.6.6 0 0 1-.83.2c-2.27-1.39-5.13-1.7-8.5-.93a.6.6 0 1 1-.27-1.17c3.69-.84 6.85-.48 9.4 1.08a.6.6 0 0 1 .2.82Zm1.1-2.45a.75.75 0 0 1-1.03.25c-2.6-1.6-6.56-2.06-9.63-1.13a.75.75 0 1 1-.43-1.44c3.51-1.06 7.87-.55 10.84 1.28a.75.75 0 0 1 .25 1.04Zm.1-2.55C14.7 9.3 9.3 9.1 6.5 9.96a.9.9 0 1 1-.52-1.72c3.22-.98 9.15-.75 12.75 1.4a.9.9 0 1 1-.93 1.54Z" />
@@ -66,7 +76,7 @@ export function BgmPlayer() {
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-40 w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl shadow-lg shadow-black/40">
+    <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 w-[min(300px,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-lg shadow-black/40">
       <div className="flex items-center justify-end bg-asphalt px-2 py-1">
         <button
           type="button"

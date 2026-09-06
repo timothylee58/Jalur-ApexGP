@@ -5,8 +5,8 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { CircuitFlyoverHero } from "@/components/hero/CircuitFlyoverHero";
 import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
+import { HeroOverlay } from "@/components/hero/HeroOverlay";
 import { SessionPicker } from "@/components/hero/SessionPicker";
-import { WATCH_THIS_WEEKEND } from "@/data/news";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -30,7 +30,7 @@ export function LandingHero() {
   const [show3D, setShow3D] = useState(false);
 
   return (
-    <div className="relative min-h-[100dvh] overflow-hidden">
+    <div className="relative min-h-[100dvh] w-full overflow-hidden">
       <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
         <AnimatePresence initial={false}>
           {show3D ? (
@@ -62,7 +62,7 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-asphalt via-asphalt/55 to-asphalt/20"
         aria-hidden
       />
-      <div className="relative z-10 mx-auto flex min-h-[100dvh] max-w-5xl flex-col justify-end px-4 pb-20 pt-24 sm:px-6">
+      <HeroOverlay className="relative min-h-[100dvh]">
         <motion.p
           custom={0.05}
           variants={fadeUp}
@@ -77,14 +77,14 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-3 max-w-3xl"
+          className="mt-2 max-w-3xl sm:mt-3"
         >
           <img
             src="/brand/jalur-apexgp.png"
             alt="Jalur APEXGP"
             width={460}
             height={180}
-            className="h-auto w-[min(100%,22rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
+            className="h-auto w-[min(100%,18.5rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
             decoding="async"
             fetchPriority="high"
           />
@@ -94,21 +94,21 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-2 max-w-xl text-sm text-paper-dim md:text-base"
+          className="-mt-0.5 max-w-xl text-sm leading-relaxed text-paper-dim sm:mt-1 md:text-base"
         >
           Unofficial race-engineer strategy simulator for the Sepang weekend. Pick a session, get
           conservative vs aggressive reads from a live weather blend, then run your own what-if
           scenarios.
         </motion.p>
         <motion.div custom={0.4} variants={fadeUp} initial="hidden" animate="show">
-          <SessionPicker className="mt-8" />
+          <SessionPicker className="mt-5 sm:mt-8" />
         </motion.div>
         <motion.div
           custom={0.52}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-4 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim"
+          className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim sm:mt-4"
         >
           <Link href="/circuit" className="hover:text-paper">
             Corner-by-corner 3D
@@ -136,12 +136,12 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-6 max-w-xl text-[11px] leading-relaxed text-paper-dim/70"
+          className="mt-4 max-w-xl text-[11px] leading-relaxed text-paper-dim/70 sm:mt-6"
         >
           Unofficial fan project — not affiliated with, endorsed by, or an official partner of
           Formula 1, the FIA, or Sepang International Circuit.
         </motion.p>
-      </div>
+      </HeroOverlay>
     </div>
   );
 }

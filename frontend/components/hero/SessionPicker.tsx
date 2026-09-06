@@ -19,7 +19,14 @@ export function SessionPicker({ className, selected }: SessionPickerProps) {
   }
 
   return (
-    <div className={cn("flex flex-wrap gap-2", className)}>
+    <div
+      className={cn(
+        // Mobile: five equal pills on one row (no orphan cell, no clipped scroll).
+        // sm+: natural-width wrapping pills.
+        "flex w-full gap-1.5 sm:flex-wrap sm:gap-2",
+        className
+      )}
+    >
       {SESSIONS.map((session, index) => (
         <motion.div
           key={session}
@@ -27,15 +34,15 @@ export function SessionPicker({ className, selected }: SessionPickerProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: 0.45,
-            delay: 0.45 + index * 0.06,
+            delay: 0.45 + index * 0.05,
             ease: [0.22, 1, 0.36, 1],
           }}
-          className="flex-1 sm:flex-none"
+          className="min-w-0 flex-1 sm:flex-none"
         >
           <Button
             type="button"
             variant={selected === session ? "default" : "outline"}
-            className="min-h-10 w-full sm:w-auto"
+            className="h-11 w-full px-1.5 text-xs sm:h-10 sm:w-auto sm:px-4 sm:text-sm"
             onClick={() => handleSelect(session)}
           >
             {session}
