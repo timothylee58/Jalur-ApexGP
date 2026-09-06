@@ -155,9 +155,16 @@ explicit about being a heuristic, not a black box.
   the stand's own page on [sepangcircuit.com](https://www.sepangcircuit.com)
   and the grandstand-map pages on malaysiaticketsgp.com/motogpsepang.com
   (the organiser's own ticketing sites for this venue), not guessed. The
-  schematic itself stays this app's own redrawn map (same centreline as
-  everywhere else) rather than a copy of the organiser's venue-map
-  graphic — see that component's own disclaimer copy.
+  map itself (`GeneralCircuitMap.tsx`) stays this app's own redrawn,
+  interactive general map — same real centreline as everywhere else,
+  own house-style iconography for the surrounding facilities and parking
+  bays — rather than a copy of the organiser's own general-map graphic;
+  which facilities exist and their rough arrangement are read as facts
+  off that same organiser material (same standard as the per-stand pages
+  above), the specific artwork isn't reproduced. The facility/parking
+  layout is illustrative, not to survey scale — stated in the page's own
+  caption, same honesty standard the transit ETA heuristic holds itself
+  to elsewhere on this page.
 - The live public-transit read on `/tickets` (nearest real RapidKL
   service toward Sepang/KLIA) uses Malaysia's official open-data GTFS
   feeds ([developer.data.gov.my](https://developer.data.gov.my)) for

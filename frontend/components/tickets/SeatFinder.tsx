@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { SepangCircuitMap, type StandMarker } from "@/components/circuit/SepangCircuitMap";
+import { GeneralCircuitMap, type StandMapMarker } from "@/components/tickets/GeneralCircuitMap";
 import { circuitCenter, pointForName } from "@/data/sepangCircuit";
 
 const ORGANISER_URL = "https://www.sepangcircuit.com/home";
@@ -108,7 +108,7 @@ export function SeatFinder() {
   // and without this they'd render exactly on top of that marker's dot
   // and label.
   const STAND_OFFSET_PX = 42;
-  const standMarkers = STANDS.map((s): StandMarker | null => {
+  const standMarkers = STANDS.map((s): StandMapMarker | null => {
     const point = s.apexPoint ? pointForName(s.apexPoint) : undefined;
     if (!point) return null;
     const dx = point.x - circuitCenter.x;
@@ -121,8 +121,11 @@ export function SeatFinder() {
       y: point.y + (dy / dist) * STAND_OFFSET_PX,
       kind: s.kind,
       selected: s.id === selectedId,
+      name: s.name,
+      priceLabel: s.priceMyr === null ? "Sold out" : `${formatMyr(s.priceMyr)} · 3 days`,
+      overlook: s.cornerLabel,
     };
-  }).filter((m): m is StandMarker => m !== null);
+  }).filter((m): m is StandMapMarker => m !== null);
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -212,12 +215,13 @@ export function SeatFinder() {
 
       <div className="rounded-lg border border-paper/10 bg-asphalt/80 p-4">
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Schematic map
+          General map · click or hover anything
         </span>
-        <SepangCircuitMap stands={standMarkers} className="mt-2 w-full" />
+        <GeneralCircuitMap stands={standMarkers} onSelectStand={setSelectedId} className="mt-2 w-full" />
         <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
-          Original schematic — this app&apos;s own real apex-point centreline, not a copy of the
-          organiser&apos;s venue-map graphic. Stand positions and the corners each one overlooks are
+          Original artwork — this app&apos;s own redrawn general map, not a copy of the
+          organiser&apos;s venue-map graphic. Grandstand/hillstand positions and the corners each one
+          overlooks are the same real apex-point centreline used everywhere else in this app,
           verified against{" "}
           <a
             href={ORGANISER_URL}
@@ -227,8 +231,9 @@ export function SeatFinder() {
           >
             sepangcircuit.com
           </a>
-          &apos;s own per-stand pages, not guessed — still an approximate reference for the selected
-          stand, not an allocated seat.
+          &apos;s own per-stand pages, not guessed. The surrounding facilities and parking bays are
+          an illustrative approximation of their real relative layout, not to survey scale — click a
+          stand to select it, or hover/tap anything else for details.
         </p>
       </div>
     </div>
