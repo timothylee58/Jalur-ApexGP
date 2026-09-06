@@ -1,53 +1,98 @@
 # 3D models
 
-`sepang.glb` (served at `/models/sepang.glb`) and `car.glb` are
-**procedurally generated** by `scripts/generate_circuit_models.py`
-(regenerate with `python scripts/generate_circuit_models.py`).
-`sepang.glb` is a spline-swept track *slab* — a real extrusion (top +
-two side walls + bottom), not a flat zero-thickness plane — projected
-from the circuit's own 18-point apex + elevation data (the same
-centreline as `scripts/blender/sepang_circuit_scene.py` and
-`frontend/data/sepangCircuit.ts`), so its shape and ~22&nbsp;m elevation
-change are real (vertical exaggerated ~6× for readability), not a
-traced-by-eye loop. The top face's normals follow the actual 3D tangent
-rather than a hardcoded straight-up vector, so a directional light
-visibly shades the climbs/descents instead of lighting the whole loop
-identically; the top (road) and walls/bottom use two different vertex
-colors so the ribbon reads as a raised shape even before lighting. Both
-`sepang.glb` and the client-side scene in `CircuitModelPreview.tsx`
-matter for how this actually looks — the component overrides the
-mesh's material on load (see the comment there) since three.js's
-`GLTFLoader` default material for a mesh with no material index
-(`metalness:1, roughness:1`) reads as flat and washed-out under this
-scene's lighting. `car.glb` is box/cylinder primitives, no scanned or
-reference geometry.
+## `sepang.glb`
+
+Served at `/models/sepang.glb`, this is now a decimated, palm-tree-augmented
+export of a **real photogrammetry/reference scan of the actual circuit** —
+not a procedural or hand-traced approximation. Built by
+`scripts/blender/build_sepang_from_reference_scan.py` from:
+
+> **"Sepang International Circuit 2025 layout"** by Dave Love
+> ([Sketchfab: @Tyler_Dave](https://sketchfab.com/Tyler_Dave)) —
+> <https://sketchfab.com/3d-models/sepang-international-circuit-2025-layout-590bf243480e43f18e588a3908daa4df>
+> Licensed [CC BY 4.0](http://creativecommons.org/licenses/by/4.0/).
+
+The source model's real track shape, curb striping, grandstands, pit
+building, and real terrain elevation are preserved; only mesh density was
+reduced (Draco-compressed decimation, ~840k → ~432k verts) to fit this
+app's ~8 MB budget, and procedural palm trees were added, raycast-snapped
+to the source terrain's real height so they sit on the ground rather than
+floating or clipping. See the script's own docstring for the full pipeline
+and re-run instructions. Per CC BY 4.0, this attribution must stay
+alongside the model if it is ever regenerated, re-exported, or replaced.
+
+**Also stripped before export** (see `EXCLUDED_MATERIAL_NAMES` in the
+script): real PETRONAS, PETRONAS PRIMAX, and ROLEX trackside sponsor-board
+textures, and an "Assetto Corsa" racing-sim logo board — the source
+Sketchfab upload bakes in real third-party trademarks this app has no
+rights to use (conflicts with the no-sponsor-marks rule below), and the
+Assetto Corsa board is itself a sign this upload is a repackaged Assetto
+Corsa circuit mod rather than independent photogrammetry. Also stripped:
+four huge, near-zero-vertex "backdrop matte" planes — flat cutout photos
+of a distant treeline/mountain meant to be viewed edge-on from one fixed
+original camera angle. Under this app's free-orbiting camera they're
+visible from angles that break the illusion, rendering as a dark,
+unlit-looking silhouette disconnected from the real geometry (this is
+in fact how this whole inspection started — a rendering glitch that
+turned out to be one of these seen edge-on). Neither category is real
+captured geometry of the circuit itself, so removing them doesn't lose
+anything this file claims to have.
+
 `sepang.glb` powers the landing page's "Orbit Sepang" stage
 (`CircuitModelPreview.tsx`, which auto-detects it and otherwise links to
-the procedural `/circuit` explorer); `car.glb` runs a lap of that
-explorer's own traced curve (`CircuitExplorer3D.tsx`), and separately
-loops the real apex-point centreline (`lib/circuitFlyoverTrack.ts`) in the
-landing hero's opt-in "3D flyover" toggle (`CircuitFlyoverHero.tsx`) — two
-different curves, so the car's lap shape differs slightly between the two.
-The car is deliberately unbranded — no team livery, no sponsor marks, no
-race number, per docs/BRAND.md.
+the procedural `/circuit` explorer). It's also loaded a second time in
+`CircuitExplorer3D.tsx` (the `/circuit` corner-by-corner explorer) as
+ground-level dressing underneath that component's own hand-traced curve —
+deliberately *not* coordinate-registered against it (see that component's
+comments): the curve is traced by eye from a published map, this terrain
+is a real survey, and pretending they line up corner-for-corner would be
+a false precision this app doesn't have. Both loaders wire up a
+`DRACOLoader` pointed at the self-hosted decoder in `frontend/public/draco/`
+(copied from `three`'s own package, not Google's CDN) — this file is
+Draco-compressed and won't parse without one.
 
-A much higher-fidelity Blender-based generator also exists at
-`scripts/blender/sepang_circuit_scene.py` — now actually run and debugged
-(see `scripts/blender/README.md` for what was found and fixed), but still
-an optional alternative path, not currently wired into either file below;
-its environment/architecture detail hasn't been checked against real
-reference photos of the venue yet.
+### Superseded generators
 
-To replace either with a hand-authored model instead, drop a compressed
-glTF binary at the matching filename:
+Two earlier from-scratch approaches to this same file are no longer used
+but remain in the repo as reference:
+
+- `scripts/generate_circuit_models.py` — a spline-swept slab projected
+  from the circuit's own 18-point apex + elevation data. Still generates
+  `car.glb` (box/cylinder primitives, no scanned geometry).
+- `scripts/blender/sepang_circuit_scene.py` — a fuller from-scratch
+  Blender scene (grandstands, pit building, ground plane, sky), now
+  debugged and rendering correctly (see `scripts/blender/README.md`) but
+  built without a real reference scan to check its architecture/layout
+  against.
+
+`CircuitModelPreview.tsx` overrides a mesh's material on load only when
+the mesh has no baked texture at all (see the comment there) — three.js's
+`GLTFLoader` default material for a mesh with no material index
+(`metalness:1, roughness:1`) reads as flat and washed-out under this
+scene's lighting. The real scan's meshes already carry real baseColor
+textures, so those are left untouched.
+
+## `car.glb`
+
+Still procedurally generated by `scripts/generate_circuit_models.py`
+(box/cylinder primitives, no scanned or reference geometry). Runs a lap of
+the `/circuit` explorer's own traced curve (`CircuitExplorer3D.tsx`), and
+separately loops the real apex-point centreline
+(`lib/circuitFlyoverTrack.ts`) in the landing hero's opt-in "3D flyover"
+toggle (`CircuitFlyoverHero.tsx`) — two different curves, so the car's lap
+shape differs slightly between the two. The car is deliberately unbranded
+— no team livery, no sponsor marks, no race number, per `docs/BRAND.md`.
+
+To replace either with a hand-authored or differently-sourced model,
+drop a compressed glTF binary at the matching filename:
 
 Tips:
 - Export glTF 2.0 from Blender (Y-up)
 - Keep under ~8 MB; use Draco / gltf-transform if larger
-- Original / licensed assets only — same standard as tourism copy
+- Original / licensed assets only — same standard as tourism copy. If the
+  source carries an attribution license (CC BY, etc.), record the
+  attribution here and in `docs/BRAND.md`, the same way this file does
+  above.
 - Include vertex/face normals in the export — a mesh with none renders
   unlit (black) under this app's `MeshStandardMaterial` scenes, since
-  three.js's `GLTFLoader` doesn't compute missing normals itself. This bit
-  the procedural generator above too (trimesh's GLB exporter silently
-  omits the `NORMAL` accessor by default even when normals are set on the
-  mesh — `include_normals=True` on `.export()` is required).
+  three.js's `GLTFLoader` doesn't compute missing normals itself.

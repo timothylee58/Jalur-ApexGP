@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { circuitCorners } from "@/data/circuitCorners";
 import {
@@ -14,6 +15,15 @@ import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
 const CAR_SRC = "/models/car.glb";
+// Same real reference scan CircuitModelPreview.tsx uses for "Orbit Sepang"
+// — see frontend/public/models/README.md for provenance/attribution and
+// what was stripped from it. Loaded here as ground-level dressing (real
+// curbs, grandstands, terrain, palms) underneath this component's own
+// curve below — see the loader callback for why the two aren't
+// coordinate-registered against each other even though both are now real:
+// unrelated real-world sources with no shared coordinate system.
+const TERRAIN_SRC = "/models/sepang.glb";
+const DRACO_DECODER_PATH = "/draco/";
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -76,7 +86,8 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     sun.position.set(4, 6, 2);
     scene.add(sun);
 
-    // Ground.
+    // Ground — the fallback surface if the real terrain model (below)
+    // fails to load; hidden once it loads successfully.
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(20, 20),
       new THREE.MeshStandardMaterial({ color: 0x14181c, roughness: 1 }),
@@ -92,16 +103,103 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     // CircuitFlyoverHero builds its own curve from, rather than a
     // separately traced-by-eye loop. circuitCorners.ts's hotspot `t`
     // values are calibrated against this exact curve's point ordering.
-    const ribbonWidth = 0.16;
+    // Kept narrow and independent of the car's own scale (below) — with
+    // the real terrain model loaded underneath it (below), this reads as
+    // a "racing line" overlay rather than the road surface itself.
+    const ribbonWidth = 0.05;
     const curve = buildFlyoverCurve();
     const { geometry: ribbonGeometry } = buildFlyoverRibbon(curve, ribbonWidth);
     const ribbonMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3a4048,
-      roughness: 0.85,
+      color: 0xf5a623,
+      emissive: 0xf5a623,
+      emissiveIntensity: 0.5,
+      roughness: 0.4,
+      transparent: true,
+      opacity: 0.85,
       side: THREE.DoubleSide,
     });
     const ribbon = new THREE.Mesh(ribbonGeometry, ribbonMaterial);
     scene.add(ribbon);
+
+    // Real terrain (see TERRAIN_SRC above) — loaded as ground-level
+    // dressing, scaled/centered to roughly the ribbon's own footprint.
+    // Deliberately NOT coordinate-registered against the curve above:
+    // the curve comes from this app's own real apex-point survey
+    // (lib/circuitFlyoverTrack.ts) and this terrain from an independent
+    // Sketchfab scan — both real, but in unrelated coordinate spaces with
+    // no shared reference point, so lining up individual corners between
+    // them would be a false precision neither source actually supports.
+    const terrainDisposables: Array<{ dispose: () => void }> = [];
+    const terrainDracoLoader = new DRACOLoader();
+    terrainDracoLoader.setDecoderPath(DRACO_DECODER_PATH);
+    const terrainLoader = new GLTFLoader();
+    terrainLoader.setDRACOLoader(terrainDracoLoader);
+    terrainLoader.load(
+      TERRAIN_SRC,
+      (gltf) => {
+        const terrain = gltf.scene;
+        const ribbonBox = new THREE.Box3().setFromObject(ribbon);
+        const ribbonSize = ribbonBox.getSize(new THREE.Vector3());
+        const ribbonCenter = ribbonBox.getCenter(new THREE.Vector3());
+
+        const terrainBox = new THREE.Box3().setFromObject(terrain);
+        const terrainSize = terrainBox.getSize(new THREE.Vector3());
+        const terrainCenter = terrainBox.getCenter(new THREE.Vector3());
+        // Sized to the ribbon's own footprint, not larger — the camera
+        // orbit below is tuned to just frame the ribbon's bounding box,
+        // so a bigger terrain would push the camera inside it instead of
+        // showing the whole loop (this was tuned visually, not derived).
+        const targetSpan = Math.max(ribbonSize.x, ribbonSize.z) * 1.15;
+        const terrainScale = targetSpan / Math.max(terrainSize.x, terrainSize.z, 0.001);
+
+        terrain.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const material = child.material as THREE.MeshStandardMaterial | undefined;
+            if (!material?.map) {
+              child.material = new THREE.MeshStandardMaterial({
+                vertexColors: true,
+                roughness: 0.65,
+                metalness: 0.05,
+                side: THREE.DoubleSide,
+              });
+            }
+            terrainDisposables.push(child.geometry);
+          }
+        });
+
+        // "Ground level" here can't just be the bounding box's min.y — a
+        // few objects in this scan (an embankment cross-section, mainly)
+        // sit well below the actual track/grass surface, so that would
+        // bury the real drivable surface (and this ribbon) deep beneath
+        // it. Each individual object's own base *does* sit at its local
+        // ground contact point, though, so the median of those bases
+        // approximates true ground level while ignoring those few deep
+        // outliers.
+        const objectBaseYs: number[] = [];
+        terrain.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            objectBaseYs.push(new THREE.Box3().setFromObject(child).min.y);
+          }
+        });
+        objectBaseYs.sort((a, b) => a - b);
+        const groundY = objectBaseYs[Math.floor(objectBaseYs.length / 2)] ?? terrainBox.min.y;
+
+        terrain.scale.setScalar(terrainScale);
+        terrain.position.set(
+          ribbonCenter.x - terrainCenter.x * terrainScale,
+          -0.05 - groundY * terrainScale,
+          ribbonCenter.z - terrainCenter.z * terrainScale,
+        );
+        scene.add(terrain);
+        ground.visible = false;
+        grid.visible = false;
+      },
+      undefined,
+      () => {
+        // Real terrain missing — the flat fallback ground/grid above
+        // stays visible, same graceful-degradation the car model gets.
+      },
+    );
 
     // Start/finish line marker.
     const startPoint = curve.getPointAt(0);
@@ -182,9 +280,13 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         // this component's own units are small (the curve spans a few
         // units), so a car authored at roughly real-world scale needs
         // normalizing down rather than assuming any particular size.
+        // Targets a fixed width rather than a multiple of ribbonWidth so
+        // the car's size doesn't change if the racing-line overlay above
+        // is ever restyled again.
         const carBox = new THREE.Box3().setFromObject(car);
         const carSize = carBox.getSize(new THREE.Vector3());
-        const carScale = ribbonWidth * 3.2 / Math.max(carSize.x, carSize.z, 0.001);
+        const carTargetWidth = 0.16 * 3.2;
+        const carScale = carTargetWidth / Math.max(carSize.x, carSize.z, 0.001);
         car.scale.setScalar(carScale);
         scene.add(car);
       },
@@ -291,6 +393,8 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
       ground.geometry.dispose();
       (ground.material as THREE.Material).dispose();
       carDisposables.forEach((item) => item.dispose());
+      terrainDisposables.forEach((item) => item.dispose());
+      terrainDracoLoader.dispose();
       renderer.dispose();
       mount.removeChild(renderer.domElement);
     };
