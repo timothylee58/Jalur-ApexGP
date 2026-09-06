@@ -45,10 +45,9 @@ the procedural `/circuit` explorer). It's also loaded a second time in
 ground-level dressing underneath that component's own racing-line curve
 (the app's real apex-point centreline, `lib/circuitFlyoverTrack.ts`) —
 registered against it by a real similarity transform (`lib/pca.ts`
-matches the ribbon's principal axis to every non-palm terrain vertex via
-`meshPointCloudPCA`, with an absolute -28.1° Y rotation, mirrorX,
-scaleMultiplier 0.95, and offset (0.3, -0.3) eye-tuned in
-`tools/r3f-sandbox`) rather than a bounding-box auto-fit, so the
+matches the ribbon's principal axis to an asphalt-coloured subset of the
+terrain's vertices via `meshAsphaltPointCloudPCA`, so buildings/runoff
+don't inflate the footprint) rather than a bounding-box auto-fit, so the
 loop's general shape, orientation, and scale genuinely
 correspond to the real track, even though the two are still independent
 real-world sources with no shared coordinate system and won't land every
@@ -56,9 +55,8 @@ corner exactly on its counterpart. That transform's rotation direction
 and whether to mirror are choices PCA can't make on its own (a major axis
 has no inherent direction, and PCA can't rule out mirrored handedness) —
 both were resolved by hand in `tools/r3f-sandbox`'s "Circuit explorer"
-scene (defaults: mirrorX true, scaleMultiplier 0.95, offsetX 0.3,
-offsetZ -0.3); re-verify there if this terrain or the real apex data ever
-changes. Both loaders wire up a `DRACOLoader` pointed at the self-hosted
+scene (defaults: scaleMultiplier 1.0, offsetX 0.15, offsetZ 0); re-verify
+there if this terrain or the real apex data ever changes. Both loaders wire up a `DRACOLoader` pointed at the self-hosted
 decoder in `frontend/public/draco/` (copied from `three`'s own package,
 not Google's CDN) — this file is Draco-compressed and won't parse
 without one.

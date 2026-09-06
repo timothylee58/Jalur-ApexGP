@@ -11,7 +11,7 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
-import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
+import { meshAsphaltPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
@@ -26,19 +26,25 @@ const CAR_SRC = "/models/car.glb";
 // why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
-// Absolute Y rotation matching tools/r3f-sandbox's Circuit explorer
-// `rotationDeg: -28.1` — coincides with ribbon-minus-terrain PCA delta
-// minus 180° for this asset pair, but kept absolute so it stays tied to
-// the sandbox's eye-tuned pose rather than drifting with PCA changes.
-const TERRAIN_ROTATION_ABS_RAD = (-28.1 * Math.PI) / 180;
-// PCA can't rule out mirrored handedness; mirrorX=true was required so
-// the ribbon footprint sits on tarmac rather than parallel on grass.
-const TERRAIN_MIRROR_X = true;
-// Fine-tune on top of PCA std ratio — 0.95 keeps the ribbon inside the
-// asphalt loop without spilling onto runoff/grass (0.65 was too tight).
-const TERRAIN_SCALE_CORRECTION = 0.95;
-const TERRAIN_OFFSET_X = 0.3;
-const TERRAIN_OFFSET_Z = -0.3;
+// PCA (see lib/pca.ts) gives the terrain's and the ribbon's major axis,
+// each defined only up to a 180° ambiguity (a line has no inherent
+// "direction"), so the raw angle delta between them is one of two
+// candidates 180° apart — and PCA alone can't also rule out the terrain
+// being mirrored (opposite handedness) rather than rotated. Both were
+// resolved by hand in tools/r3f-sandbox's "Circuit explorer" scene:
+// dragging a rotationDeg slider live against the actual rendered shapes
+// showed the "-180°" branch below to be the correct one (the raw delta
+// visibly ran the ribbon backwards around the loop), and no mirror was
+// needed. If this terrain model or the real apex data ever changes,
+// re-verify both in that sandbox rather than assuming this still holds.
+const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
+// Size/translation polish on top of asphalt-vs-ribbon PCA. Registration
+// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only), so the
+// std-ratio already matches track-to-ribbon size — these stay near
+// identity and only mop up residual bias from kerbs/pit-lane gray.
+const TERRAIN_SCALE_CORRECTION = 1.0;
+const TERRAIN_OFFSET_X = 0.15;
+const TERRAIN_OFFSET_Z = 0;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -175,11 +181,10 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
 
         // Everything below reads the terrain's own untransformed local
         // space — must happen before any scale/rotation/position is
-        // applied to `terrain` itself. Full non-palm mesh PCA (same as
-        // the sandbox) so scale/centroid match the absolute -28.1° pose
-        // that was eye-tuned there — asphalt-only PCA changes the axes
-        // and breaks that absolute angle.
-        const terrainPCA = meshPointCloudPCA(terrain);
+        // applied to `terrain` itself. Asphalt-only PCA (not every
+        // non-palm vertex) so buildings/runoff don't inflate the
+        // footprint the ribbon is registered against.
+        const terrainPCA = meshAsphaltPointCloudPCA(terrain);
 
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
@@ -206,7 +211,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const rotationRad = TERRAIN_ROTATION_ABS_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
         const scaledTerrainMean = new THREE.Vector3(
-          terrainPCA.mean.x * terrainScale * mirror,
+          terrainPCA.mean.x * terrainScale,
           0,
           terrainPCA.mean.y * terrainScale,
         ).applyMatrix4(rotationMatrix);

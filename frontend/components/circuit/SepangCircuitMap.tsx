@@ -5,9 +5,26 @@ import {
   startFinish,
 } from "@/data/sepangCircuit";
 
+export interface StandMarker {
+  id: string;
+  /** Short label drawn on the map, e.g. "K2", "F", "Main". */
+  code: string;
+  /** SVG-space position — from `pointForName()` in sepangCircuit.ts. */
+  x: number;
+  y: number;
+  kind: "grandstand" | "hillstand";
+  selected?: boolean;
+}
+
 interface SepangCircuitMapProps {
-  /** Corner codes to highlight (e.g. ["T1","T9"]) — matches referencedCorners. */
+  /** Corner codes to highlight (e.g. ["T1","T9"]) — matches referencedCorners.
+   * Semantically distinct from `stands` below: this highlights the 4
+   * corners the strategy engine reasons about, not grandstand positions. */
   highlighted?: string[];
+  /** Grandstand/hillstand markers at their real apex-point positions —
+   * separate from `highlighted` since a stand's real view doesn't
+   * necessarily land on one of those 4 curated corners. */
+  stands?: StandMarker[];
   className?: string;
   /** Faded, decorative-only rendering for use as a background (e.g. the hero). */
   muted?: boolean;
@@ -15,6 +32,7 @@ interface SepangCircuitMapProps {
 
 export function SepangCircuitMap({
   highlighted = [],
+  stands = [],
   className,
   muted = false,
 }: SepangCircuitMapProps) {
@@ -74,6 +92,50 @@ export function SepangCircuitMap({
                   fill={on ? "#f5a623" : "#a39b8f"}
                 >
                   {marker.label}
+                </text>
+              </g>
+            );
+          })
+        : null}
+
+      {!muted
+        ? stands.map((stand) => {
+            const color = stand.selected ? "#f5a623" : "#a39b8f";
+            const size = stand.selected ? 20 : 14;
+            return (
+              <g key={stand.id}>
+                {stand.selected ? (
+                  <circle cx={stand.x} cy={stand.y} r={34} fill="#f5a623" opacity={0.15} />
+                ) : null}
+                {stand.kind === "grandstand" ? (
+                  <rect
+                    x={stand.x - size / 2}
+                    y={stand.y - size / 2}
+                    width={size}
+                    height={size}
+                    rx={3}
+                    fill={stand.selected ? "#f5a623" : "#14181c"}
+                    stroke={color}
+                    strokeWidth={2}
+                  />
+                ) : (
+                  <polygon
+                    points={`${stand.x},${stand.y - size * 0.6} ${stand.x - size * 0.55},${stand.y + size * 0.5} ${stand.x + size * 0.55},${stand.y + size * 0.5}`}
+                    fill={stand.selected ? "#f5a623" : "#14181c"}
+                    stroke={color}
+                    strokeWidth={2}
+                  />
+                )}
+                <text
+                  x={stand.x}
+                  y={stand.y - size - 8}
+                  textAnchor="middle"
+                  fontSize={24}
+                  fontFamily="var(--font-geist-mono), monospace"
+                  fontWeight={700}
+                  fill={color}
+                >
+                  {stand.code}
                 </text>
               </g>
             );

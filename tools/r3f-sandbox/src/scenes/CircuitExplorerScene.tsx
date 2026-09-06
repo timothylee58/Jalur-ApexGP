@@ -137,10 +137,10 @@ export function CircuitExplorerScene() {
   });
   const { rotationDeg, mirrorX, scaleMultiplier, offsetX, offsetZ, yOffset } = useControls("Terrain registration", {
     rotationDeg: { value: -28.1, min: -180, max: 180, step: 0.1 },
-    mirrorX: true,
-    scaleMultiplier: { value: 0.95, min: 0.3, max: 2, step: 0.01 },
-    offsetX: { value: 0.3, min: -2, max: 2, step: 0.01 },
-    offsetZ: { value: -0.3, min: -2, max: 2, step: 0.01 },
+    mirrorX: false,
+    scaleMultiplier: { value: 1.0, min: 0.3, max: 2, step: 0.01 },
+    offsetX: { value: 0.15, min: -2, max: 2, step: 0.01 },
+    offsetZ: { value: 0, min: -2, max: 2, step: 0.01 },
     yOffset: { value: -0.05, min: -3, max: 0.5, step: 0.01 },
   });
   const { autoRotateSpeed } = useControls("Camera", {
