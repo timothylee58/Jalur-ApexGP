@@ -9,15 +9,9 @@ import { cn } from "@/lib/utils";
 export function HeroOverlay({
   children,
   className,
-  align = "start",
 }: {
   children: ReactNode;
   className?: string;
-  /** "center" horizontally-centers the copy stack (text-align included) —
-   * used by LandingHero's redesigned centered header. Defaults to the
-   * original left-aligned layout so other consumers (CircuitMotionPreview)
-   * are unaffected. */
-  align?: "start" | "center";
 }) {
   return (
     <div
@@ -33,8 +27,7 @@ export function HeroOverlay({
           "sm:px-6 sm:pb-14 sm:pt-10",
           "md:pb-20 md:pt-16",
           // Short / landscape: top-align so nothing clips off the chin.
-          "[@media(max-height:640px)]:justify-start [@media(max-height:640px)]:py-4",
-          align === "center" && "items-center text-center"
+          "[@media(max-height:640px)]:justify-start [@media(max-height:640px)]:py-4"
         )}
       >
         {children}

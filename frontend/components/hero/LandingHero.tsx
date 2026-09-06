@@ -62,7 +62,7 @@ export function LandingHero() {
         className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-asphalt via-asphalt/55 to-asphalt/20"
         aria-hidden
       />
-      <HeroOverlay className="relative min-h-[100dvh]" align="center">
+      <HeroOverlay className="relative min-h-[100dvh]">
         <motion.p
           custom={0.05}
           variants={fadeUp}
@@ -84,7 +84,7 @@ export function LandingHero() {
             alt="Jalur APEXGP"
             width={460}
             height={180}
-            className="mx-auto h-auto w-[min(100%,24rem)] object-contain sm:w-[min(100%,36rem)] md:w-[min(100%,44rem)]"
+            className="h-auto w-[min(100%,24rem)] object-contain object-left sm:w-[min(100%,36rem)] md:w-[min(100%,44rem)]"
             decoding="async"
             fetchPriority="high"
           />
@@ -97,7 +97,7 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim sm:mt-4"
+          className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim sm:mt-4"
         >
           <Link href="/circuit" className="hover:text-paper">
             Corner-by-corner 3D
