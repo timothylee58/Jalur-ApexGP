@@ -11,7 +11,7 @@ export default function HomePage() {
       <WeekendHub />
       <CircuitMotionPreview />
       <CircuitModelPreview />
-      <div className="relative z-20 mx-auto w-full max-w-5xl px-4 pb-[max(7rem,calc(env(safe-area-inset-bottom)+5.5rem))] sm:px-6 sm:pb-16">
+      <div className="relative z-20 mx-auto w-full max-w-5xl px-4 pb-[max(9rem,calc(env(safe-area-inset-bottom)+7.5rem))] sm:px-6 sm:pb-16">
         <div className="max-w-xl">
           <AboutNote />
         </div>

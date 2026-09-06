@@ -84,7 +84,7 @@ export function LandingHero() {
             alt="Jalur APEXGP"
             width={460}
             height={180}
-            className="h-auto w-[min(100%,20rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
+            className="h-auto w-[min(100%,18.5rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
             decoding="async"
             fetchPriority="high"
           />
@@ -94,7 +94,7 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-1.5 max-w-xl text-sm leading-relaxed text-paper-dim sm:mt-2 md:text-base"
+          className="-mt-0.5 max-w-xl text-sm leading-relaxed text-paper-dim sm:mt-1 md:text-base"
         >
           Unofficial race-engineer strategy simulator for the Sepang weekend. Pick a session, get
           conservative vs aggressive reads from a live weather blend, then run your own what-if

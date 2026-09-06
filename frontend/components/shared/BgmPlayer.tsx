@@ -35,7 +35,17 @@ export function BgmPlayer() {
 
   useEffect(() => {
     try {
-      setMinimized(window.localStorage.getItem(STORAGE_KEY) === "1");
+      const stored = window.localStorage.getItem(STORAGE_KEY);
+      if (stored === "1" || stored === "0") {
+        setMinimized(stored === "1");
+        return;
+      }
+      // First visit on a narrow viewport: start minimized so the embed
+      // doesn't eat the first screen of content. Desktop stays expanded
+      // once so the player is discoverable.
+      if (window.matchMedia("(max-width: 639px)").matches) {
+        setMinimized(true);
+      }
     } catch {
       // private mode / blocked storage — stays expanded for this visit
     }

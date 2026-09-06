@@ -47,9 +47,9 @@ export function MyWeekendChecklist() {
   const done = DEFAULT_ITEMS.filter((item) => checked[item.id]).length;
 
   return (
-    <section className="border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div>
+    <section className="min-w-0 w-full overflow-hidden border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
+      <div className="flex min-w-0 flex-wrap items-end justify-between gap-2">
+        <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-paper-dim">
             My weekend
           </p>

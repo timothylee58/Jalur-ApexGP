@@ -53,9 +53,9 @@ export function SessionCountdown() {
   const parts = targetMs != null ? split(targetMs - now) : null;
 
   return (
-    <section className="border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    <section className="min-w-0 w-full overflow-hidden border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-pit-lime">
             {live ? "Live session window · MYT" : "Next session · MYT"}
           </p>
@@ -71,7 +71,7 @@ export function SessionCountdown() {
         <button
           type="button"
           onClick={() => downloadWeekendIcs()}
-          className="min-h-10 border border-amber/40 px-3 font-mono text-[11px] uppercase tracking-wide text-amber hover:bg-amber/10"
+          className="min-h-10 w-full shrink-0 border border-amber/40 px-3 font-mono text-[11px] uppercase tracking-wide text-amber hover:bg-amber/10 sm:w-auto"
         >
           Add weekend to calendar (.ics)
         </button>
@@ -79,7 +79,7 @@ export function SessionCountdown() {
 
       {parts ? (
         <div
-          className="mt-5 grid grid-cols-4 gap-2 font-mono sm:max-w-md"
+          className="mt-5 grid w-full min-w-0 grid-cols-4 gap-2 font-mono sm:max-w-md"
           aria-live="off"
         >
           {(

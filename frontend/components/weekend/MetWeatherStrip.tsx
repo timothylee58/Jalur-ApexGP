@@ -19,9 +19,9 @@ export function MetWeatherStrip() {
   const today = feed.data?.[0] ?? null;
 
   return (
-    <section className="border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+    <section className="min-w-0 w-full overflow-hidden border border-asphalt-line bg-pit-carbon/60 px-4 py-5 sm:px-5">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <div className="min-w-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-paper-dim">
             Sepang weather · MET Malaysia
           </p>
