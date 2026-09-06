@@ -1,4 +1,11 @@
-import type { PredictionResponse, Session, WhatIf } from "@/types";
+import type {
+  AccuracyResponse,
+  OutcomeLogged,
+  OutcomeRequest,
+  PredictionResponse,
+  Session,
+  WhatIf,
+} from "@/types";
 import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 import type { SepangAccessPayload } from "@/types/transit";
@@ -72,4 +79,26 @@ export async function fetchSepangAccess(): Promise<SepangAccessPayload> {
   const res = await fetch(`${API_URL}/transit/sepang-access`, { cache: "no-store" });
   if (!res.ok) throw new Error(`Transit access request failed (${res.status})`);
   return res.json() as Promise<SepangAccessPayload>;
+}
+
+export async function submitOutcome(outcome: OutcomeRequest): Promise<OutcomeLogged> {
+  const res = await fetch(`${API_URL}/outcomes`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(outcome),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Outcome log failed (${res.status})`);
+  return res.json() as Promise<OutcomeLogged>;
+}
+
+export async function fetchAccuracy(session: Session): Promise<AccuracyResponse | null> {
+  const res = await fetch(`${API_URL}/accuracy?session=${session}`, { cache: "no-store" });
+  if (res.status === 404) {
+    // Not an error state — just means nothing has been scored yet for this
+    // session (no outcome logged against a same-day prediction).
+    return null;
+  }
+  if (!res.ok) throw new Error(`Accuracy request failed (${res.status})`);
+  return res.json() as Promise<AccuracyResponse>;
 }

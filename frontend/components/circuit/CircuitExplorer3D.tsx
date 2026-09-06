@@ -4,6 +4,12 @@ import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { circuitCorners } from "@/data/circuitCorners";
+import {
+  buildFlyoverCurve,
+  buildFlyoverRibbon,
+  FLYOVER_GRANDSTANDS,
+  grandstandPosition,
+} from "@/lib/circuitFlyoverTrack";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
@@ -22,37 +28,6 @@ export interface RealLapPacing {
    * via a ref, not by re-running this component's three.js setup effect. */
   currentTime: number;
 }
-
-// Traced by eye from the circuit's published general map — a stylized
-// closed loop reflecting its actual shape (pit straight, a tight hairpin
-// section, a long outer sweep), not survey-grade track geometry. Same
-// honesty standard the strategy engine holds itself to: this is a
-// showcase model, not a simulator.
-const TRACK_POINTS: Array<[number, number]> = [
-  [0.0, -0.2],
-  [1.0, -0.5],
-  [1.8, -1.3],
-  [2.6, -1.6],
-  [3.3, -1.0],
-  [3.5, 0.0],
-  [3.2, 1.0],
-  [2.5, 1.7],
-  [1.5, 2.1],
-  [0.3, 2.0],
-  [-0.8, 1.5],
-  [-1.6, 0.5],
-  [-1.2, -0.4],
-  [-0.5, -0.6],
-];
-
-const GRANDSTANDS: Array<{ x: number; z: number; color: number; label: string }> = [
-  { x: -0.2, z: -0.9, color: 0xf5a623, label: "Main" }, // start/finish
-  { x: -1.6, z: -0.9, color: 0xf5a623, label: "K1/K2" }, // hairpin
-  { x: 3.6, z: -0.6, color: 0x2ec4b6, label: "G" }, // esses outer — matches the app's teal accent
-  { x: 3.9, z: 1.1, color: 0x2ec4b6, label: "F" }, // T9 apex
-  { x: -0.5, z: 2.6, color: 0xa39b8f, label: "C" }, // bottom sweep — matches paper-dim
-  { x: -2.2, z: 1.0, color: 0xa39b8f, label: "B" },
-];
 
 interface CircuitExplorer3DProps {
   selectedId: string | null;
@@ -112,34 +87,14 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     const grid = new THREE.GridHelper(20, 40, 0x2a3036, 0x1c2126);
     scene.add(grid);
 
-    // Track curve + ribbon.
-    const curvePoints = TRACK_POINTS.map(([x, z]) => new THREE.Vector3(x, 0, z));
-    const curve = new THREE.CatmullRomCurve3(curvePoints, true, "catmullrom", 0.5);
-    const samples = curve.getSpacedPoints(240);
-    const tangents = samples.map((_, i) => curve.getTangentAt(i / (samples.length - 1)));
-
+    // Track curve + ribbon — the real apex-point centreline
+    // (data/sepang.json via lib/circuitFlyoverTrack), the same source
+    // CircuitFlyoverHero builds its own curve from, rather than a
+    // separately traced-by-eye loop. circuitCorners.ts's hotspot `t`
+    // values are calibrated against this exact curve's point ordering.
     const ribbonWidth = 0.16;
-    const positions: number[] = [];
-    const indices: number[] = [];
-    samples.forEach((point, i) => {
-      const tangent = tangents[i];
-      const normal = new THREE.Vector3(-tangent.z, 0, tangent.x).normalize();
-      const left = point.clone().addScaledVector(normal, ribbonWidth / 2);
-      const right = point.clone().addScaledVector(normal, -ribbonWidth / 2);
-      positions.push(left.x, left.y + 0.01, left.z, right.x, right.y + 0.01, right.z);
-      if (i < samples.length - 1) {
-        const a = i * 2;
-        indices.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
-      }
-    });
-    // Close the loop back to the first pair.
-    const last = (samples.length - 1) * 2;
-    indices.push(last, last + 1, 0, last + 1, 1, 0);
-
-    const ribbonGeometry = new THREE.BufferGeometry();
-    ribbonGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-    ribbonGeometry.setIndex(indices);
-    ribbonGeometry.computeVertexNormals();
+    const curve = buildFlyoverCurve();
+    const { geometry: ribbonGeometry } = buildFlyoverRibbon(curve, ribbonWidth);
     const ribbonMaterial = new THREE.MeshStandardMaterial({
       color: 0x3a4048,
       roughness: 0.85,
@@ -159,25 +114,34 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     startLine.rotation.y = Math.atan2(startTangent.x, startTangent.z);
     scene.add(startLine);
 
-    // Grandstand blocks — decorative, positioned near the traced ribbon.
-    GRANDSTANDS.forEach(({ x, z, color }) => {
+    // Grandstand blocks — decorative, positioned as fractions along the
+    // curve (same spec CircuitFlyoverHero uses) rather than hand-placed
+    // world coordinates, so they stay sensible against this real geometry.
+    const grandstandOffset = ribbonWidth * 1.4;
+    FLYOVER_GRANDSTANDS.forEach((spec) => {
+      const position = grandstandPosition(curve, spec, grandstandOffset);
       const box = new THREE.Mesh(
         new THREE.BoxGeometry(0.22, 0.1, 0.14),
         new THREE.MeshStandardMaterial({
-          color,
-          emissive: color,
+          color: spec.color,
+          emissive: spec.color,
           emissiveIntensity: 0.35,
           roughness: 0.6,
         }),
       );
-      box.position.set(x, 0.05, z);
+      box.position.set(position.x, 0.05, position.z);
       scene.add(box);
     });
 
-    // Corner hotspots.
+    // Corner hotspots — placed with getPoint (raw parameter), not getPointAt
+    // (arc-length): circuitCorners.ts's `t` values are each corner's exact
+    // index among the curve's real apex control points, so the un-remapped
+    // parameter lands exactly on that point. getPointAt is reserved for the
+    // car's pacing below, where constant-speed arc-length traversal is what
+    // actually matters.
     const hotspotGroup = new THREE.Group();
     circuitCorners.forEach((corner) => {
-      const point = curve.getPointAt(corner.t);
+      const point = curve.getPoint(corner.t);
       const dot = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0xf5a623 }),
@@ -349,7 +313,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
       ref={mountRef}
       className="h-[52vh] w-full cursor-grab overflow-hidden rounded-lg border border-paper/10 bg-asphalt active:cursor-grabbing sm:h-[60vh]"
       role="img"
-      aria-label="Interactive stylized 3D model of the Sepang International Circuit layout with all 15 corner markers"
+      aria-label="Interactive 3D model of the Sepang International Circuit layout, built from the circuit's real apex-point centreline, with all 15 corner markers"
     />
   );
 }

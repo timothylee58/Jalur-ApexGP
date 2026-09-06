@@ -71,10 +71,10 @@ export default function CircuitPage() {
           Sepang, corner by corner
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Drag to orbit, or tap a corner below. This is a stylized model
-          traced from the circuit&apos;s published general map — not
-          survey-grade geometry — covering all 15 named corners, with Turns
-          5–7, 9, and 15 carrying the strategy engine&apos;s own reasoning.
+          Drag to orbit, or tap a corner below. Built from the circuit's
+          real apex-point centreline — the same geometry behind the
+          landing page's flyover hero and the 2D strategy map — covering
+          all 15 named corners, not a stylized subset.
         </p>
 
         <label className="mt-4 flex items-center gap-2 font-mono text-xs uppercase tracking-wide text-paper-dim">
@@ -174,7 +174,7 @@ export default function CircuitPage() {
           </div>
         ) : null}
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
           {circuitCorners.map((corner) => (
             <button
               key={corner.id}
