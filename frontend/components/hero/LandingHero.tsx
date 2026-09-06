@@ -68,7 +68,7 @@ export function LandingHero() {
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="font-mono text-[10px] uppercase tracking-[0.35em] text-pit-lime sm:text-xs"
+          className="font-mono text-sm uppercase tracking-[0.35em] text-pit-lime sm:text-base"
         >
           Sepang International Circuit
         </motion.p>
@@ -84,22 +84,11 @@ export function LandingHero() {
             alt="Jalur APEXGP"
             width={460}
             height={180}
-            className="h-auto w-[min(100%,18.5rem)] object-contain object-left sm:w-[min(100%,28rem)] md:w-[min(100%,34rem)]"
+            className="h-auto w-[min(100%,24rem)] object-contain object-left sm:w-[min(100%,36rem)] md:w-[min(100%,44rem)]"
             decoding="async"
             fetchPriority="high"
           />
         </motion.h1>
-        <motion.p
-          custom={0.28}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="-mt-0.5 max-w-xl text-sm leading-relaxed text-paper-dim sm:mt-1 md:text-base"
-        >
-          Unofficial race-engineer strategy simulator for the Sepang weekend. Pick a session, get
-          conservative vs aggressive reads from a live weather blend, then run your own what-if
-          scenarios.
-        </motion.p>
         <motion.div custom={0.4} variants={fadeUp} initial="hidden" animate="show">
           <SessionPicker className="mt-5 sm:mt-8" />
         </motion.div>
@@ -131,16 +120,6 @@ export function LandingHero() {
             {show3D ? "Lap video" : "3D flyover"}
           </button>
         </motion.div>
-        <motion.p
-          custom={0.62}
-          variants={fadeUp}
-          initial="hidden"
-          animate="show"
-          className="mt-4 max-w-xl text-[11px] leading-relaxed text-paper-dim/70 sm:mt-6"
-        >
-          Unofficial fan project — not affiliated with, endorsed by, or an official partner of
-          Formula 1, the FIA, or Sepang International Circuit.
-        </motion.p>
       </HeroOverlay>
     </div>
   );
