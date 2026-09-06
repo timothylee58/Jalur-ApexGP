@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { SepangCircuitMap } from "@/components/circuit/SepangCircuitMap";
+import { SepangCircuitMap, type StandMarker } from "@/components/circuit/SepangCircuitMap";
+import { circuitCenter, pointForName } from "@/data/sepangCircuit";
 
 const ORGANISER_URL = "https://www.sepangcircuit.com/home";
 
@@ -11,8 +12,13 @@ interface Stand {
   /** MYR 3-day price for Malaysian MyKad holders, or null if sold out. */
   priceMyr: number | null;
   kind: "grandstand" | "hillstand";
-  /** Turn marker(s) on SepangCircuitMap to highlight, if any. */
-  corners: string[];
+  /** Corner code shown on the map (T1-15) and a real apex-point name
+   * (sepangCircuit.ts) for its actual position — verified against each
+   * stand's own page on sepangcircuit.com and motogpsepang.com's/
+   * malaysiaticketsgp.com's grandstand-map pages, not guessed. Null when
+   * the stand doesn't overlook a specific numbered corner. */
+  cornerLabel: string | null;
+  apexPoint: string | null;
   description: string;
 }
 
@@ -22,7 +28,8 @@ const STANDS: Stand[] = [
     name: "Main Grandstand",
     priceMyr: 2083.4,
     kind: "grandstand",
-    corners: ["T15"],
+    cornerLabel: "T15",
+    apexPoint: "Start/Finish",
     description:
       "Seated, rooftop viewing. North side takes in the start/finish straight, pit entry and exit, and the team pit boxes; the south side looks over the back straight into the final corner.",
   },
@@ -31,7 +38,8 @@ const STANDS: Stand[] = [
     name: "K1 Grandstand",
     priceMyr: null,
     kind: "grandstand",
-    corners: ["T1"],
+    cornerLabel: "T1–T2",
+    apexPoint: "T1 Apex",
     description: "Turns 1 and 2 — the best seat for the race start and first-corner overtakes.",
   },
   {
@@ -39,34 +47,38 @@ const STANDS: Stand[] = [
     name: "K2 Hillstand",
     priceMyr: 809.6,
     kind: "hillstand",
-    corners: ["T1"],
+    cornerLabel: "T3–T4",
+    apexPoint: "T3 Apex",
     description:
-      "Elevated hillstand near Turns 1–2, closer to the fan-zone atmosphere than the covered stands across the circuit.",
+      "Grass hillstand overlooking Turns 3 and 4 — braking, cornering, and overtakes through this sweeping section. Malaysian MyKad holders only.",
   },
   {
     id: "f",
     name: "F Grandstand",
     priceMyr: null,
     kind: "grandstand",
-    corners: ["T5–T7"],
+    cornerLabel: "T5–T7",
+    apexPoint: "T6 Apex",
     description:
-      "Seated grandstand along the esses. Good sightlines, but the most isolated stand from the paddock atmosphere.",
+      "Seated grandstand along the esses, seeing more corners than any other stand — the hairpin complex plus long stretches of both the main and back straights from its centre.",
   },
   {
     id: "c",
     name: "C Hillstand",
     priceMyr: 809.6,
     kind: "hillstand",
-    corners: ["T9"],
+    cornerLabel: "T9–T11",
+    apexPoint: "T10 Apex",
     description:
-      "Grass, open-air — partly covered. Panoramic view of the technical mid-sector (Turns 9–11) and the high-speed run onto the back straight.",
+      "Grass, open-air, with a long canopy for shade. Panoramic view of the technical mid-sector (Turns 9–11) and the high-speed run onto the back straight.",
   },
   {
     id: "b",
     name: "B Hillstand",
     priceMyr: null,
     kind: "hillstand",
-    corners: ["T15"],
+    cornerLabel: "T12–T14",
+    apexPoint: "T13 Apex",
     description: "Grass, open-air. Turns 12–14 toward the end of the lap.",
   },
   {
@@ -74,9 +86,10 @@ const STANDS: Stand[] = [
     name: "G Hillstand",
     priceMyr: 200,
     kind: "hillstand",
-    corners: [],
+    cornerLabel: null,
+    apexPoint: null,
     description:
-      "Grass, open-air — the budget entry point. Malaysian MyKad holders only; not sold to international fans.",
+      "Grass, open-air — the budget entry point, general admission with no fixed corner view. Malaysian MyKad holders only; not sold to international fans.",
   },
 ];
 
@@ -88,6 +101,28 @@ export function SeatFinder() {
   const [selectedId, setSelectedId] = useState<string>("b");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const selected = STANDS.find((s) => s.id === selectedId) ?? STANDS[0];
+
+  // Offset each stand out along the centre→apex-point ray — several
+  // stands share (or sit very close to) one of the 4 curated
+  // circuitMarkers' own points (K1 with T1, F with T5–T7's T6 anchor),
+  // and without this they'd render exactly on top of that marker's dot
+  // and label.
+  const STAND_OFFSET_PX = 42;
+  const standMarkers = STANDS.map((s): StandMarker | null => {
+    const point = s.apexPoint ? pointForName(s.apexPoint) : undefined;
+    if (!point) return null;
+    const dx = point.x - circuitCenter.x;
+    const dy = point.y - circuitCenter.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    return {
+      id: s.id,
+      code: s.id === "main" ? "Main" : s.name.split(" ")[0],
+      x: point.x + (dx / dist) * STAND_OFFSET_PX,
+      y: point.y + (dy / dist) * STAND_OFFSET_PX,
+      kind: s.kind,
+      selected: s.id === selectedId,
+    };
+  }).filter((m): m is StandMarker => m !== null);
 
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -135,6 +170,11 @@ export function SeatFinder() {
           >
             {selected.priceMyr === null ? "Sold out" : `${formatMyr(selected.priceMyr)} · 3 days`}
           </span>
+          {selected.cornerLabel ? (
+            <span className="mt-1 block font-mono text-xs uppercase tracking-wide text-paper-dim">
+              Overlooks {selected.cornerLabel}
+            </span>
+          ) : null}
           <p className="mt-3 text-sm leading-relaxed text-paper-dim">{selected.description}</p>
 
           <a
@@ -174,10 +214,21 @@ export function SeatFinder() {
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Schematic map
         </span>
-        <SepangCircuitMap highlighted={selected.corners} className="mt-2 w-full" />
+        <SepangCircuitMap stands={standMarkers} className="mt-2 w-full" />
         <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
-          Original schematic, not the organiser&apos;s venue map — approximate corner reference for
-          the selected stand, not an allocated seat.
+          Original schematic — this app&apos;s own real apex-point centreline, not a copy of the
+          organiser&apos;s venue-map graphic. Stand positions and the corners each one overlooks are
+          verified against{" "}
+          <a
+            href={ORGANISER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-paper-dim"
+          >
+            sepangcircuit.com
+          </a>
+          &apos;s own per-stand pages, not guessed — still an approximate reference for the selected
+          stand, not an allocated seat.
         </p>
       </div>
     </div>

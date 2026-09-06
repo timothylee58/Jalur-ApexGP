@@ -67,6 +67,26 @@ function pointFor(name: string): XY {
   return points[index];
 }
 
+/**
+ * Public lookup by apex-point name (e.g. "T3 Apex", "Start/Finish") in the
+ * same projected SVG-space coordinates as `circuitPath` — for consumers
+ * that need to place something against a specific real point rather than
+ * just the 4 curated `circuitMarkers` (e.g. a grandstand position, which
+ * doesn't necessarily land on one of those 4 strategy-relevant corners).
+ * Returns undefined for an unrecognized name rather than throwing, so a
+ * typo shows up as "nothing rendered" during development, not a crash.
+ */
+export function pointForName(name: string): XY | undefined {
+  const index = RAW_POINTS.findIndex((p) => p.name === name);
+  return index === -1 ? undefined : points[index];
+}
+
+/** Center of `circuitViewBox` — the projection centers the track within
+ * it by construction, so this is a reasonable "outward" reference point
+ * for offsetting a label away from the track line rather than computing
+ * a true centroid. */
+export const circuitCenter: XY = { x: VIEW / 2, y: VIEW / 2 };
+
 /** Catmull-Rom → cubic-bézier smoothing for a closed loop. */
 function closedSmoothPath(pts: XY[]): string {
   const n = pts.length;
