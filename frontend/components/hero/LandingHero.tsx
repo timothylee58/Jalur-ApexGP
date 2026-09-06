@@ -113,6 +113,9 @@ export function LandingHero() {
           <Link href="/circuit" className="hover:text-paper">
             Corner-by-corner 3D
           </Link>
+          <Link href="/accuracy" className="hover:text-paper">
+            Prediction accuracy
+          </Link>
           <Link href="/lore" className="hover:text-paper">
             Circuit lore (1999 → 2026)
           </Link>

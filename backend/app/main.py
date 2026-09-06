@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes.jolpica import router as jolpica_router
+from app.api.routes.outcomes import router as outcomes_router
 from app.api.routes.predict import router as predict_router
 from app.api.routes.telemetry import router as telemetry_router
 from app.api.routes.transit import router as transit_router
@@ -36,6 +37,7 @@ app.include_router(predict_router, prefix="/api")
 app.include_router(telemetry_router, prefix="/api")
 app.include_router(jolpica_router, prefix="/api")
 app.include_router(transit_router, prefix="/api")
+app.include_router(outcomes_router, prefix="/api")
 
 
 @app.get("/api/health")

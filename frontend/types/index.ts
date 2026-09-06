@@ -77,3 +77,41 @@ export interface WhatIf {
   safetyCar?: boolean;
   tyreChoice?: Compound | null;
 }
+
+export interface OutcomeRequest {
+  session: Session;
+  rainOccurred: boolean;
+  actualPitLap?: number | null;
+  notes?: string;
+}
+
+export interface OutcomeLogged {
+  logged: boolean;
+  session: Session;
+  date: string;
+}
+
+export interface VariantScore {
+  variant: StrategyVariant;
+  predictedConfidence: number;
+  rainCallScore: number;
+  pitWindowHit: boolean | null;
+  compositeScore: number;
+  date: string;
+}
+
+export interface AccuracySummary {
+  variant: StrategyVariant;
+  sampleSize: number;
+  meanRainCallScore: number;
+  pitWindowHitRate: number | null;
+  meanCompositeScore: number;
+}
+
+export interface AccuracyResponse {
+  session: Session;
+  sampleSize: number;
+  conservative: AccuracySummary;
+  aggressive: AccuracySummary;
+  recent: VariantScore[];
+}
