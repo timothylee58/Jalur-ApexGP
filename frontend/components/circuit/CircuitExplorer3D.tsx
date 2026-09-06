@@ -7,7 +7,6 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { circuitCorners } from "@/data/circuitCorners";
 import { registerTerrain } from "@/lib/circuitTerrainAlign";
 import { buildFlyoverCurve, FLYOVER_GRANDSTANDS, grandstandPosition } from "@/lib/circuitFlyoverTrack";
-import { meshAsphaltPointCloudPCA, planarPCA } from "@/lib/pca";
 
 // Same real reference scan CircuitModelPreview.tsx uses for "Orbit Sepang"
 // — see frontend/public/models/README.md for provenance/attribution and
@@ -117,11 +116,7 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
 
         // Everything below reads the terrain's own untransformed local
         // space — must happen before any scale/rotation/position is
-        // applied to `terrain` itself. Asphalt-only PCA (not every
-        // non-palm vertex) so buildings/runoff don't inflate the
-        // footprint the centreline is registered against.
-        const terrainPCA = meshAsphaltPointCloudPCA(terrain);
-
+        // applied to `terrain` itself.
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
         // sit well below the actual track/grass surface, so that would
@@ -139,10 +134,9 @@ export function CircuitExplorer3D({ selectedId, onSelect }: CircuitExplorer3DPro
         const groundY = objectBaseYs[Math.floor(objectBaseYs.length / 2)] ?? 0;
 
         const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
-        const ribbonPCA = planarPCA(ribbonSamples);
 
         const registrationStart = performance.now();
-        const pose = registerTerrain(terrain, ribbonSamples, { terrainPCA, ribbonPCA, groundY });
+        const pose = registerTerrain(terrain, ribbonSamples, groundY);
         // Fit quality (and search cost) is inspectable rather than just
         // trusted — re-run and compare this if the terrain model or apex
         // data ever changes.
