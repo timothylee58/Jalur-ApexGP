@@ -42,14 +42,22 @@ anything this file claims to have.
 (`CircuitModelPreview.tsx`, which auto-detects it and otherwise links to
 the procedural `/circuit` explorer). It's also loaded a second time in
 `CircuitExplorer3D.tsx` (the `/circuit` corner-by-corner explorer) as
-ground-level dressing underneath that component's own hand-traced curve —
-deliberately *not* coordinate-registered against it (see that component's
-comments): the curve is traced by eye from a published map, this terrain
-is a real survey, and pretending they line up corner-for-corner would be
-a false precision this app doesn't have. Both loaders wire up a
-`DRACOLoader` pointed at the self-hosted decoder in `frontend/public/draco/`
-(copied from `three`'s own package, not Google's CDN) — this file is
-Draco-compressed and won't parse without one.
+ground-level dressing underneath that component's own racing-line curve
+(the app's real apex-point centreline, `lib/circuitFlyoverTrack.ts`) —
+registered against it by a real similarity transform (`lib/pca.ts`
+matches each one's own principal axis) rather than a bounding-box
+auto-fit, so the loop's general shape, orientation, and scale genuinely
+correspond to the real track, even though the two are still independent
+real-world sources with no shared coordinate system and won't land every
+corner exactly on its counterpart. That transform's rotation direction
+and whether to mirror are choices PCA can't make on its own (a major axis
+has no inherent direction, and PCA can't rule out mirrored handedness) —
+both were resolved by hand in `tools/r3f-sandbox`'s "Circuit explorer"
+scene; re-verify there if this terrain or the real apex data ever
+changes. Both loaders wire up a `DRACOLoader` pointed at the self-hosted
+decoder in `frontend/public/draco/` (copied from `three`'s own package,
+not Google's CDN) — this file is Draco-compressed and won't parse
+without one.
 
 ### Superseded generators
 

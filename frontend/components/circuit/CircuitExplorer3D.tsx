@@ -11,6 +11,7 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
+import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
@@ -19,11 +20,31 @@ const CAR_SRC = "/models/car.glb";
 // — see frontend/public/models/README.md for provenance/attribution and
 // what was stripped from it. Loaded here as ground-level dressing (real
 // curbs, grandstands, terrain, palms) underneath this component's own
-// curve below — see the loader callback for why the two aren't
-// coordinate-registered against each other even though both are now real:
-// unrelated real-world sources with no shared coordinate system.
+// curve — registered against it via a similarity transform (rotation +
+// scale + translation), not just a bounding-box auto-fit; see the loader
+// callback below for how, and TERRAIN_ROTATION_OFFSET_RAD's comment for
+// why that transform needs one further manual decision PCA can't make.
 const TERRAIN_SRC = "/models/sepang.glb";
 const DRACO_DECODER_PATH = "/draco/";
+// PCA (see lib/pca.ts) gives the terrain's and the ribbon's major axis,
+// each defined only up to a 180° ambiguity (a line has no inherent
+// "direction"), so the raw angle delta between them is one of two
+// candidates 180° apart — and PCA alone can't also rule out the terrain
+// being mirrored (opposite handedness) rather than rotated. Both were
+// resolved by hand in tools/r3f-sandbox's "Circuit explorer" scene:
+// dragging a rotationDeg slider live against the actual rendered shapes
+// showed the "-180°" branch below to be the correct one (the raw delta
+// visibly ran the ribbon backwards around the loop), and no mirror was
+// needed. If this terrain model or the real apex data ever changes,
+// re-verify both in that sandbox rather than assuming this still holds.
+const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
+// PCA standard deviation isn't a like-for-like "size" between a dense
+// vertex cloud (terrain) and a sparse 18-point curve's samples (ribbon)
+// — matching it 1:1 visibly under-scaled the terrain against the real
+// curve in that same sandbox. This empirical correction was tuned there
+// by eye (drag scaleMultiplier until the loop's outer edges stopped
+// spilling past the terrain's own footprint), not derived.
+const TERRAIN_SCALE_CORRECTION = 0.65;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -122,13 +143,16 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
     scene.add(ribbon);
 
     // Real terrain (see TERRAIN_SRC above) — loaded as ground-level
-    // dressing, scaled/centered to roughly the ribbon's own footprint.
-    // Deliberately NOT coordinate-registered against the curve above:
-    // the curve comes from this app's own real apex-point survey
-    // (lib/circuitFlyoverTrack.ts) and this terrain from an independent
-    // Sketchfab scan — both real, but in unrelated coordinate spaces with
-    // no shared reference point, so lining up individual corners between
-    // them would be a false precision neither source actually supports.
+    // dressing under the curve above, registered against it by a real
+    // similarity transform (rotation + scale + translation matching each
+    // one's own PCA major axis — see lib/pca.ts) rather than a bounding-
+    // box auto-fit. The curve comes from this app's own real apex-point
+    // survey (lib/circuitFlyoverTrack.ts) and this terrain from an
+    // independent Sketchfab scan — two unrelated real-world sources with
+    // no shared coordinate system, so this can align them well (verified
+    // visually in tools/r3f-sandbox) but won't land every one of the 15
+    // corners exactly on its real counterpart; treat it as "the same
+    // track, correctly oriented and scaled," not survey-grade fusion.
     const terrainDisposables: Array<{ dispose: () => void }> = [];
     const terrainDracoLoader = new DRACOLoader();
     terrainDracoLoader.setDecoderPath(DRACO_DECODER_PATH);
@@ -138,19 +162,6 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
       TERRAIN_SRC,
       (gltf) => {
         const terrain = gltf.scene;
-        const ribbonBox = new THREE.Box3().setFromObject(ribbon);
-        const ribbonSize = ribbonBox.getSize(new THREE.Vector3());
-        const ribbonCenter = ribbonBox.getCenter(new THREE.Vector3());
-
-        const terrainBox = new THREE.Box3().setFromObject(terrain);
-        const terrainSize = terrainBox.getSize(new THREE.Vector3());
-        const terrainCenter = terrainBox.getCenter(new THREE.Vector3());
-        // Sized to the ribbon's own footprint, not larger — the camera
-        // orbit below is tuned to just frame the ribbon's bounding box,
-        // so a bigger terrain would push the camera inside it instead of
-        // showing the whole loop (this was tuned visually, not derived).
-        const targetSpan = Math.max(ribbonSize.x, ribbonSize.z) * 1.15;
-        const terrainScale = targetSpan / Math.max(terrainSize.x, terrainSize.z, 0.001);
 
         terrain.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -167,6 +178,11 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
           }
         });
 
+        // Everything below reads the terrain's own untransformed local
+        // space — must happen before any scale/rotation/position is
+        // applied to `terrain` itself.
+        const terrainPCA = meshPointCloudPCA(terrain);
+
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
         // sit well below the actual track/grass surface, so that would
@@ -182,13 +198,24 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
           }
         });
         objectBaseYs.sort((a, b) => a - b);
-        const groundY = objectBaseYs[Math.floor(objectBaseYs.length / 2)] ?? terrainBox.min.y;
+        const groundY = objectBaseYs[Math.floor(objectBaseYs.length / 2)] ?? 0;
+
+        const ribbonSamples = curve.getSpacedPoints(240).map((p) => ({ x: p.x, z: p.z }));
+        const ribbonPCA = planarPCA(ribbonSamples);
+
+        const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
+        const rotationRad = ribbonPCA.majorAngle - terrainPCA.majorAngle + TERRAIN_ROTATION_OFFSET_RAD;
+        const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
+        const scaledTerrainMean = new THREE.Vector3(terrainPCA.mean.x * terrainScale, 0, terrainPCA.mean.y * terrainScale).applyMatrix4(
+          rotationMatrix,
+        );
 
         terrain.scale.setScalar(terrainScale);
+        terrain.rotation.y = rotationRad;
         terrain.position.set(
-          ribbonCenter.x - terrainCenter.x * terrainScale,
+          ribbonPCA.mean.x - scaledTerrainMean.x,
           -0.05 - groundY * terrainScale,
-          ribbonCenter.z - terrainCenter.z * terrainScale,
+          ribbonPCA.mean.y - scaledTerrainMean.z,
         );
         scene.add(terrain);
         ground.visible = false;
