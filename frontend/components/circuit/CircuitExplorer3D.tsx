@@ -11,7 +11,7 @@ import {
   FLYOVER_GRANDSTANDS,
   grandstandPosition,
 } from "@/lib/circuitFlyoverTrack";
-import { meshPointCloudPCA, planarPCA } from "@/lib/pca";
+import { meshAsphaltPointCloudPCA, planarPCA } from "@/lib/pca";
 import { progressFractionAt } from "@/lib/telemetry";
 import type { TelemetrySample } from "@/types/telemetry";
 
@@ -38,13 +38,13 @@ const DRACO_DECODER_PATH = "/draco/";
 // needed. If this terrain model or the real apex data ever changes,
 // re-verify both in that sandbox rather than assuming this still holds.
 const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
-// PCA standard deviation isn't a like-for-like "size" between a dense
-// vertex cloud (terrain) and a sparse 18-point curve's samples (ribbon)
-// — matching it 1:1 visibly under-scaled the terrain against the real
-// curve in that same sandbox. This empirical correction was tuned there
-// by eye (drag scaleMultiplier until the loop's outer edges stopped
-// spilling past the terrain's own footprint), not derived.
-const TERRAIN_SCALE_CORRECTION = 0.65;
+// Size/translation polish on top of asphalt-vs-ribbon PCA. Registration
+// uses meshAsphaltPointCloudPCA (tarmac-coloured verts only), so the
+// std-ratio already matches track-to-ribbon size — these stay near
+// identity and only mop up residual bias from kerbs/pit-lane gray.
+const TERRAIN_SCALE_CORRECTION = 1.0;
+const TERRAIN_OFFSET_X = 0.15;
+const TERRAIN_OFFSET_Z = 0;
 // Seconds for one lap of the traced curve — arbitrary showcase pacing, used
 // whenever `realLap` isn't supplied (or hasn't loaded yet), not derived
 // from any real lap time.
@@ -68,6 +68,7 @@ interface CircuitExplorer3DProps {
    * RealLapPacing doc comment. */
   realLap?: RealLapPacing | null;
 }
+
 
 export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: CircuitExplorer3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -180,8 +181,10 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
 
         // Everything below reads the terrain's own untransformed local
         // space — must happen before any scale/rotation/position is
-        // applied to `terrain` itself.
-        const terrainPCA = meshPointCloudPCA(terrain);
+        // applied to `terrain` itself. Asphalt-only PCA (not every
+        // non-palm vertex) so buildings/runoff don't inflate the
+        // footprint the ribbon is registered against.
+        const terrainPCA = meshAsphaltPointCloudPCA(terrain);
 
         // "Ground level" here can't just be the bounding box's min.y — a
         // few objects in this scan (an embankment cross-section, mainly)
@@ -193,7 +196,7 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         // outliers.
         const objectBaseYs: number[] = [];
         terrain.traverse((child) => {
-          if (child instanceof THREE.Mesh) {
+          if (child instanceof THREE.Mesh && !child.name.startsWith("Palm")) {
             objectBaseYs.push(new THREE.Box3().setFromObject(child).min.y);
           }
         });
@@ -206,16 +209,18 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
         const rotationRad = ribbonPCA.majorAngle - terrainPCA.majorAngle + TERRAIN_ROTATION_OFFSET_RAD;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
-        const scaledTerrainMean = new THREE.Vector3(terrainPCA.mean.x * terrainScale, 0, terrainPCA.mean.y * terrainScale).applyMatrix4(
-          rotationMatrix,
-        );
+        const scaledTerrainMean = new THREE.Vector3(
+          terrainPCA.mean.x * terrainScale,
+          0,
+          terrainPCA.mean.y * terrainScale,
+        ).applyMatrix4(rotationMatrix);
 
         terrain.scale.setScalar(terrainScale);
         terrain.rotation.y = rotationRad;
         terrain.position.set(
-          ribbonPCA.mean.x - scaledTerrainMean.x,
+          ribbonPCA.mean.x - scaledTerrainMean.x + TERRAIN_OFFSET_X,
           -0.05 - groundY * terrainScale,
-          ribbonPCA.mean.y - scaledTerrainMean.z,
+          ribbonPCA.mean.y - scaledTerrainMean.z + TERRAIN_OFFSET_Z,
         );
         scene.add(terrain);
         ground.visible = false;
