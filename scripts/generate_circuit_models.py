@@ -67,7 +67,7 @@ def _load_apex_points() -> list[tuple[str, float, float, float]]:
         ("T12 Apex", 2.75750, 101.73080, 18.0),
         ("T13 Apex", 2.75630, 101.72890, 23.0),
         ("T14 Apex", 2.75820, 101.72750, 26.0),
-        ("Back Straight Mid", 2.76180, 101.73710, 29.0),
+        ("Back Straight Mid", 2.761575, 101.732925, 26.0),
         ("T15 Hairpin", 2.76495, 101.73835, 26.0),
     ]
 

@@ -3,7 +3,7 @@
   "name": "Sepang International Circuit",
   "lengthKm": 5.543,
   "turns": 15,
-  "source": "Shared centreline for Orbit Sepang (sepang.glb), CircuitFlyoverHero, SepangCircuitMap, and scripts/generate_circuit_models.py. Close honest apex points with elevation — not a laser survey. Same honesty standard as the strategy engine.",
+  "source": "Shared centreline for Orbit Sepang (sepang.glb), CircuitFlyoverHero, SepangCircuitMap, and scripts/generate_circuit_models.py. Close honest apex points with elevation — not a laser survey. Same honesty standard as the strategy engine. 'Back Straight Mid' sits between T14 and T15 Hairpin, matching Sepang's real 927m back straight — the track's longest straight, running back alongside the pit straight in the opposite direction and joining it only via the T15 hairpin (driver61.com's circuit guide) — not between T4 and T5 as an earlier revision of this file wrongly assumed. The point originally shipped in the right place but with a coordinate skewed toward the front straight, which visibly pinched/self-crossed the derived path; corrected by interpolating between T14 and T15's own existing points rather than inventing a new unverified coordinate.",
   "points": [
     { "name": "Start/Finish", "lat": 2.7607, "lon": 101.7383, "elevM": 27.0 },
     { "name": "T1 Entry", "lat": 2.76455, "lon": 101.73975, "elevM": 26.0 },
@@ -21,7 +21,7 @@
     { "name": "T12 Apex", "lat": 2.7575, "lon": 101.7308, "elevM": 18.0 },
     { "name": "T13 Apex", "lat": 2.7563, "lon": 101.7289, "elevM": 23.0 },
     { "name": "T14 Apex", "lat": 2.7582, "lon": 101.7275, "elevM": 26.0 },
-    { "name": "Back Straight Mid", "lat": 2.7618, "lon": 101.7371, "elevM": 29.0 },
+    { "name": "Back Straight Mid", "lat": 2.761575, "lon": 101.732925, "elevM": 26.0 },
     { "name": "T15 Hairpin", "lat": 2.76495, "lon": 101.73835, "elevM": 26.0 }
   ]
 }
