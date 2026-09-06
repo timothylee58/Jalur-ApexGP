@@ -3,7 +3,7 @@ import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { SiteHeader } from "@/components/site-chrome";
 
-export default function AppleDesignPage() {
+export default function ProductRevealPage() {
   return (
     <>
       <SiteHeader />

@@ -41,7 +41,7 @@ interface ScrollFrameSequenceProps {
  * Scroll-scrubbed WebP frame sequence rendered via three.js, mapped onto a
  * full-bleed plane. Generic and reusable — extracted from what was
  * originally CircuitFrameSequence's own implementation once a second scroll-
- * frame page (apple-design) needed the identical mechanism; that component
+ * frame page (product-reveal, née apple-design) needed the identical mechanism; that component
  * is now a thin wrapper around this one, unchanged in behavior.
  *
  * Camera and mesh scale are recomputed on every resize to "cover" the
