@@ -38,6 +38,18 @@ const DRACO_DECODER_PATH = "/draco/";
 // needed. If this terrain model or the real apex data ever changes,
 // re-verify both in that sandbox rather than assuming this still holds.
 const TERRAIN_ROTATION_OFFSET_RAD = -Math.PI;
+// Residual fine-tune on top of the asphalt-PCA angle match — the asphalt
+// point cloud (kerbs, pit lane, runoff, and a few unrelated access roads
+// all included, not just the racing surface) isn't a perfect proxy for the
+// centreline itself, so the PCA angle lands close but visibly a few degrees
+// off the real tarmac. Negative here means clockwise on screen; walked in
+// by hand (screenshotting a spread of candidate degrees against the live
+// scene, both at the default oblique camera and a steep near-top-down one,
+// and checking several corners — the T1 hairpin loop and the T9-ish loop on
+// the far side in particular — against their kerb markings) until those
+// corners' asphalt sat under the ribbon rather than beside it; re-verify by
+// the same method if the terrain model or centreline data ever changes.
+const TERRAIN_ROTATION_FINE_TUNE_DEG = -10;
 // Size/translation polish on top of asphalt-vs-ribbon PCA. Registration
 // uses meshAsphaltPointCloudPCA (tarmac-coloured verts only), so the
 // std-ratio already matches track-to-ribbon size — these stay near
@@ -207,7 +219,11 @@ export function CircuitExplorer3D({ selectedId, onSelect, realLap = null }: Circ
         const ribbonPCA = planarPCA(ribbonSamples);
 
         const terrainScale = (ribbonPCA.majorStd / terrainPCA.majorStd) * TERRAIN_SCALE_CORRECTION;
-        const rotationRad = ribbonPCA.majorAngle - terrainPCA.majorAngle + TERRAIN_ROTATION_OFFSET_RAD;
+        const rotationRad =
+          ribbonPCA.majorAngle -
+          terrainPCA.majorAngle +
+          TERRAIN_ROTATION_OFFSET_RAD +
+          (TERRAIN_ROTATION_FINE_TUNE_DEG * Math.PI) / 180;
         const rotationMatrix = new THREE.Matrix4().makeRotationY(rotationRad);
         const scaledTerrainMean = new THREE.Vector3(
           terrainPCA.mean.x * terrainScale,
