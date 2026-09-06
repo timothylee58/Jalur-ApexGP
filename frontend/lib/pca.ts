@@ -152,20 +152,17 @@ function sampleMapRgb(
 }
 
 /**
- * PCA over asphalt-coloured vertices only (texture-sampled mid-gray, or
- * vertex-color gray when there is no map). Registering the ribbon against
- * this cloud — rather than every non-palm vertex — keeps buildings and
- * runoff from inflating the footprint, so the yellow centreline lands on
- * the tarmac without a large hand-tuned scale fudge.
- *
- * Falls back to {@link meshPointCloudPCA} if too few asphalt samples are
- * found (e.g. textures not decoded yet).
+ * World-space X/Z of asphalt-coloured vertices only (texture-sampled
+ * mid-gray, or vertex-color gray when a mesh has no map) — the single
+ * source of truth for "what counts as tarmac" in this scan, shared by
+ * {@link meshAsphaltPointCloudPCA} below and CircuitExplorer3D.tsx's
+ * terrain-registration search (lib/circuitTerrainAlign.ts), so the two
+ * can't quietly drift into classifying different vertices as asphalt.
  */
-export function meshAsphaltPointCloudPCA(
+export function sampleAsphaltPoints(
   root: THREE.Object3D,
   skipPrefix = "Palm",
-  minSamples = 800,
-): PlanarPCA {
+): Array<{ x: number; z: number }> {
   root.updateMatrixWorld(true);
   const v = new THREE.Vector3();
   const mapCache = new Map<THREE.Texture, { w: number; h: number; data: Uint8ClampedArray }>();
@@ -202,6 +199,24 @@ export function meshAsphaltPointCloudPCA(
     }
   });
 
+  return points;
+}
+
+/**
+ * PCA over asphalt-coloured vertices only. Registering the ribbon against
+ * this cloud — rather than every non-palm vertex — keeps buildings and
+ * runoff from inflating the footprint, so the yellow centreline lands on
+ * the tarmac without a large hand-tuned scale fudge.
+ *
+ * Falls back to {@link meshPointCloudPCA} if too few asphalt samples are
+ * found (e.g. textures not decoded yet).
+ */
+export function meshAsphaltPointCloudPCA(
+  root: THREE.Object3D,
+  skipPrefix = "Palm",
+  minSamples = 800,
+): PlanarPCA {
+  const points = sampleAsphaltPoints(root, skipPrefix);
   if (points.length < minSamples) {
     return meshPointCloudPCA(root, skipPrefix);
   }
