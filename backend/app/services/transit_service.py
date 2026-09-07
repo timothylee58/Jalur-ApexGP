@@ -123,6 +123,22 @@ class TransitUpstreamError(Exception):
     "no route happens to match." Routes turn this into a 502."""
 
 
+def _describe_http_error(exc: httpx.HTTPError) -> str:
+    """A real status code + response snippet when there is one
+    (raise_for_status() failures — HTTPStatusError carries .response),
+    otherwise the exception's own message (connection/timeout errors,
+    which never got a response at all). Folded into TransitUpstreamError's
+    message specifically because this module's own docstring flags its
+    endpoint shape as unverified against a live response — when this
+    fires for real, knowing *which* HTTP status/body it got back is the
+    difference between "wrong query param" and "endpoint moved" and
+    "feed is just down right now"."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        snippet = exc.response.text[:200]
+        return f"upstream returned {exc.response.status_code}: {snippet}"
+    return f"{type(exc).__name__}: {exc}"
+
+
 def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     earth_radius_km = 6371.0
     phi1, phi2 = radians(lat1), radians(lat2)
@@ -156,7 +172,9 @@ async def _fetch_static_zip(client: httpx.AsyncClient, category: str) -> zipfile
         response = await client.get(url, params={"category": category})
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise TransitUpstreamError(f"GTFS static request failed: {url} (category={category})") from exc
+        raise TransitUpstreamError(
+            f"GTFS static request failed: {url} (category={category}) — {_describe_http_error(exc)}"
+        ) from exc
     try:
         return zipfile.ZipFile(io.BytesIO(response.content))
     except zipfile.BadZipFile as exc:
@@ -249,7 +267,9 @@ async def _fetch_realtime_bytes(client: httpx.AsyncClient, category: str) -> byt
         response = await client.get(url, params={"category": category})
         response.raise_for_status()
     except httpx.HTTPError as exc:
-        raise TransitUpstreamError(f"GTFS-Realtime request failed: {url} (category={category})") from exc
+        raise TransitUpstreamError(
+            f"GTFS-Realtime request failed: {url} (category={category}) — {_describe_http_error(exc)}"
+        ) from exc
     return response.content
 
 

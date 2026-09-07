@@ -1,16 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { QUIZ_QUESTIONS } from "@/data/f1Guide";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RookieQuiz() {
+  const { t } = useLanguage();
+  const questions = t.guide.quiz;
+  const ui = t.quizUi;
+
   const [index, setIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
 
-  const question = QUIZ_QUESTIONS[index];
-  const isLast = index === QUIZ_QUESTIONS.length - 1;
+  const question = questions[index];
+  const isLast = index === questions.length - 1;
   const answered = selected !== null;
   const correct = answered && selected === question.correctIndex;
 
@@ -40,22 +44,20 @@ export function RookieQuiz() {
     return (
       <div className="rounded-lg border border-paper/10 bg-asphalt/80 p-6 text-center">
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Quiz complete
+          {ui.quizComplete}
         </span>
         <p className="mt-2 font-display text-3xl uppercase tracking-wide text-amber">
-          {score} / {QUIZ_QUESTIONS.length}
+          {score} / {questions.length}
         </p>
         <p className="mt-2 text-sm text-paper-dim" aria-live="polite">
-          {score === QUIZ_QUESTIONS.length
-            ? "Clean sweep — you know your current rulebook."
-            : "Give it another lap — every question's explanation stays up after you answer."}
+          {score === questions.length ? ui.cleanSweep : ui.tryAgain}
         </p>
         <button
           type="button"
           onClick={restart}
           className="mt-4 rounded-full border border-amber/40 px-5 py-2 font-mono text-xs uppercase tracking-wide text-amber hover:border-amber"
         >
-          Play again
+          {ui.playAgain}
         </button>
       </div>
     );
@@ -65,10 +67,10 @@ export function RookieQuiz() {
     <div className="rounded-lg border border-paper/10 bg-asphalt/80 p-4">
       <div className="flex items-center justify-between">
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Question {index + 1} / {QUIZ_QUESTIONS.length}
+          {ui.questionOf.replace("{current}", String(index + 1)).replace("{total}", String(questions.length))}
         </span>
         <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Score {score}
+          {ui.score} {score}
         </span>
       </div>
 
@@ -94,8 +96,8 @@ export function RookieQuiz() {
               className={`rounded-md border px-4 py-2 text-left text-sm text-paper transition-colors disabled:cursor-default ${style}`}
             >
               {option}
-              {answered && isCorrectOption ? " — Correct" : null}
-              {answered && isPicked && !isCorrectOption ? " — Your answer" : null}
+              {answered && isCorrectOption ? ui.correctSuffix : null}
+              {answered && isPicked && !isCorrectOption ? ui.yourAnswerSuffix : null}
             </button>
           );
         })}
@@ -104,7 +106,7 @@ export function RookieQuiz() {
       <div aria-live="polite">
         {answered ? (
           <p className={`mt-3 text-sm leading-relaxed ${correct ? "text-amber" : "text-brick"}`}>
-            {correct ? "Correct. " : "Not quite. "}
+            {correct ? ui.correct : ui.notQuite}
             <span className="text-paper-dim">{question.explanation}</span>
           </p>
         ) : null}
@@ -116,7 +118,7 @@ export function RookieQuiz() {
           onClick={next}
           className="mt-4 rounded-full border border-amber/40 px-5 py-2 font-mono text-xs uppercase tracking-wide text-amber hover:border-amber"
         >
-          {isLast ? "See results" : "Next question"}
+          {isLast ? ui.seeResults : ui.nextQuestion}
         </button>
       ) : null}
     </div>

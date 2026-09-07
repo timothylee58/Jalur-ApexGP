@@ -6,7 +6,7 @@ import pytest
 
 from app.schemas.jolpica import ClassifiedDriver, RaceClassification
 from app.schemas.picks import PickAnswers
-from app.services.picks_scoring import score_submission
+from app.services.picks_scoring import POINTS_PER_QUESTION, score_submission
 
 CORRECT_PICKS = PickAnswers(
     winner="norris",
@@ -121,3 +121,55 @@ def test_raises_when_classification_not_final() -> None:
 def test_unknown_driver_id_scores_zero_for_that_question_not_a_crash() -> None:
     picks = CORRECT_PICKS.model_copy(update={"winner": "not-a-real-driver-id"})
     assert score_submission(picks, _classification()) == 70
+
+
+def test_tied_top_constructor_accepts_either_tied_pick() -> None:
+    # A genuine points tie isn't rare at low totals — max() alone would
+    # silently favor whichever constructor happened to appear first in
+    # the results list, scoring a correct pick of the OTHER tied
+    # constructor as wrong.
+    classification = RaceClassification(
+        season="2026",
+        round="16",
+        source="jolpica",
+        is_final=True,
+        pole_family_name=None,
+        results=[
+            ClassifiedDriver(
+                position=1,
+                driver_family_name="Leclerc",
+                constructor_name="Ferrari",
+                status="Finished",
+                points=10.0,
+                fastest_lap_rank=None,
+            ),
+            ClassifiedDriver(
+                position=2,
+                driver_family_name="Verstappen",
+                constructor_name="Red Bull",
+                status="Finished",
+                points=10.0,
+                fastest_lap_rank=None,
+            ),
+        ],
+    )
+    base = PickAnswers(
+        winner="not-a-real-driver-id",
+        p2="not-a-real-driver-id",
+        p3="not-a-real-driver-id",
+        pole="not-a-real-driver-id",
+        fastest_lap="not-a-real-driver-id",
+        top_constructor="ferrari",
+        dnf_band="3+",
+        beats_teammate_of="mclaren",
+        beats_teammate_pick="not-a-real-driver-id",
+    )
+    assert score_submission(base, classification) == POINTS_PER_QUESTION
+    assert (
+        score_submission(base.model_copy(update={"top_constructor": "red-bull"}), classification)
+        == POINTS_PER_QUESTION
+    )
+    assert (
+        score_submission(base.model_copy(update={"top_constructor": "mclaren"}), classification)
+        == 0
+    )

@@ -40,6 +40,9 @@ _TIMEOUT = httpx.Timeout(10.0)
 
 _TABLE = "picks_predictions"
 _CACHE_TABLE = "picks_race_cache"
+# Comfortably under PostgREST/Supabase's default 1000-row response cap —
+# score_pending() loops pages rather than assuming everything fits in one.
+_SCORE_PENDING_PAGE_SIZE = 500
 
 
 class PicksStorageUnavailable(Exception):
@@ -163,7 +166,7 @@ async def get_leaderboard(*, limit: int = 50, viewer_id: str | None = None) -> L
         LeaderboardRow(
             rank=index + 1,
             display_name=row["display_name"],
-            score=row.get("score") or 0,
+            score=row.get("score"),
             is_you=(row["id"] == viewer_id),
         )
         for index, row in enumerate(rows)
@@ -228,36 +231,52 @@ async def score_pending() -> int:
         return 0
 
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        pending_response = await client.get(
-            _rest_url(_TABLE),
-            headers=_headers(),
-            params={"score": "is.null", "select": "*"},
-        )
-        pending_response.raise_for_status()
-        pending = pending_response.json()
-
         scored_count = 0
-        for row in pending:
-            picks = PickAnswers(
-                winner=row["winner"],
-                p2=row["p2"],
-                p3=row["p3"],
-                pole=row["pole"],
-                fastestLap=row["fastest_lap"],
-                topConstructor=row["top_constructor"],
-                dnfBand=row["dnf_band"],
-                beatsTeammateOf=row["beats_teammate_of"],
-                beatsTeammatePick=row["beats_teammate_pick"],
-            )
-            score = score_submission(picks, classification)
-            patch_response = await client.patch(
+        while True:
+            # Re-query the same "score is.null" filter each pass rather
+            # than offset-paginating: PostgREST caps a single response at
+            # 1000 rows, and each PATCH below removes that row from
+            # future matches of this filter, so the next page naturally
+            # advances — no offset math to get wrong as rows are patched
+            # out from under an in-progress scan.
+            pending_response = await client.get(
                 _rest_url(_TABLE),
                 headers=_headers(),
-                params={"id": f"eq.{row['id']}"},
-                json={"score": score, "scored_at": datetime.now(MYT).isoformat()},
+                params={
+                    "score": "is.null",
+                    "select": "*",
+                    "limit": str(_SCORE_PENDING_PAGE_SIZE),
+                },
             )
-            patch_response.raise_for_status()
-            scored_count += 1
+            pending_response.raise_for_status()
+            pending = pending_response.json()
+            if not pending:
+                break
+
+            for row in pending:
+                picks = PickAnswers(
+                    winner=row["winner"],
+                    p2=row["p2"],
+                    p3=row["p3"],
+                    pole=row["pole"],
+                    fastestLap=row["fastest_lap"],
+                    topConstructor=row["top_constructor"],
+                    dnfBand=row["dnf_band"],
+                    beatsTeammateOf=row["beats_teammate_of"],
+                    beatsTeammatePick=row["beats_teammate_pick"],
+                )
+                score = score_submission(picks, classification)
+                patch_response = await client.patch(
+                    _rest_url(_TABLE),
+                    headers=_headers(),
+                    params={"id": f"eq.{row['id']}"},
+                    json={"score": score, "scored_at": datetime.now(MYT).isoformat()},
+                )
+                patch_response.raise_for_status()
+                scored_count += 1
+
+            if len(pending) < _SCORE_PENDING_PAGE_SIZE:
+                break
 
         cache_response = await client.post(
             _rest_url(_CACHE_TABLE),

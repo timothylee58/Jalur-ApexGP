@@ -46,7 +46,11 @@ class LeaderboardRow(BaseModel):
 
     rank: int
     display_name: str = Field(serialization_alias="displayName")
-    score: int
+    # None means this entry hasn't been scored yet — distinct from an
+    # honest 0. Coercing to 0 here would make a still-pending entry look
+    # identical to one that scored nothing once the board has ANY scored
+    # entries (is_scored is board-wide, not per-row).
+    score: int | None
     is_you: bool = Field(default=False, serialization_alias="isYou")
 
 

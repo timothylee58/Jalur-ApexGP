@@ -26,7 +26,8 @@ export interface PickSubmitted {
 export interface LeaderboardRow {
   rank: number;
   displayName: string;
-  score: number;
+  // null = not scored yet — distinct from an honest 0.
+  score: number | null;
   isYou: boolean;
 }
 

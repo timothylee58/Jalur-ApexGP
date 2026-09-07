@@ -62,7 +62,7 @@ export function Leaderboard({ viewerId }: { viewerId: string | null }) {
               {row.displayName}
               {row.isYou ? " (you)" : ""}
             </span>
-            <span className="font-mono text-amber">{data.isScored ? row.score : "—"}</span>
+            <span className="font-mono text-amber">{row.score ?? "—"}</span>
           </li>
         ))}
       </ol>

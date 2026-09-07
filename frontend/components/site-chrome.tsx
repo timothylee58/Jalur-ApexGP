@@ -2,26 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LanguageSwitcher } from "@/components/i18n/LanguageSwitcher";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import type { Dictionary } from "@/lib/i18n/types";
 
-const NAV = [
-  { href: "/predict", label: "Predict" },
-  { href: "/picks", label: "Picks" },
-  { href: "/circuit", label: "Circuit" },
-  { href: "/accuracy", label: "Accuracy" },
-  { href: "/drivers", label: "Drivers" },
-  { href: "/teams", label: "Teams" },
-  { href: "/fan", label: "Fan" },
-  { href: "/news", label: "News" },
-  { href: "/telemetry", label: "Telemetry" },
-  { href: "/drive", label: "Drive" },
-  { href: "/product-reveal", label: "Reveal" },
-  { href: "/lore", label: "Lore" },
-  { href: "/guide", label: "Guide" },
-  { href: "/tickets", label: "Seats" },
+// Nav labels are looked up from the language dictionary at render time
+// (below) — this array only carries what's language-independent (the
+// route + which dictionary key names its label).
+const NAV: { href: string; key: keyof Dictionary["nav"] }[] = [
+  { href: "/predict", key: "predict" },
+  { href: "/picks", key: "picks" },
+  { href: "/circuit", key: "circuit" },
+  { href: "/accuracy", key: "accuracy" },
+  { href: "/drivers", key: "drivers" },
+  { href: "/teams", key: "teams" },
+  { href: "/fan", key: "fan" },
+  { href: "/news", key: "news" },
+  { href: "/telemetry", key: "telemetry" },
+  { href: "/drive", key: "drive" },
+  { href: "/product-reveal", key: "reveal" },
+  { href: "/lore", key: "lore" },
+  { href: "/guide", key: "guide" },
+  { href: "/calendar", key: "calendar" },
+  { href: "/tickets", key: "seats" },
 ];
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { t } = useLanguage();
 
   return (
     <header className="relative z-20 border-b border-paper/10 bg-asphalt/80 backdrop-blur">
@@ -55,10 +63,11 @@ export function SiteHeader() {
                   active ? "text-amber" : "text-paper-dim hover:text-paper"
                 }`}
               >
-                {item.label}
+                {t.nav[item.key]}
               </Link>
             );
           })}
+          <LanguageSwitcher />
         </div>
       </nav>
     </header>
