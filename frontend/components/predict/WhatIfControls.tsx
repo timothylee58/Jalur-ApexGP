@@ -11,6 +11,20 @@ interface WhatIfControlsProps {
 
 const TYRE_OPTIONS: Array<Compound | "Auto"> = ["Auto", ...COMPOUNDS];
 
+// Real Pirelli sidewall colors — informational, not decorative, so these
+// stay true to the actual compound colors rather than forced into the
+// brand palette (the same reasoning data/f1Guide.ts's tyre-compounds card
+// already states in words: "Hard (white sidewall), Medium (yellow), Soft
+// (red)"). Intermediate/Wet aren't raced in a dry-only what-if sim's
+// normal range but stay selectable, so they get their real colors too.
+const TYRE_COLOR: Record<Compound, string> = {
+  Hard: "#f4efe6",
+  Medium: "#ffd200",
+  Soft: "#c23b22",
+  Intermediate: "#43b02a",
+  Wet: "#1e5bc6",
+};
+
 /**
  * Original side-profile safety-car silhouette — cropped tight to the car
  * itself (no road/background) so it can drop straight into the toggle below.
@@ -41,6 +55,56 @@ function SafetyCarGlyph({ active }: { active: boolean }) {
       <circle cx={15} cy={21} r={1.3} fill="currentColor" />
       <circle cx={42} cy={21} r={3.6} fill="#0a0c0e" />
       <circle cx={42} cy={21} r={1.3} fill="currentColor" />
+    </svg>
+  );
+}
+
+/**
+ * Original side-profile tyre icon — tread block pattern + a sidewall band
+ * in the compound's real color (see TYRE_COLOR above). "Auto" gets a
+ * dashed, colorless outline instead of picking a compound for it.
+ */
+function TyreGlyph({ compound }: { compound: Compound | "Auto" }) {
+  const isAuto = compound === "Auto";
+  const sidewallColor = isAuto ? "none" : TYRE_COLOR[compound];
+
+  return (
+    <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden="true">
+      <circle
+        cx={20}
+        cy={20}
+        r={17.5}
+        fill="#0a0c0e"
+        stroke={isAuto ? "currentColor" : "none"}
+        strokeWidth={isAuto ? 1.5 : 0}
+        strokeDasharray={isAuto ? "3 3" : undefined}
+        className={isAuto ? "text-paper-dim" : undefined}
+      />
+      {/* Sidewall band carrying the compound color. */}
+      {!isAuto ? <circle cx={20} cy={20} r={13.5} fill="none" stroke={sidewallColor} strokeWidth={3} /> : null}
+      {/* Tread blocks around the rim. */}
+      {Array.from({ length: 10 }).map((_, i) => {
+        const angle = (i / 10) * Math.PI * 2;
+        const x1 = 20 + Math.cos(angle) * 15.5;
+        const y1 = 20 + Math.sin(angle) * 15.5;
+        const x2 = 20 + Math.cos(angle) * 17.5;
+        const y2 = 20 + Math.sin(angle) * 17.5;
+        return (
+          <line
+            key={i}
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke="#0a0c0e"
+            strokeWidth={2.5}
+            className={isAuto ? "opacity-30" : undefined}
+          />
+        );
+      })}
+      {/* Hub */}
+      <circle cx={20} cy={20} r={6} fill="#2a3036" />
+      <circle cx={20} cy={20} r={2} fill={isAuto ? "#a39b8f" : sidewallColor} />
     </svg>
   );
 }
@@ -77,7 +141,9 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
       <div className="mt-3 space-y-4">
         <label className="block">
           <span className="flex items-baseline justify-between font-mono text-[11px] text-paper-dim">
-            <span>Rain probability</span>
+            <span>
+              <span aria-hidden>🌧️</span> Rain probability
+            </span>
             <span className="text-paper">{rain}%</span>
           </span>
           <input
@@ -94,7 +160,9 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
 
         <label className="block">
           <span className="flex items-baseline justify-between font-mono text-[11px] text-paper-dim">
-            <span>Track / air temp</span>
+            <span>
+              <span aria-hidden>🌡️</span> Track / air temp
+            </span>
             <span className="text-paper">{temp}°C</span>
           </span>
           <input
@@ -109,41 +177,63 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
           />
         </label>
 
-        <div className="flex items-center justify-between">
+        <div>
           <span className="font-mono text-[11px] text-paper-dim">Safety car</span>
           <button
             type="button"
             role="switch"
             aria-checked={safetyCar}
-            aria-label="Safety car"
             onClick={() => onChange({ ...whatIf, safetyCar: !safetyCar })}
-            className={`h-7 w-14 shrink-0 rounded-md transition-colors ${
-              safetyCar ? "bg-amber/10" : "hover:bg-paper/5"
+            className={`mt-1.5 flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors ${
+              safetyCar
+                ? "border-amber bg-amber/10"
+                : "border-paper/15 bg-asphalt hover:border-paper/30"
             }`}
           >
-            <SafetyCarGlyph active={safetyCar} />
+            <span className="h-10 w-16 shrink-0">
+              <SafetyCarGlyph active={safetyCar} />
+            </span>
+            <span>
+              <span className={`block font-display text-sm uppercase tracking-wide ${safetyCar ? "text-amber" : "text-paper"}`}>
+                {safetyCar ? "Deployed" : "Track clear"}
+              </span>
+              <span className="block text-[11px] text-paper-dim">
+                {safetyCar ? "Field bunched, pit cost falls" : "Tap to force a safety car"}
+              </span>
+            </span>
           </button>
         </div>
 
         <div>
           <span className="font-mono text-[11px] text-paper-dim">Starting tyre</span>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
+          <div className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
             {TYRE_OPTIONS.map((option) => {
               const selected = tyre === option;
               return (
                 <button
                   key={option}
                   type="button"
+                  role="radio"
+                  aria-checked={selected}
                   onClick={() =>
                     onChange({ ...whatIf, tyreChoice: option === "Auto" ? null : (option as Compound) })
                   }
-                  className={`rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wide transition-colors ${
+                  className={`flex flex-col items-center gap-1 rounded-md border px-1.5 py-2 transition-colors ${
                     selected
-                      ? "border-amber bg-amber text-asphalt"
-                      : "border-paper/20 text-paper-dim hover:border-amber hover:text-amber"
+                      ? "border-amber bg-amber/10"
+                      : "border-paper/15 hover:border-paper/30"
                   }`}
                 >
-                  {option}
+                  <span className="h-8 w-8">
+                    <TyreGlyph compound={option} />
+                  </span>
+                  <span
+                    className={`font-mono text-[9px] uppercase tracking-wide ${
+                      selected ? "text-amber" : "text-paper-dim"
+                    }`}
+                  >
+                    {option}
+                  </span>
                 </button>
               );
             })}
