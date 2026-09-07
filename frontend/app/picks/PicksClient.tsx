@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Leaderboard } from "@/components/picks/Leaderboard";
 import { PickForm } from "@/components/picks/PickForm";
 import { fetchMyPick } from "@/lib/api";
@@ -17,7 +17,10 @@ type CheckState = Confirmed | "checking" | "none" | "error";
 export function PicksClient() {
   const [state, setState] = useState<CheckState>("checking");
 
-  const checkExisting = () => {
+  // Stable across renders (only reaches module-level getEntryId/fetchMyPick
+  // and the setState setter, both stable) — listed as the effect's real
+  // dependency below instead of the empty array pretending there is none.
+  const checkExisting = useCallback(() => {
     const existingId = getEntryId();
     if (!existingId) {
       setState("none");
@@ -27,9 +30,11 @@ export function PicksClient() {
     fetchMyPick(existingId)
       .then((mine) => setState(mine ? { id: mine.id, displayName: mine.displayName } : "none"))
       .catch(() => setState("error"));
-  };
+  }, []);
 
-  useEffect(checkExisting, []);
+  useEffect(() => {
+    checkExisting();
+  }, [checkExisting]);
 
   const handleSubmitted = (submitted: PickSubmitted) => {
     setState({ id: submitted.id, displayName: submitted.displayName });
@@ -50,13 +55,22 @@ export function PicksClient() {
             Retry before submitting again — resubmitting while this is unconfirmed could create a
             second entry.
           </p>
-          <button
-            type="button"
-            onClick={checkExisting}
-            className="mt-3 rounded-full border border-amber/40 px-4 py-1.5 font-mono text-xs uppercase tracking-wide text-amber hover:border-amber"
-          >
-            Try again
-          </button>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={checkExisting}
+              className="rounded-full border border-amber/40 px-4 py-1.5 font-mono text-xs uppercase tracking-wide text-amber hover:border-amber"
+            >
+              Try again
+            </button>
+            <button
+              type="button"
+              onClick={() => setState("none")}
+              className="rounded-full border border-paper/20 px-4 py-1.5 font-mono text-xs uppercase tracking-wide text-paper-dim hover:border-paper/40 hover:text-paper"
+            >
+              Never picked before — enter picks
+            </button>
+          </div>
         </div>
       ) : confirmed ? (
         <div className="rounded-lg border border-amber/40 bg-amber/10 p-5">
