@@ -97,14 +97,30 @@ function SafetyCarGlyph({ active }: { active: boolean }) {
   );
 }
 
+// Real F1 dry compounds (Soft/Medium/Hard, the "P Zero" family) are slick
+// — zero tread pattern, that's the entire point of a slick tyre. Only the
+// two wet-weather compounds carry circumferential tread grooves, and Wet's
+// are visibly deeper/denser than Intermediate's — confirmed against real
+// reference photos of mounted F1 tyres (deep chevron-block grooves on a
+// full wet vs. a lighter groove count on an intermediate vs. bald slicks),
+// not guessed. Reproduced here as dashed rings (a stroke-dasharray on a
+// circle), not the actual tread-block artwork or any Pirelli/P Zero/
+// Cinturato text from those photos.
+const TREAD_DASH: Partial<Record<Compound, string>> = {
+  Intermediate: "2 2.6",
+  Wet: "1.4 1.1",
+};
+
 /**
- * Original side-profile tyre icon — tread block pattern + a sidewall band
- * in the compound's real color (see TYRE_COLOR above). "Auto" gets a
- * dashed, colorless outline instead of picking a compound for it.
+ * Original side-profile tyre icon — a sidewall band in the compound's real
+ * color (see TYRE_COLOR above), slick or treaded to match the real
+ * compound, plus a soft gloss highlight evoking photographed rubber.
+ * "Auto" gets a dashed, colorless outline instead of picking a compound.
  */
 function TyreGlyph({ compound }: { compound: Compound | "Auto" }) {
   const isAuto = compound === "Auto";
   const sidewallColor = isAuto ? "none" : TYRE_COLOR[compound];
+  const treadDash = isAuto ? undefined : TREAD_DASH[compound];
 
   return (
     <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden="true">
@@ -118,28 +134,30 @@ function TyreGlyph({ compound }: { compound: Compound | "Auto" }) {
         strokeDasharray={isAuto ? "3 3" : undefined}
         className={isAuto ? "text-paper-dim" : undefined}
       />
+      {/* Gloss highlight — real tread rubber reads as glossy/reflective,
+          not flat matte, under any real light. */}
+      <path
+        d="M8.5 12.5 A17.5 17.5 0 0 1 17 3.2"
+        stroke="#fff"
+        strokeWidth={1.4}
+        strokeLinecap="round"
+        fill="none"
+        opacity={0.18}
+      />
+      {/* Tread grooves — only for wet-weather compounds, see TREAD_DASH. */}
+      {treadDash ? (
+        <circle
+          cx={20}
+          cy={20}
+          r={16}
+          fill="none"
+          stroke="#2a3036"
+          strokeWidth={2.2}
+          strokeDasharray={treadDash}
+        />
+      ) : null}
       {/* Sidewall band carrying the compound color. */}
-      {!isAuto ? <circle cx={20} cy={20} r={13.5} fill="none" stroke={sidewallColor} strokeWidth={3} /> : null}
-      {/* Tread blocks around the rim. */}
-      {Array.from({ length: 10 }).map((_, i) => {
-        const angle = (i / 10) * Math.PI * 2;
-        const x1 = 20 + Math.cos(angle) * 15.5;
-        const y1 = 20 + Math.sin(angle) * 15.5;
-        const x2 = 20 + Math.cos(angle) * 17.5;
-        const y2 = 20 + Math.sin(angle) * 17.5;
-        return (
-          <line
-            key={i}
-            x1={x1}
-            y1={y1}
-            x2={x2}
-            y2={y2}
-            stroke="#0a0c0e"
-            strokeWidth={2.5}
-            className={isAuto ? "opacity-30" : undefined}
-          />
-        );
-      })}
+      {!isAuto ? <circle cx={20} cy={20} r={13} fill="none" stroke={sidewallColor} strokeWidth={2.6} /> : null}
       {/* Hub */}
       <circle cx={20} cy={20} r={6} fill="#2a3036" />
       <circle cx={20} cy={20} r={2} fill={isAuto ? "#a39b8f" : sidewallColor} />
