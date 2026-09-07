@@ -1,6 +1,6 @@
 # Jalur APEXGP
 
-The name was nspired by the fictional Formula 1 team featured in the feature film F1 The Movie + Jalur (Flag in Malay) 
+The name was inspired by the fictional Formula 1 team featured in the feature film F1 The Movie + Jalur (Flag in Malay) 
 
 
 A race-engineer **strategy simulator** for the Sepang F1 race weekend.
