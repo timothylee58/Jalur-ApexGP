@@ -30,31 +30,69 @@ const TYRE_COLOR: Record<Compound, string> = {
  * itself (no road/background) so it can drop straight into the toggle below.
  * Deliberately unbranded (see docs/BRAND.md): this control lives on the
  * strategy tool, not /fan, so it gets the same generic treatment as
- * car.glb rather than a real, sponsor/FIA-liveried photo.
+ * car.glb rather than a real, sponsor/FIA-liveried photo — no manufacturer
+ * marque, no sponsor decals, no readable text.
+ *
+ * Body paint is always "safety-car red" (a real one always is — what
+ * actually changes when one's deployed is the beacon lights, not the
+ * paint), pushed toward some real photographed-car drama instead of a flat
+ * icon fill: a glossy gradient, a soft amber glow behind the beacons when
+ * lit, motion streaks trailing the car once it's moving, and a ground
+ * shadow for depth.
  */
 function SafetyCarGlyph({ active }: { active: boolean }) {
   return (
-    <svg
-      viewBox="0 0 56 28"
-      className={`h-full w-full transition-colors ${active ? "text-amber" : "text-paper-dim"}`}
-      aria-hidden="true"
-    >
-      {/* Beacon bar — lit (amber + brick) only when the safety car is out. */}
-      <rect x={23} y={1} width={5} height={3} rx={1} fill={active ? "#f5a623" : "currentColor"} opacity={active ? 1 : 0.4} />
-      <rect x={28} y={1} width={5} height={3} rx={1} fill={active ? "#c23b22" : "currentColor"} opacity={active ? 1 : 0.4} />
-      {/* Body */}
-      <path
-        d="M6 20 L6 15 C6 12 8 10 11 10 L20 10 L25 4 C26.5 2.3 28.8 1.5 31 1.8 L38 3 C40 3.3 41.8 4.6 42.7 6.4 L45 10 L49 10 C51 10 52.5 11.5 52.5 13.5 L52.5 18 C52.5 19.1 51.6 20 50.5 20 Z"
-        fill="currentColor"
-      />
-      {/* Cabin glass */}
-      <path d="M21 10 L25.5 5.3 C26.5 4.2 28 3.6 29.5 3.8 L29.5 10 Z" fill="#0a0c0e" opacity={0.55} />
-      <path d="M32 10 L32 4 L37.6 4.9 C39 5.1 40.2 6 40.9 7.2 L42.9 10 Z" fill="#0a0c0e" opacity={0.55} />
+    <svg viewBox="0 0 64 30" className="h-full w-full overflow-visible" aria-hidden="true">
+      <defs>
+        <linearGradient id="sc-body" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#e2543a" />
+          <stop offset="55%" stopColor="#c23b22" />
+          <stop offset="100%" stopColor="#8f2a18" />
+        </linearGradient>
+        <radialGradient id="sc-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#f5a623" stopOpacity={0.9} />
+          <stop offset="100%" stopColor="#f5a623" stopOpacity={0} />
+        </radialGradient>
+      </defs>
+
+      {/* Ground shadow. */}
+      <ellipse cx={30} cy={25.5} rx={22} ry={2.2} fill="#000" opacity={0.35} />
+
+      {/* Motion streaks — only trail the car once it's deployed and moving. */}
+      {active ? (
+        <g opacity={0.6}>
+          <rect x={0} y={13} width={9} height={1.3} rx={0.65} fill="#f4efe6" opacity={0.5} />
+          <rect x={0} y={17} width={5} height={1.1} rx={0.55} fill="#f4efe6" opacity={0.35} />
+          <rect x={0} y={9.5} width={5} height={1} rx={0.5} fill="#f4efe6" opacity={0.3} />
+        </g>
+      ) : null}
+
+      {/* Beacon glow, behind the lights, only lit when deployed. */}
+      {active ? <circle cx={30} cy={3} r={9} fill="url(#sc-glow)" /> : null}
+      {/* Beacon bar. */}
+      <rect x={26} y={1} width={5} height={3} rx={1} fill={active ? "#f5a623" : "#4a5158"} />
+      <rect x={31} y={1} width={5} height={3} rx={1} fill={active ? "#c23b22" : "#3a4046"} />
+
+      {/* Body — glossy gradient red, dimmed when parked/not deployed. */}
+      <g opacity={active ? 1 : 0.6}>
+        <path
+          d="M10 22 L10 17 C10 14 12 12 15 12 L24 12 L29 6 C30.5 4.3 32.8 3.5 35 3.8 L42 5 C44 5.3 45.8 6.6 46.7 8.4 L49 12 L53 12 C55 12 56.5 13.5 56.5 15.5 L56.5 20 C56.5 21.1 55.6 22 54.5 22 Z"
+          fill="url(#sc-body)"
+        />
+        {/* Specular highlight along the roofline — the "photographed gloss". */}
+        <path d="M25 12 L30 6.5 C31.3 5.1 33.1 4.4 35 4.6 L40.5 5.6" stroke="#ffb89f" strokeWidth={0.8} strokeLinecap="round" opacity={0.7} fill="none" />
+        {/* Cabin glass */}
+        <path d="M25 12 L29.5 7.3 C30.5 6.2 32 5.6 33.5 5.8 L33.5 12 Z" fill="#0a0c0e" opacity={0.6} />
+        <path d="M36 12 L36 6 L41.6 6.9 C43 7.1 44.2 8 44.9 9.2 L46.9 12 Z" fill="#0a0c0e" opacity={0.6} />
+        {/* Front splitter, evokes the aero of a real safety car without copying one. */}
+        <rect x={7} y={20.5} width={7} height={1.6} rx={0.6} fill="#0a0c0e" opacity={0.7} />
+      </g>
+
       {/* Wheels */}
-      <circle cx={15} cy={21} r={3.6} fill="#0a0c0e" />
-      <circle cx={15} cy={21} r={1.3} fill="currentColor" />
-      <circle cx={42} cy={21} r={3.6} fill="#0a0c0e" />
-      <circle cx={42} cy={21} r={1.3} fill="currentColor" />
+      <circle cx={19} cy={23} r={3.8} fill="#0a0c0e" />
+      <circle cx={19} cy={23} r={1.4} fill={active ? "#f5a623" : "#4a5158"} />
+      <circle cx={46} cy={23} r={3.8} fill="#0a0c0e" />
+      <circle cx={46} cy={23} r={1.4} fill={active ? "#f5a623" : "#4a5158"} />
     </svg>
   );
 }
@@ -224,8 +262,13 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
                       : "border-paper/15 hover:border-paper/30"
                   }`}
                 >
-                  <span className="h-8 w-8">
-                    <TyreGlyph compound={option} />
+                  <span className="h-8 w-8" style={{ perspective: "180px" }}>
+                    <span
+                      className="animate-tyre-spin block h-full w-full"
+                      style={{ transformStyle: "preserve-3d" }}
+                    >
+                      <TyreGlyph compound={option} />
+                    </span>
                   </span>
                   <span
                     className={`font-mono text-[9px] uppercase tracking-wide ${

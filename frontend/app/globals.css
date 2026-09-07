@@ -29,3 +29,27 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+/* Tyre picker (components/predict/WhatIfControls.tsx): a slow, continuous
+   Y-axis rotation on a flat 2D disc — no WebGL/Three.js needed, a plain
+   CSS 3D transform on a face-on circle already foreshortens correctly
+   into the classic "spinning wheel" silhouette. Respects
+   prefers-reduced-motion, same standard as LoreTimeline's animation. */
+@keyframes tyre-spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+.animate-tyre-spin {
+  animation: tyre-spin 7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-tyre-spin {
+    animation: none;
+  }
+}
