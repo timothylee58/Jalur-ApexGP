@@ -29,6 +29,15 @@ export const metadata: Metadata = {
   title: "Jalur APEXGP — Sepang race engineer",
   description:
     "Pick a Sepang session and get conservative vs aggressive strategy reads from a live weather blend.",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
 };
 
 export default function RootLayout({
