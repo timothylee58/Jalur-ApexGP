@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, type KeyboardEvent } from "react";
 import { COMPOUNDS, type Compound, type SimInputs, type WhatIf } from "@/types";
 
 interface WhatIfControlsProps {
@@ -13,10 +14,9 @@ const TYRE_OPTIONS: Array<Compound | "Auto"> = ["Auto", ...COMPOUNDS];
 
 // Real Pirelli sidewall colors — informational, not decorative, so these
 // stay true to the actual compound colors rather than forced into the
-// brand palette (the same reasoning data/f1Guide.ts's tyre-compounds card
-// already states in words: "Hard (white sidewall), Medium (yellow), Soft
-// (red)"). Intermediate/Wet aren't raced in a dry-only what-if sim's
-// normal range but stay selectable, so they get their real colors too.
+// brand palette (Hard: white sidewall, Medium: yellow, Soft: red).
+// Intermediate/Wet aren't raced in a dry-only what-if sim's normal range
+// but stay selectable, so they get their real colors too.
 const TYRE_COLOR: Record<Compound, string> = {
   Hard: "#f4efe6",
   Medium: "#ffd200",
@@ -171,6 +171,30 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
   const safetyCar = whatIf.safetyCar ?? inputs?.safetyCar ?? false;
   const tyre: Compound | "Auto" = whatIf.tyreChoice ?? "Auto";
 
+  // WAI-ARIA radiogroup pattern: arrow keys move focus AND selection
+  // together (like a native <input type="radio"> group), with roving
+  // tabindex — only the checked option sits in the tab order, everything
+  // else is reached via arrow keys once the group has focus.
+  const tyreButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
+
+  const selectTyreAt = (index: number) => {
+    const wrapped = (index + TYRE_OPTIONS.length) % TYRE_OPTIONS.length;
+    const option = TYRE_OPTIONS[wrapped];
+    onChange({ ...whatIf, tyreChoice: option === "Auto" ? null : (option as Compound) });
+    tyreButtonRefs.current[wrapped]?.focus();
+  };
+
+  const handleTyreKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const currentIndex = TYRE_OPTIONS.indexOf(tyre);
+    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+      event.preventDefault();
+      selectTyreAt(currentIndex + 1);
+    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+      event.preventDefault();
+      selectTyreAt(currentIndex - 1);
+    }
+  };
+
   const touched =
     whatIf.rainProbability !== undefined ||
     whatIf.tempC !== undefined ||
@@ -262,15 +286,24 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
 
         <div>
           <span className="font-mono text-[11px] text-paper-dim">Starting tyre</span>
-          <div className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-            {TYRE_OPTIONS.map((option) => {
+          <div
+            role="radiogroup"
+            aria-label="Starting tyre"
+            onKeyDown={handleTyreKeyDown}
+            className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6"
+          >
+            {TYRE_OPTIONS.map((option, index) => {
               const selected = tyre === option;
               return (
                 <button
                   key={option}
+                  ref={(el) => {
+                    tyreButtonRefs.current[index] = el;
+                  }}
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  tabIndex={selected ? 0 : -1}
                   onClick={() =>
                     onChange({ ...whatIf, tyreChoice: option === "Auto" ? null : (option as Compound) })
                   }

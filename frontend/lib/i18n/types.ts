@@ -15,6 +15,17 @@
 
 export type Lang = "en" | "ms" | "zh";
 
+// Lives here (a plain, non-"use client" module) rather than in
+// LanguageProvider.tsx so the Server Component layout can call it
+// directly — every export of a "use client" file becomes a client
+// reference from the server's point of view, and a plain function like
+// this one can't be invoked that way, only rendered/passed as a prop.
+export const LANG_COOKIE = "jalur-apexgp-lang";
+
+export function isLang(value: string | null | undefined): value is Lang {
+  return value === "en" || value === "ms" || value === "zh";
+}
+
 export interface GuideCardText {
   id: string;
   title: string;

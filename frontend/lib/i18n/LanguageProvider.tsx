@@ -2,7 +2,12 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { dictionaries } from "./dictionaries";
-import type { Dictionary, Lang } from "./types";
+import { isLang, LANG_COOKIE, type Dictionary, type Lang } from "./types";
+
+// Re-exported for existing importers — the canonical definitions now
+// live in types.ts (see the comment there) so layout.tsx, a Server
+// Component, can call isLang() directly.
+export { isLang, LANG_COOKIE };
 
 const STORAGE_KEY = "jalur-apexgp:lang";
 const DEFAULT_LANG: Lang = "en";
@@ -15,25 +20,34 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function isLang(value: string | null): value is Lang {
-  return value === "en" || value === "ms" || value === "zh";
-}
+// initialLang comes from the cookie the server already read in
+// layout.tsx (a Server Component, via next/headers) — so the very first
+// client render matches what the server sent: no flash of DEFAULT_LANG
+// while a client-only effect catches up, and no hydration mismatch
+// either (server and client agree on the same value up front). Reading
+// localStorage synchronously here instead would fix the flash but
+// reintroduce a mismatch, since the server has no localStorage access.
+export function LanguageProvider({
+  children,
+  initialLang = DEFAULT_LANG,
+}: {
+  children: ReactNode;
+  initialLang?: Lang;
+}) {
+  const [lang, setLangState] = useState<Lang>(initialLang);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  // Always starts "en" on both server and the client's first render —
-  // the real preference only applies after mount (below), same
-  // hydration-safe pattern as SessionCountdown's clock and RookieQuiz's
-  // draft restore elsewhere in this app. Reading localStorage during the
-  // initial render would make server and client markup disagree.
-  const [lang, setLangState] = useState<Lang>(DEFAULT_LANG);
-
+  // Post-mount fallback only, for a tab that set the old localStorage-only
+  // key before this cookie existed and never revisited setLang since —
+  // the cookie read in layout.tsx is what actually removes the flash for
+  // everyone else.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (isLang(stored)) setLangState(stored);
+      if (isLang(stored) && stored !== initialLang) setLangState(stored);
     } catch {
-      // Private window / blocked storage — stay on the default language.
+      // Private window / blocked storage — stay on the server-resolved language.
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -44,6 +58,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setLangState(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Best-effort — the choice still applies for this page view.
+    }
+    try {
+      document.cookie = `${LANG_COOKIE}=${next}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {
       // Best-effort — the choice still applies for this page view.
     }

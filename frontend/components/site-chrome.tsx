@@ -49,9 +49,17 @@ export function SiteHeader() {
         </Link>
         {/* min-w-0 is load-bearing on a flex child: without it this can't
             shrink below its content width, so overflow-x-auto never
-            engages and the nav (now 8 items) pushes the whole page wider
-            than the viewport on mobile instead of scrolling in place. */}
-        <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto sm:flex-none sm:justify-end">
+            engages and the nav pushes the whole page wider than the
+            viewport instead of scrolling in place. Deliberately
+            scrollable at every breakpoint, not just mobile — 15 nav items
+            plus the language switcher can outgrow even an `sm:` desktop
+            header width, and `html`'s overflow-x-clip means anything that
+            overflows without a scroll affordance is just unreachable, not
+            merely ugly (a real bug this used to have via `sm:flex-none`,
+            which stopped this row from shrinking right when it needed to
+            most). Harmless when everything already fits — overflow-x-auto
+            only engages once content actually overflows. */}
+        <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto">
           {NAV.map((item) => {
             const active = pathname === item.href;
             return (
