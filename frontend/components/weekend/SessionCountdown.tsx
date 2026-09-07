@@ -22,7 +22,13 @@ function split(ms: number): Parts {
 }
 
 function formatMyt(iso: string): string {
-  return new Date(iso).toLocaleString("en-GB", {
+  // toLocaleString's own punctuation for en-GB ("Fri, 2 Oct, 12:30" vs
+  // "Fri 2 Oct, 12:30") isn't guaranteed identical between Node's ICU
+  // (SSR) and the browser's (hydration) — a real mismatch reproduced
+  // here, not hypothetical. formatToParts sidesteps it: only the raw
+  // weekday/day/month/hour/minute token values come from Intl (stable
+  // across engines), every separator is a literal this function controls.
+  const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Asia/Kuala_Lumpur",
     weekday: "short",
     day: "numeric",
@@ -30,7 +36,10 @@ function formatMyt(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-  });
+  }).formatToParts(new Date(iso));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${get("weekday")}, ${get("day")} ${get("month")}, ${get("hour")}:${get("minute")}`;
 }
 
 export function SessionCountdown() {

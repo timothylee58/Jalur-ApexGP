@@ -16,6 +16,7 @@ from app.services import jolpica_service
 from app.services.jolpica_service import (
     JolpicaUnavailable,
     JolpicaUpstreamError,
+    get_race_classification,
     get_sepang_schedule,
     get_standings,
 )
@@ -272,3 +273,117 @@ async def test_standings_cache_respects_ttl(monkeypatch: pytest.MonkeyPatch) -> 
     clock[0] += jolpica_service._STANDINGS_CACHE_TTL_SECONDS
     await get_standings()
     assert calls == 4
+
+
+SAMPLE_RESULTS_RACE = {
+    "season": "2026",
+    "round": "16",
+    "Results": [
+        {
+            "position": "1",
+            "points": "25",
+            "status": "Finished",
+            "Driver": {"driverId": "norris", "givenName": "Lando", "familyName": "Norris"},
+            "Constructor": {"constructorId": "mclaren", "name": "McLaren"},
+            "FastestLap": {"rank": "2"},
+        },
+        {
+            "position": "2",
+            "points": "18",
+            "status": "Finished",
+            "Driver": {"driverId": "piastri", "givenName": "Oscar", "familyName": "Piastri"},
+            "Constructor": {"constructorId": "mclaren", "name": "McLaren"},
+            "FastestLap": {"rank": "1"},
+        },
+        {
+            "position": "3",
+            "points": "15",
+            "status": "Finished",
+            "Driver": {
+                "driverId": "max_verstappen",
+                "givenName": "Max",
+                "familyName": "Verstappen",
+            },
+            "Constructor": {"constructorId": "red_bull", "name": "Red Bull"},
+        },
+        {
+            "position": "20",
+            "points": "0",
+            "status": "Retired",
+            "Driver": {"driverId": "perez", "givenName": "Sergio", "familyName": "Pérez"},
+            "Constructor": {"constructorId": "cadillac", "name": "Cadillac"},
+        },
+    ],
+}
+
+SAMPLE_QUALIFYING_RACE = {
+    "season": "2026",
+    "round": "16",
+    "QualifyingResults": [
+        {
+            "position": "1",
+            "Driver": {"driverId": "piastri", "givenName": "Oscar", "familyName": "Piastri"},
+        },
+        {
+            "position": "2",
+            "Driver": {"driverId": "norris", "givenName": "Lando", "familyName": "Norris"},
+        },
+    ],
+}
+
+
+@pytest.mark.asyncio
+async def test_race_classification_parses_results_and_pole(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/results/"):
+            return httpx.Response(
+                200, json={"MRData": {"RaceTable": {"Races": [SAMPLE_RESULTS_RACE]}}}
+            )
+        if path.endswith("/qualifying/"):
+            return httpx.Response(
+                200, json={"MRData": {"RaceTable": {"Races": [SAMPLE_QUALIFYING_RACE]}}}
+            )
+        raise AssertionError(f"unexpected path {path}")
+
+    _patch_client(monkeypatch, handler)
+
+    classification = await get_race_classification()
+    assert classification.is_final is True
+    assert classification.pole_family_name == "Piastri"
+    assert [row.driver_family_name for row in classification.results] == [
+        "Norris",
+        "Piastri",
+        "Verstappen",
+        "Pérez",
+    ]
+    assert classification.results[1].fastest_lap_rank == 1
+    assert classification.results[3].status == "Retired"
+
+
+@pytest.mark.asyncio
+async def test_race_classification_not_final_before_race_runs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"MRData": {"RaceTable": {"Races": []}}})
+
+    _patch_client(monkeypatch, handler)
+
+    classification = await get_race_classification()
+    assert classification.is_final is False
+    assert classification.results == []
+    assert classification.pole_family_name is None
+
+
+@pytest.mark.asyncio
+async def test_race_classification_upstream_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, text="unavailable")
+
+    _patch_client(monkeypatch, handler)
+
+    with pytest.raises(JolpicaUpstreamError):
+        await get_race_classification()

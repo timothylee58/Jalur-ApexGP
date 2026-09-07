@@ -26,8 +26,10 @@ import httpx
 
 from app.config import settings
 from app.schemas.jolpica import (
+    ClassifiedDriver,
     ConstructorStandingRow,
     DriverStandingRow,
+    RaceClassification,
     ScheduleSession,
     StandingsPayload,
     WeekendSchedule,
@@ -35,6 +37,10 @@ from app.schemas.jolpica import (
 
 DEFAULT_SEASON = 2026
 DEFAULT_CIRCUIT_ID = "sepang"
+# Jolpica round 16 of the 2026 season — the real Bahrain Grand Prix this
+# app's fiction relocates to Sepang (see module docstring above). Race-day
+# Picks scores against this round's real classification once it's final.
+DEFAULT_ROUND = 16
 # Was a fixed 2025 season-close snapshot — the standings strip now tracks
 # the *current*, still-in-progress season live instead, same as the
 # schedule above. A caller can still pass ?season=2025 for the old
@@ -229,3 +235,69 @@ async def get_standings(season: int = STANDINGS_SEASON) -> StandingsPayload:
     )
     _standings_cache[season] = (result, time.monotonic())
     return result
+
+
+async def get_race_classification(
+    season: int = DEFAULT_SEASON, round_: int = DEFAULT_ROUND
+) -> RaceClassification:
+    """Real classification for a round — the source of truth Race-day Picks
+    scores against. No in-memory cache here (unlike schedule/standings):
+    the durable cache is picks_service's Supabase row, since a serverless
+    instance's own memory isn't where "was this round already scored" needs
+    to live. Returns is_final=False (not an error) before the race has run —
+    that's an expected, common state for callers to handle, not a fault.
+    """
+    # Ergast/Jolpica returns HTTP 200 with an empty Races list for a round
+    # that hasn't run yet — not a 404 — so a not-final round surfaces here
+    # as empty data, not an exception. A genuine transport failure still
+    # propagates as JolpicaUpstreamError, same as every other call in this
+    # module.
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+        results_payload = await _get(client, f"{season}/{round_}/results/")
+        quali_payload = await _get(client, f"{season}/{round_}/qualifying/")
+
+    races = results_payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
+    if not races or not races[0].get("Results"):
+        return RaceClassification(
+            season=str(season), round=str(round_), source="jolpica", is_final=False, results=[]
+        )
+
+    race = races[0]
+    results: list[ClassifiedDriver] = []
+    for row in race["Results"]:
+        try:
+            driver = row["Driver"]
+            constructor = row["Constructor"]
+            fastest_lap = row.get("FastestLap") or {}
+            position_text = str(row.get("position", ""))
+            results.append(
+                ClassifiedDriver(
+                    position=int(position_text) if position_text.isdigit() else None,
+                    driver_family_name=str(driver["familyName"]),
+                    constructor_name=str(constructor["name"]),
+                    status=str(row.get("status", "")),
+                    points=float(row.get("points", 0.0)),
+                    fastest_lap_rank=(
+                        int(fastest_lap["rank"]) if fastest_lap.get("rank") is not None else None
+                    ),
+                )
+            )
+        except (KeyError, TypeError, ValueError):
+            continue
+
+    pole_family_name: str | None = None
+    quali_races = quali_payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
+    if quali_races and quali_races[0].get("QualifyingResults"):
+        for row in quali_races[0]["QualifyingResults"]:
+            if str(row.get("position")) == "1":
+                pole_family_name = str(row["Driver"]["familyName"])
+                break
+
+    return RaceClassification(
+        season=str(race.get("season", season)),
+        round=str(race.get("round", round_)),
+        source="jolpica",
+        is_final=bool(results),
+        pole_family_name=pole_family_name,
+        results=results,
+    )

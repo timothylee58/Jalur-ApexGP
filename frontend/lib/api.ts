@@ -7,6 +7,12 @@ import type {
   WhatIf,
 } from "@/types";
 import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
+import type {
+  LeaderboardResponse,
+  MyPickResponse,
+  PickSubmission,
+  PickSubmitted,
+} from "@/types/picks";
 import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 import type { SepangAccessPayload } from "@/types/transit";
 
@@ -101,4 +107,49 @@ export async function fetchAccuracy(session: Session): Promise<AccuracyResponse 
   }
   if (!res.ok) throw new Error(`Accuracy request failed (${res.status})`);
   return res.json() as Promise<AccuracyResponse>;
+}
+
+/** Thrown on a 409 — the picks deadline has passed. Distinct from a plain
+ * Error so the form can show "picks are closed" instead of a generic
+ * "something went wrong". */
+export class PicksClosedError extends Error {}
+
+/** Thrown on a 503 — picks storage isn't configured server-side yet (a
+ * deploy/setup gap, not a network blip). Distinct from a plain Error so
+ * the form doesn't tell a fan to "check your connection" for something
+ * that isn't their connection's fault. */
+export class PicksUnavailableError extends Error {}
+
+export async function submitPicks(submission: PickSubmission): Promise<PickSubmitted> {
+  const res = await fetch(`${API_URL}/picks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(submission),
+    cache: "no-store",
+  });
+  if (res.status === 409) {
+    const body = await res.json().catch(() => ({ detail: "Picks are closed." }));
+    throw new PicksClosedError(body.detail ?? "Picks are closed.");
+  }
+  if (res.status === 503) {
+    throw new PicksUnavailableError("Picks aren't open yet — check back soon.");
+  }
+  if (!res.ok) throw new Error(`Picks submission failed (${res.status})`);
+  return res.json() as Promise<PickSubmitted>;
+}
+
+export async function fetchLeaderboard(viewerId?: string | null): Promise<LeaderboardResponse> {
+  const query = viewerId ? `?id=${encodeURIComponent(viewerId)}` : "";
+  const res = await fetch(`${API_URL}/picks/leaderboard${query}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Leaderboard request failed (${res.status})`);
+  return res.json() as Promise<LeaderboardResponse>;
+}
+
+export async function fetchMyPick(entryId: string): Promise<MyPickResponse | null> {
+  const res = await fetch(`${API_URL}/picks/me?id=${encodeURIComponent(entryId)}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`My picks request failed (${res.status})`);
+  return res.json() as Promise<MyPickResponse>;
 }

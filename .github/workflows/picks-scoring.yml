@@ -1,0 +1,29 @@
+name: Race-day Picks Scoring
+
+on:
+  schedule:
+    - cron: "15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  score-picks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python ml/score_picks.py
+        env:
+          # A Supabase service_role key (Project Settings -> API), set as
+          # repo secrets: Settings -> Secrets and variables -> Actions.
+          # Unlike the MLflow cron above, this job fails loudly (non-zero
+          # exit) rather than silently no-op'ing until these are set —
+          # deliberate: a "picks storage unavailable" run going red is the
+          # signal that these secrets still need configuring.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:3000"
     port: int = 8000
     live_weather_weight: float = 0.65
+    # Race-day Picks storage (Supabase Postgres via its PostgREST HTTP
+    # API). The service_role key, never the anon key — RLS on both picks
+    # tables has no permissive policies, so only this key can read/write.
+    # Unset in dev is a valid state (picks_service raises a clear
+    # PicksStorageUnavailable rather than silently no-op'ing); this
+    # feature has no local-file fallback the way MLflow does.
+    supabase_url: str | None = None
+    supabase_service_role_key: str | None = None
 
 
 settings = Settings()

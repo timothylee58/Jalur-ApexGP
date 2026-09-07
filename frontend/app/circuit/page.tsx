@@ -26,18 +26,28 @@ export default function CircuitPage() {
           circuit&apos;s real apex-point centreline — the same geometry
           behind the landing page&apos;s flyover hero and the 2D strategy
           map — covering all 15 named corners, with Turns 5–7, 9, and 15
-          carrying the strategy engine&apos;s own reasoning. The terrain is
-          a separate real photogrammetry scan (the same one as{" "}
+          carrying the strategy engine&apos;s own reasoning. The ground
+          underneath is a separate real 3D scan (the same one as{" "}
           <Link href="/#orbit-sepang" className="text-amber hover:underline">
             Orbit Sepang
           </Link>{" "}
-          on the landing page), registered against that centreline by an
-          actual computed similarity transform — the two are still
-          independent real-world sources with no shared coordinate system,
-          so treat it as the same track correctly oriented, not a
-          survey-grade fusion of the two — see{" "}
-          <code className="text-amber">frontend/public/models/README.md</code>{" "}
-          for the terrain&apos;s CC BY 4.0 attribution.
+          on the landing page), lined up against that centreline
+          automatically rather than by eye. The two come from separate
+          real-world sources, though, so treat it as the same track,
+          correctly oriented — not a seamless, millimetre-perfect merge of
+          the two.
+        </p>
+        <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
+          Terrain scan shared under a Creative Commons license —{" "}
+          <a
+            href="/models/README.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-paper-dim"
+          >
+            full source &amp; license
+          </a>
+          .
         </p>
 
         <div className="mt-6">
