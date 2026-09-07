@@ -21,7 +21,7 @@ from app.schemas.jolpica import (
 )
 from app.schemas.picks import PickAnswers, PickSubmission
 from app.services import jolpica_service, picks_service
-from app.services.picks_service import PicksClosed, PicksStorageUnavailable
+from app.services.picks_service import PicksClosed, PicksDeadlineUnknown, PicksStorageUnavailable
 
 _RealAsyncClient = httpx.AsyncClient
 MYT = ZoneInfo("Asia/Kuala_Lumpur")
@@ -118,6 +118,27 @@ async def test_submit_pick_past_deadline_raises(monkeypatch: pytest.MonkeyPatch)
     _patch_client(monkeypatch, _fail_if_called)
 
     with pytest.raises(PicksClosed):
+        await picks_service.submit_pick(PickSubmission(displayName="Timothy", picks=SAMPLE_PICKS))
+
+
+@pytest.mark.asyncio
+async def test_submit_pick_when_deadline_unknown_raises_cleanly(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Reproduced live against this sandbox's blocked network: Jolpica
+    # unreachable must surface as PicksDeadlineUnknown (-> a clean 502),
+    # never an uncaught JolpicaUpstreamError bubbling up as a bare 500.
+    async def _unreachable(**_: object) -> WeekendSchedule:
+        raise jolpica_service.JolpicaUpstreamError("Jolpica request failed")
+
+    monkeypatch.setattr(jolpica_service, "get_sepang_schedule", _unreachable)
+
+    def _fail_if_called(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("must not reach Supabase when the deadline can't be confirmed")
+
+    _patch_client(monkeypatch, _fail_if_called)
+
+    with pytest.raises(PicksDeadlineUnknown):
         await picks_service.submit_pick(PickSubmission(displayName="Timothy", picks=SAMPLE_PICKS))
 
 

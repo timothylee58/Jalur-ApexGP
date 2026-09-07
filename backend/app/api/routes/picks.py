@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.picks import LeaderboardResponse, MyPickResponse, PickSubmission, PickSubmitted
 from app.services import picks_service
-from app.services.picks_service import PicksClosed, PicksStorageUnavailable
+from app.services.picks_service import PicksClosed, PicksDeadlineUnknown, PicksStorageUnavailable
 
 router = APIRouter()
 
@@ -16,6 +16,8 @@ async def submit_pick(payload: PickSubmission) -> PickSubmitted:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PicksStorageUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except PicksDeadlineUnknown as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
     except httpx.HTTPError as exc:
         raise HTTPException(
             status_code=502, detail="Could not save your picks; try again shortly."

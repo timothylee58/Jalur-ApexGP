@@ -54,6 +54,14 @@ class PicksClosed(Exception):
     """The picks deadline has passed — a real 4xx, not a config problem."""
 
 
+class PicksDeadlineUnknown(Exception):
+    """Couldn't confirm the picks deadline (Jolpica's schedule endpoint is
+    down/unreachable) — a real, expected failure mode, not a bug: a
+    submission must never be accepted or rejected on an unconfirmed
+    deadline. Distinct from a generic 500 so the caller gets an honest
+    "try again shortly" instead of a bare Internal Server Error."""
+
+
 def _configured() -> bool:
     return bool(settings.supabase_url and settings.supabase_service_role_key)
 
@@ -83,7 +91,13 @@ async def get_deadline() -> datetime:
     already seen the grid shouldn't be able to lock in a pole guess. One
     deadline covers all 8 questions rather than a per-question staggered
     lock, a deliberate v1 simplification stated plainly in the page copy."""
-    schedule = await jolpica_service.get_sepang_schedule()
+    try:
+        schedule = await jolpica_service.get_sepang_schedule()
+    except (jolpica_service.JolpicaUpstreamError, jolpica_service.JolpicaUnavailable) as exc:
+        # Reproduced live, not hypothetical: Jolpica unreachable must not
+        # surface as a bare 500 — a submission can't be honestly accepted
+        # OR rejected without knowing whether the deadline has passed.
+        raise PicksDeadlineUnknown("Couldn't confirm the picks deadline right now.") from exc
     quali = next(s for s in schedule.sessions if s.session == "Quali")
     return datetime.fromisoformat(quali.start)
 

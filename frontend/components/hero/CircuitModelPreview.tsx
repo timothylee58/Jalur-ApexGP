@@ -226,11 +226,21 @@ export function CircuitModelPreview() {
         Orbit Sepang
       </h2>
       <p className="mt-2 max-w-xl text-sm text-paper-dim">
-        A real photogrammetry scan of Sepang — track surface, curbs,
-        grandstands, and elevation as-built, not a traced-by-eye or
-        procedural approximation. Sourced under CC BY 4.0; see{" "}
-        <code className="text-amber">frontend/public/models/README.md</code>{" "}
-        for the full attribution and pipeline. Drag to orbit.
+        A real 3D scan of Sepang itself — every curb, grandstand, and
+        elevation change sits exactly where it does on the real circuit,
+        not guessed or hand-drawn. Drag to orbit.
+      </p>
+      <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-paper-dim/70">
+        Shared under a Creative Commons license by the original scanner —{" "}
+        <a
+          href="/models/README.md"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline hover:text-paper-dim"
+        >
+          full source &amp; license
+        </a>
+        .
       </p>
 
       <div

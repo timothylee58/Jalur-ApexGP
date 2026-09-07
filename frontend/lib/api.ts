@@ -114,6 +114,12 @@ export async function fetchAccuracy(session: Session): Promise<AccuracyResponse 
  * "something went wrong". */
 export class PicksClosedError extends Error {}
 
+/** Thrown on a 503 — picks storage isn't configured server-side yet (a
+ * deploy/setup gap, not a network blip). Distinct from a plain Error so
+ * the form doesn't tell a fan to "check your connection" for something
+ * that isn't their connection's fault. */
+export class PicksUnavailableError extends Error {}
+
 export async function submitPicks(submission: PickSubmission): Promise<PickSubmitted> {
   const res = await fetch(`${API_URL}/picks`, {
     method: "POST",
@@ -124,6 +130,9 @@ export async function submitPicks(submission: PickSubmission): Promise<PickSubmi
   if (res.status === 409) {
     const body = await res.json().catch(() => ({ detail: "Picks are closed." }));
     throw new PicksClosedError(body.detail ?? "Picks are closed.");
+  }
+  if (res.status === 503) {
+    throw new PicksUnavailableError("Picks aren't open yet — check back soon.");
   }
   if (!res.ok) throw new Error(`Picks submission failed (${res.status})`);
   return res.json() as Promise<PickSubmitted>;

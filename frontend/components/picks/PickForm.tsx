@@ -8,7 +8,7 @@ import {
   TEAM_OPTIONS,
   teamIdForDriver,
 } from "@/data/pickQuestions";
-import { PicksClosedError, submitPicks } from "@/lib/api";
+import { PicksClosedError, PicksUnavailableError, submitPicks } from "@/lib/api";
 import { clearDraft, loadDraft, saveDraft, saveEntryId } from "@/lib/picksStorage";
 import type { PickAnswers, PickSubmitted } from "@/types/picks";
 
@@ -60,7 +60,7 @@ export function PickForm({ onSubmitted }: { onSubmitted: (submitted: PickSubmitt
       clearDraft();
       onSubmitted(submitted);
     } catch (err) {
-      if (err instanceof PicksClosedError) {
+      if (err instanceof PicksClosedError || err instanceof PicksUnavailableError) {
         setError(err.message);
       } else {
         setError("Couldn't save your picks — check your connection and try again.");
