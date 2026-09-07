@@ -1,5 +1,8 @@
 # Jalur APEXGP
 
+The name was inspired by the fictional Formula 1 team featured in the feature film F1 The Movie + Jalur (Flag in Malay) 
+
+
 A race-engineer **strategy simulator** for the Sepang F1 race weekend.
 Pick a session (FP1 / FP2 / FP3 / Quali / Race) and get two strategy reads —
 conservative vs aggressive — with confidence scores, a lap-by-lap stint plan,
