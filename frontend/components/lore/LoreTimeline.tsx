@@ -23,10 +23,19 @@ export function LoreTimeline() {
             key={entry.id}
             id={entry.id}
             className="relative scroll-mt-20 pb-10 last:pb-0"
-            // useReducedMotion() is null until its effect resolves (including
-            // during SSR); only opt into the hidden->reveal animation once it
-            // confirms the user is NOT reduced-motion, so an unresolved or true
-            // reading always renders visible instead of stuck at opacity 0.
+            // useReducedMotion() reads matchMedia synchronously on the
+            // client's first render (framer-motion 12's implementation —
+            // not deferred to an effect, despite reading like it would
+            // be), so it's never actually null on the client the way SSR
+            // sees it. That's a real, reproduced hydration mismatch on
+            // this initial/style attribute — framer-motion applies
+            // "initial" via direct DOM manipulation outside React's own
+            // diffing, so it's cosmetic (verified: no visible flash, all
+            // entries render correctly) rather than a functional bug, and
+            // suppressHydrationWarning is the correct tool for exactly
+            // this "known third-party mismatch" case rather than
+            // reworking a reduced-motion guard that isn't actually wrong.
+            suppressHydrationWarning
             initial={reduceMotion === false ? { opacity: 0, y: 24 } : false}
             whileInView={reduceMotion === false ? { opacity: 1, y: 0 } : undefined}
             viewport={{ once: true, amount: 0.2 }}
