@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { BgmPlayer } from "@/components/shared/BgmPlayer";
+import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -50,8 +51,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${display.variable} min-w-0 overflow-x-clip bg-asphalt font-sans text-paper`}
       >
-        {children}
-        <BgmPlayer />
+        <LanguageProvider>
+          {children}
+          <BgmPlayer />
+        </LanguageProvider>
       </body>
     </html>
   );
