@@ -123,15 +123,21 @@ def _fastest_lap_holder(classification: RaceClassification) -> ClassifiedDriver 
     return None
 
 
-def _top_constructor_name(classification: RaceClassification) -> str | None:
+def _top_constructor_names(classification: RaceClassification) -> list[str]:
+    """All constructors tied for the most combined points — usually one,
+    but a tie is real and not vanishingly rare at low point totals (e.g.
+    two midfield teams on 0). max() alone would silently pick whichever
+    tied constructor happened to appear first in the results list, scoring
+    a correct pick of the other tied constructor as wrong."""
     points_by_constructor: dict[str, float] = {}
     for row in classification.results:
         points_by_constructor[row.constructor_name] = (
             points_by_constructor.get(row.constructor_name, 0.0) + row.points
         )
     if not points_by_constructor:
-        return None
-    return max(points_by_constructor.items(), key=lambda item: item[1])[0]
+        return []
+    max_points = max(points_by_constructor.values())
+    return [name for name, points in points_by_constructor.items() if points == max_points]
 
 
 def _dnf_band(classification: RaceClassification) -> str:
@@ -202,9 +208,10 @@ def score_submission(picks: PickAnswers, classification: RaceClassification) -> 
     ):
         score += POINTS_PER_QUESTION
 
-    top_constructor = _top_constructor_name(classification)
-    if top_constructor and _names_match(
-        top_constructor, CONSTRUCTOR_NAME.get(picks.top_constructor, "")
+    top_constructors = _top_constructor_names(classification)
+    picked_constructor = CONSTRUCTOR_NAME.get(picks.top_constructor, "")
+    if picked_constructor and any(
+        _names_match(name, picked_constructor) for name in top_constructors
     ):
         score += POINTS_PER_QUESTION
 

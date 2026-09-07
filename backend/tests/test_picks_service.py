@@ -163,7 +163,9 @@ async def test_get_leaderboard_shapes_rows(monkeypatch: pytest.MonkeyPatch) -> N
     assert leaderboard.entries[0].rank == 1
     assert leaderboard.entries[0].display_name == "Ana"
     assert leaderboard.entries[1].is_you is True
-    assert leaderboard.entries[1].score == 0
+    # Ben's row is still unscored — must stay None, not get coerced to 0
+    # (which would be indistinguishable from an honest zero score).
+    assert leaderboard.entries[1].score is None
 
 
 @pytest.mark.asyncio
@@ -240,3 +242,69 @@ async def test_score_pending_scores_and_patches(monkeypatch: pytest.MonkeyPatch)
     scored = await picks_service.score_pending()
     assert scored == 1
     assert patched_ids == ["eq.id-1"]
+
+
+@pytest.mark.asyncio
+async def test_score_pending_paginates_past_the_page_size(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Regression test: more pending rows than fit in one page must all get
+    # scored, not just the first page's worth.
+    monkeypatch.setattr(picks_service, "_SCORE_PENDING_PAGE_SIZE", 1)
+
+    async def _final(**_: object) -> RaceClassification:
+        return RaceClassification(
+            season="2026",
+            round="16",
+            source="jolpica",
+            is_final=True,
+            pole_family_name="Piastri",
+            results=[
+                ClassifiedDriver(
+                    position=1,
+                    driver_family_name="Norris",
+                    constructor_name="McLaren",
+                    status="Finished",
+                    points=25.0,
+                    fastest_lap_rank=None,
+                ),
+            ],
+        )
+
+    monkeypatch.setattr(jolpica_service, "get_race_classification", _final)
+
+    remaining = {"id-1", "id-2", "id-3"}
+    patched_ids: list[str] = []
+
+    def _row(entry_id: str) -> dict[str, str]:
+        return {
+            "id": entry_id,
+            "winner": "norris",
+            "p2": "piastri",
+            "p3": "verstappen",
+            "pole": "piastri",
+            "fastest_lap": "piastri",
+            "top_constructor": "mclaren",
+            "dnf_band": "1-2",
+            "beats_teammate_of": "mclaren",
+            "beats_teammate_pick": "norris",
+        }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "GET":
+            # One row per page, in a stable order, matching the
+            # PAGE_SIZE=1 monkeypatch above.
+            next_id = sorted(remaining)[0] if remaining else None
+            return httpx.Response(200, json=[_row(next_id)] if next_id else [])
+        if request.method == "PATCH":
+            entry_id = str(request.url.params.get("id")).removeprefix("eq.")
+            remaining.discard(entry_id)
+            patched_ids.append(entry_id)
+            return httpx.Response(200, json=[])
+        if request.method == "POST":
+            return httpx.Response(201, json=[])
+        raise AssertionError(f"unexpected method {request.method}")
+
+    _patch_client(monkeypatch, handler)
+
+    scored = await picks_service.score_pending()
+    assert scored == 3
+    assert patched_ids == ["id-1", "id-2", "id-3"]
