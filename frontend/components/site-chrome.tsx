@@ -15,6 +15,7 @@ const NAV = [
   { href: "/drive", label: "Drive" },
   { href: "/product-reveal", label: "Reveal" },
   { href: "/lore", label: "Lore" },
+  { href: "/guide", label: "Guide" },
   { href: "/tickets", label: "Seats" },
 ];
 

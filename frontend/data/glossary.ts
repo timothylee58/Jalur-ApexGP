@@ -51,7 +51,12 @@ export const glossary: Record<string, GlossaryEntry> = {
   drs: {
     label: "DRS",
     definition:
-      "Drag Reduction System — a movable rear-wing flap that opens on the straights when you're within one second of the car ahead, boosting top speed to help overtaking.",
+      "Drag Reduction System — the movable rear-wing flap F1 used from 2011 to open on the straights when you're within one second of the car ahead. Retired for 2026, replaced by Overtake Mode.",
+  },
+  "overtake mode": {
+    label: "Overtake Mode",
+    definition:
+      "DRS's 2026 replacement — part of the new active-aero regulations, adjusting both front and rear wings (not just a rear flap) under the same within-one-second rule at a track's detection point.",
   },
   slicks: {
     label: "Slicks",
