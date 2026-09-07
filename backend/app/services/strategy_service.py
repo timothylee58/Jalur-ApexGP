@@ -272,8 +272,8 @@ def _aggressive_reasoning(session: Session, weather: WeatherSnapshot, safety_car
     if session == "Race":
         sc = " Under a safety car, dive early — the pit loss shrinks and you jump the queue." if safety_car else ""
         return (
-            "Soft-medium offset stop, pit early off the softer opening tyre. Attack the DRS zone "
-            "down the back straight, but don't burn the rears defending into Turn 15." + sc
+            "Soft-medium offset stop, pit early off the softer opening tyre. Attack in Overtake "
+            "Mode down the back straight, but don't burn the rears defending into Turn 15." + sc
         )
     return "Short-run softs for a headline time — accept deg if it buys a tow through Sector 2."
 
