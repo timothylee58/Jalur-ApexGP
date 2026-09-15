@@ -57,6 +57,8 @@ class TestRetrieval:
             ("how does qualifying work", "weekend-quali"),
             ("what is parc ferme", "weekend-parc-ferme"),
             ("explain DRS", "weekend-drs"),
+            ("what is overtake mode", "weekend-drs"),
+            ("how does active aero work", "weekend-drs"),
             ("how do I get to the circuit from Kuala Lumpur", "travel-getting-there"),
             ("which grandstand should I sit in", "travel-tickets"),
             ("how many points for a win", "basics-points"),
@@ -70,6 +72,16 @@ class TestRetrieval:
         assert expected in _top_ids(query), (
             f"{query!r} did not surface {expected}; got {_top_ids(query)}"
         )
+
+    def test_drs_document_does_not_present_drs_as_current(self):
+        # DRS was dropped for 2026, the season this app is set in. The
+        # document has to answer a DRS question by saying it is gone —
+        # retrieval alone isn't enough if the prose is out of date.
+        doc = knowledge_base.document_by_id("weekend-drs")
+        assert doc is not None
+        assert "no longer exists" in doc.body
+        assert "active aero" in doc.body.lower()
+        assert "Overtake" in doc.body
 
     def test_hot_lap_question_finds_the_simulation_caveat(self):
         # The honesty document must be reachable — a user asking about the

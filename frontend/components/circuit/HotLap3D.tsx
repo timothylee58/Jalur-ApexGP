@@ -215,6 +215,10 @@ export function HotLap3D({ playing, cameraMode, focusTurn, seek, onSample }: Hot
     // Registered against the flyover curve, which buildHotLapProjection is
     // built to coincide with (see lib/hotLapTrack's docstring).
     const flyoverCurve = buildFlyoverCurve();
+    // sepang.glb is large enough that navigating away mid-load is normal.
+    // Without this the callback still runs, mutating a scene whose
+    // geometries and renderer the cleanup below has already disposed.
+    let cancelled = false;
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath(DRACO_DECODER_PATH);
     const gltfLoader = new GLTFLoader();
@@ -222,6 +226,7 @@ export function HotLap3D({ playing, cameraMode, focusTurn, seek, onSample }: Hot
     gltfLoader.load(
       TERRAIN_SRC,
       (gltf) => {
+        if (cancelled) return;
         const terrain = gltf.scene;
         terrain.traverse((child) => {
           if (child instanceof THREE.Mesh) {
@@ -376,6 +381,7 @@ export function HotLap3D({ playing, cameraMode, focusTurn, seek, onSample }: Hot
     animate();
 
     return () => {
+      cancelled = true;
       cancelAnimationFrame(frameId);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);

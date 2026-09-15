@@ -66,9 +66,24 @@ export function RaceEngineerChat() {
       const trimmed = question.trim();
       if (!trimmed || streaming) return;
 
-      const history = turns
-        .filter((t) => !t.error)
-        .map((t) => ({ role: t.role, content: t.content }));
+      // Whole exchanges only. Filtering out just the errored assistant
+      // turn left its user message behind, so the next request sent two
+      // user turns in a row — which the Messages API rejects, meaning one
+      // recoverable failure bricked every later question until reload.
+      const history: Array<{ role: "user" | "assistant"; content: string }> = [];
+      for (let i = 0; i < turns.length - 1; i += 1) {
+        const ask = turns[i];
+        const answer = turns[i + 1];
+        if (
+          ask.role === "user" &&
+          answer.role === "assistant" &&
+          !answer.error &&
+          answer.content.trim()
+        ) {
+          history.push({ role: "user", content: ask.content });
+          history.push({ role: "assistant", content: answer.content });
+        }
+      }
 
       setTurns((prev) => [
         ...prev,

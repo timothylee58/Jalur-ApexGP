@@ -55,6 +55,33 @@ describe("simulateLap", () => {
     expect(turns).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
   });
 
+  it("splits sectors at the T5 and T11 apexes the docstring names", () => {
+    // Guards an off-by-one that is easy to reintroduce: turn number and
+    // sepang.json index diverge from T2 on, because the file carries a
+    // "T1 Entry" point as well as "T1 Apex".
+    const t5 = lap.corners.find((c) => c.turn === 5)!;
+    const t11 = lap.corners.find((c) => c.turn === 11)!;
+    // Tolerance is one sample spacing: the split is the exact arc position
+    // of the control point, while a corner's `s` snaps to the nearest
+    // sample, so they agree only to the trace's resolution.
+    const spacing = lap.lengthM / lap.samples.length;
+    expect(Math.abs(lap.sectorSplitsM[0] - t5.s)).toBeLessThan(spacing);
+    expect(Math.abs(lap.sectorSplitsM[1] - t11.s)).toBeLessThan(spacing);
+  });
+
+  it("puts T1's apex after its braking zone, not on the entry point", () => {
+    // "T1 Entry" precedes "T1 Apex" in sepang.json, so a prefix match
+    // anchored T1's whole speed constraint to the braking point and let
+    // the real apex run far quicker than its 90 km/h reference.
+    const t1 = lap.corners.find((c) => c.turn === 1)!;
+    const zone = lap.brakingZones.find((z) => z.cornerCode === "T1")!;
+    expect(zone).toBeDefined();
+    expect(t1.s).toBeGreaterThan(zone.endS - 1);
+    // And the samples around the apex actually hold the reference speed.
+    const nearApex = lap.samples.filter((s) => Math.abs(s.s - t1.s) < 20);
+    expect(Math.min(...nearApex.map((s) => s.speedKmh))).toBeLessThan(100);
+  });
+
   it("orders corners monotonically around the lap", () => {
     const positions = lap.corners.map((c) => c.s);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);

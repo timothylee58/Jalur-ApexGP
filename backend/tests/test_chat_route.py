@@ -155,10 +155,20 @@ class TestLiveContextGating:
     def test_weather_questions_trigger_weather(self, question):
         assert rag_service._LIVE_WEATHER_RE.search(question)
 
-    @pytest.mark.parametrize("question", ["what is DRS", "explain parc ferme"])
+    @pytest.mark.parametrize(
+        "question",
+        ["what is DRS", "explain parc ferme", "Is the hot lap time real?"],
+    )
     def test_static_questions_trigger_neither(self, question):
         assert not rag_service._LIVE_STANDINGS_RE.search(question)
         assert not rag_service._LIVE_WEATHER_RE.search(question)
+
+    def test_hot_lap_is_not_a_weather_question(self):
+        # "hot lap" is a circuit-simulation term; it used to trip the
+        # weather gate and pull a live forecast into a static question.
+        assert not rag_service._LIVE_WEATHER_RE.search("is the hot lap time real")
+        # But a genuine heat question still should.
+        assert rag_service._LIVE_WEATHER_RE.search("how hot is it at the track")
 
     @pytest.mark.asyncio
     async def test_gather_returns_empty_for_a_static_question(self):

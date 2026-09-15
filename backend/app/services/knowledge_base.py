@@ -243,12 +243,13 @@ _CIRCUIT: list[Document] = [
         tags=("sector", "s1", "s2", "s3", "timing", "splits"),
         body=(
             "This app splits the lap into three timing sectors at the Turn 5 and "
-            "Turn 11 apexes, which divides it into near-thirds: sector 1 covers the "
-            "Turn 1 to Turn 4 opening complex, sector 2 the Genting and KLIA "
-            "curves, and sector 3 the final sequence through the Turn 15 hairpin "
-            "onto the main straight. The FIA does not publish its actual timing-loop "
-            "positions, so these boundaries are derived from the layout, not "
-            "official."
+            "Turn 11 apexes: sector 1 covers the Turn 1 to Turn 4 opening complex, "
+            "sector 2 the Genting and KLIA curves, and sector 3 the final sequence "
+            "through the Turn 15 hairpin onto the main straight. They are not equal "
+            "thirds — sector 3 contains the back straight and runs noticeably "
+            "longer than the other two. The FIA does not publish its actual "
+            "timing-loop positions, so these boundaries are derived from the "
+            "layout, not official."
         ),
     ),
     Document(
@@ -422,15 +423,30 @@ _WEEKEND: list[Document] = [
     ),
     Document(
         id="weekend-drs",
-        title="DRS, the Drag Reduction System",
+        title="Overtaking aids in 2026: active aero and Overtake, not DRS",
         section="weekend",
-        tags=("drs", "overtaking", "rear wing", "detection"),
+        tags=(
+            "drs",
+            "active aero",
+            "overtake",
+            "manual override",
+            "straight mode",
+            "corner mode",
+            "overtaking",
+            "rear wing",
+        ),
         body=(
-            "DRS opens a flap in the rear wing to cut drag and raise straight-line "
-            "speed. A driver may use it only in a designated activation zone, and "
-            "only if they were within one second of the car ahead at the detection "
-            "point before that zone. It exists to make overtaking possible, and at a "
-            "circuit with two long straights like Sepang it matters a great deal."
+            "DRS no longer exists. It was dropped for 2026 after fourteen seasons, "
+            "and the regulations do not include it in any form. Two things replace "
+            "it. Active aerodynamics moves the front and rear wings together "
+            "between a high-downforce corner mode and a low-drag straight mode — "
+            "available to every driver on every lap, not gated on being within a "
+            "second of the car ahead the way DRS was. Separately, a driver chasing "
+            "another gets Overtake, an extra burst of electrical deployment "
+            "(originally called Manual Override Mode), which is the part that "
+            "actually does the job DRS used to do. At a circuit with two long "
+            "straights like Sepang, how a driver spends that deployment is one of "
+            "the more interesting things to watch."
         ),
     ),
 ]

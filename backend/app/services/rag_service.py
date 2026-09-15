@@ -86,8 +86,11 @@ _LIVE_STANDINGS_RE = re.compile(
     re.IGNORECASE,
 )
 _LIVE_WEATHER_RE = re.compile(
-    r"\b(weather|rain|raining|forecast|temperature|temp|hot|humid|wet|storm|"
-    r"conditions)\b",
+    # "hot" excludes "hot lap", which is a core term for this app's circuit
+    # simulation and nothing to do with the weather — without the guard the
+    # suggested question "Is the hot lap time real?" fetched a forecast.
+    r"\b(weather|rain|raining|forecast|temperature|temp|hot(?!\s+lap)|humid|wet|"
+    r"storm|conditions)\b",
     re.IGNORECASE,
 )
 

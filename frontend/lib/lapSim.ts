@@ -46,11 +46,14 @@
  * figures, not any team's real data. Output is a *plausible* lap,
  * labelled as simulated everywhere it surfaces — never a real one.
  *
- * Sector boundaries sit at real corner landmarks (T5 and T11 apexes,
- * which split the lap into near-thirds and match how the layout is
- * described — the T1-T4 opening complex, the T7-T8 KLIA sequence, the
- * T15 hairpin onto the straight). The FIA's actual timing-loop positions
- * aren't published, so these are derived, not official.
+ * Sector boundaries sit at real corner landmarks — the T5 and T11 apexes
+ * — chosen to match how the layout is described: the T1-T4 opening
+ * complex, then the Genting and KLIA curves, then the final sequence
+ * through the T15 hairpin onto the straight. They do NOT come out as
+ * even thirds (roughly 31/26/42 by distance): sector 3 swallows the back
+ * straight, and the centreline's distance distortion above exaggerates
+ * that. The FIA's actual timing-loop positions aren't published, so these
+ * are derived landmarks, not official splits.
  */
 
 import { circuitPointsMetres } from "@/data/sepangCircuit";
@@ -252,6 +255,28 @@ interface XY {
   y: number;
 }
 
+/**
+ * Index of a turn's *apex* point in sepang.json.
+ *
+ * Two traps this exists to close, both of which shipped as bugs before it
+ * did. Turn number and array index are not the same thing — the file
+ * carries a "T1 Entry" point as well as "T1 Apex", so everything from T2
+ * on is offset by one, and a hardcoded `points[5]` is T4, not T5. And a
+ * `startsWith("T1 ")` scan finds "T1 Entry" first, which put T1's entire
+ * speed constraint, 3D marker and seek target on the braking point
+ * instead of the apex — leaving the real apex free to run at the
+ * linked-complex ceiling rather than the 90 km/h it is supposed to be
+ * held to.
+ *
+ * T15 is named "T15 Hairpin" rather than "T15 Apex", so both suffixes
+ * count; "Entry" never does.
+ */
+function apexPointIndex(turn: number): number {
+  return sepang.points.findIndex(
+    (p) => p.name === `T${turn} Apex` || p.name === `T${turn} Hairpin`,
+  );
+}
+
 interface DensePoint extends XY {
   elev: number;
 }
@@ -397,7 +422,7 @@ export function simulateLap(): LapSimResult {
   const apexIndexByTurn = new Map<number, number>();
 
   for (const ref of SEPANG_CORNER_REFERENCE) {
-    const pointIdx = sepang.points.findIndex((p) => p.name.startsWith(`T${ref.turn} `));
+    const pointIdx = apexPointIndex(ref.turn);
     if (pointIdx < 0) continue;
     const apexS = controlS[pointIdx];
     const apexI = Math.round(apexS / ds) % n;
@@ -476,9 +501,13 @@ export function simulateLap(): LapSimResult {
   const speed = vb;
 
   // 4. Integrate time, and derive the presentational channels.
+  // Looked up by turn number, never by a hardcoded array index. The index
+  // and the turn number are off by one from T2 onward — sepang.json carries
+  // a "T1 Entry" point as well as "T1 Apex" — so `controlS[5]` was landing
+  // on T4, splitting sector 2 a corner earlier than the docstring says.
   const sectorSplitIndices: [number, number] = [
-    controlS[5] ?? lengthM / 3, // T5 apex
-    controlS[12] ?? (2 * lengthM) / 3, // T11 apex
+    controlS[apexPointIndex(5)] ?? lengthM / 3,
+    controlS[apexPointIndex(11)] ?? (2 * lengthM) / 3,
   ];
 
   const samples: LapSample[] = [];
