@@ -26,19 +26,15 @@ const TYRE_COLOR: Record<Compound, string> = {
 };
 
 /**
- * Original side-profile safety-car silhouette — cropped tight to the car
- * itself (no road/background) so it can drop straight into the toggle below.
- * Deliberately unbranded (see docs/BRAND.md): this control lives on the
- * strategy tool, not /fan, so it gets the same generic treatment as
- * car.glb rather than a real, sponsor/FIA-liveried photo — no manufacturer
- * marque, no sponsor decals, no readable text.
+ * Original side-profile safety-car silhouette, drawn rather than
+ * photographed — an SVG scales cleanly into a 64x30 button slot and can
+ * carry per-state art (beacons lit, motion streaks) that a photo can't.
  *
- * Body paint is always "safety-car red" (a real one always is — what
- * actually changes when one's deployed is the beacon lights, not the
- * paint), pushed toward some real photographed-car drama instead of a flat
- * icon fill: a glossy gradient, a soft amber glow behind the beacons when
- * lit, motion streaks trailing the car once it's moving, and a ground
- * shadow for depth.
+ * Proportions and colour are taken from the real thing: the long nose,
+ * low roofline and big rear haunch of the current Mercedes-AMG GT
+ * safety car, in the red it actually runs. What changes when one is
+ * deployed is the beacons, not the paint, so the body stays red in both
+ * states and only the lights, glow and motion streaks switch.
  */
 function SafetyCarGlyph({ active }: { active: boolean }) {
   return (
