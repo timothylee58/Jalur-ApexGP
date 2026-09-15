@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.routes.chat import router as chat_router
 from app.api.routes.jolpica import router as jolpica_router
 from app.api.routes.outcomes import router as outcomes_router
 from app.api.routes.picks import router as picks_router
@@ -40,6 +41,7 @@ app.include_router(jolpica_router, prefix="/api")
 app.include_router(transit_router, prefix="/api")
 app.include_router(outcomes_router, prefix="/api")
 app.include_router(picks_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 
 
 @app.get("/api/health")

@@ -1,90 +1,20 @@
-"use client";
-
-import { useState } from "react";
-import Link from "next/link";
+import type { Metadata } from "next";
 import { AboutNote } from "@/components/shared/AboutNote";
-import { CircuitExplorer3D } from "@/components/circuit/CircuitExplorer3D";
+import { HotLapExplorer } from "@/components/circuit/HotLapExplorer";
 import { SiteHeader } from "@/components/site-chrome";
-import { circuitCorners } from "@/data/circuitCorners";
+
+export const metadata: Metadata = {
+  title: "Sepang, corner by corner — Jalur APEXGP",
+  description:
+    "A simulated hot lap of Sepang International Circuit: braking zones, apex speeds and the three timing sectors that decide a Grand Prix.",
+};
 
 export default function CircuitPage() {
-  const [selectedId, setSelectedId] = useState<string | null>(circuitCorners[0].id);
-  const selected = circuitCorners.find((corner) => corner.id === selectedId) ?? null;
-
   return (
     <>
       <SiteHeader />
       <main className="mx-auto w-full max-w-3xl px-4 py-6">
-        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          Circuit explorer
-        </p>
-        <h1 className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-paper">
-          Sepang, corner by corner
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Drag to orbit, or tap a corner below. The amber markers sit on the
-          circuit&apos;s real apex-point centreline — the same geometry
-          behind the landing page&apos;s flyover hero and the 2D strategy
-          map — covering all 15 named corners, with Turns 5–7, 9, and 15
-          carrying the strategy engine&apos;s own reasoning. The ground
-          underneath is a separate real 3D scan (the same one as{" "}
-          <Link href="/#orbit-sepang" className="text-amber hover:underline">
-            Orbit Sepang
-          </Link>{" "}
-          on the landing page), lined up against that centreline
-          automatically rather than by eye. The two come from separate
-          real-world sources, though, so treat it as the same track,
-          correctly oriented — not a seamless, millimetre-perfect merge of
-          the two.
-        </p>
-        <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
-          Terrain scan shared under a Creative Commons license —{" "}
-          <a
-            href="/models/README.md"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="underline hover:text-paper-dim"
-          >
-            full source &amp; license
-          </a>
-          .
-        </p>
-
-        <div className="mt-6">
-          <CircuitExplorer3D selectedId={selectedId} onSelect={setSelectedId} />
-        </div>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {circuitCorners.map((corner) => (
-            <button
-              key={corner.id}
-              type="button"
-              onClick={() => setSelectedId(corner.id)}
-              aria-pressed={selectedId === corner.id}
-              className={`rounded-md border px-3 py-2 text-left font-mono text-xs uppercase tracking-wide transition-colors ${
-                selectedId === corner.id
-                  ? "border-amber bg-amber/10 text-amber"
-                  : "border-paper/10 text-paper-dim hover:text-paper"
-              }`}
-            >
-              {corner.code}
-            </button>
-          ))}
-        </div>
-
-        {selected ? (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mt-4 rounded-lg border border-paper/10 bg-asphalt px-4 py-3"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-amber">
-              {selected.code} · {selected.name}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-paper-dim">{selected.note}</p>
-          </div>
-        ) : null}
-
+        <HotLapExplorer />
         <AboutNote />
       </main>
     </>

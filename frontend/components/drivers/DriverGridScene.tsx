@@ -34,6 +34,13 @@ function layoutPosition(index: number, era: Driver["era"]): { x: number; z: numb
   };
 }
 
+/**
+ * Build-time marker size. The animate loop multiplies this rather than
+ * calling setScalar(1) for the idle state — doing that silently undid the
+ * scale-up on the very next frame.
+ */
+const MARKER_SCALE = 1.3;
+
 function numberBadgeTexture(label: string, primaryHex: string): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = 128;
@@ -90,11 +97,11 @@ function buildPhotoMarker(
 ): { group: THREE.Group; shell: THREE.Mesh; base: THREE.Mesh } {
   const group = new THREE.Group();
 
-  const baseGeo = new THREE.CylinderGeometry(0.15, 0.17, 0.035, 28);
+  const baseGeo = new THREE.CylinderGeometry(0.115, 0.135, 0.03, 28);
   const baseMat = new THREE.MeshStandardMaterial({
     color: 0x1a1e22,
     emissive: primary,
-    emissiveIntensity: 0.22,
+    emissiveIntensity: 0.1,
     roughness: 0.7,
     metalness: 0.15,
   });
@@ -125,8 +132,13 @@ function buildPhotoMarker(
     side: THREE.DoubleSide,
   });
   const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = -Math.PI / 2.4;
-  ring.position.y = 0.2;
+  // Near-upright, not near-flat. These used to lie at 75 degrees, facing
+  // almost straight up, which only reads from a high camera looking down —
+  // from the grid-level camera this scene now uses they collapsed into
+  // slivers. Standing them up and yawing them at the camera each frame
+  // (see the animate loop) keeps every helmet legible from any angle.
+  ring.rotation.x = -Math.PI / 12;
+  ring.position.y = 0.21;
   group.add(ring);
   disposables.push(ringGeo, ringMat);
 
@@ -138,8 +150,8 @@ function buildPhotoMarker(
   });
   const portraitGeo = new THREE.CircleGeometry(0.12, 40);
   const shell = new THREE.Mesh(portraitGeo, portraitMat);
-  shell.rotation.x = -Math.PI / 2.4;
-  shell.position.y = 0.205;
+  shell.rotation.x = -Math.PI / 12;
+  shell.position.y = 0.215;
   group.add(shell);
   disposables.push(portraitGeo, portraitMat, fallback);
 
@@ -167,7 +179,7 @@ function buildPhotoMarker(
     depthWrite: false,
   });
   const badgeSprite = new THREE.Sprite(badgeMat);
-  badgeSprite.position.set(0.11, 0.12, 0.08);
+  badgeSprite.position.set(0.1, 0.11, 0.06);
   badgeSprite.scale.set(0.11, 0.11, 1);
   group.add(badgeSprite);
   disposables.push(badge, badgeMat);
@@ -190,7 +202,7 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x080a0c);
-    scene.fog = new THREE.Fog(0x080a0c, 6, 16);
+    scene.fog = new THREE.Fog(0x080a0c, 7, 19);
 
     const camera = new THREE.PerspectiveCamera(
       40,
@@ -213,7 +225,7 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
     rim.position.set(-4, 3, -5);
     scene.add(rim);
 
-    const groundGeo = new THREE.CircleGeometry(7.5, 64);
+    const groundGeo = new THREE.CircleGeometry(16, 64);
     const groundMat = new THREE.MeshStandardMaterial({
       color: 0x12161a,
       roughness: 0.95,
@@ -230,13 +242,21 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
       emissiveIntensity: 0.15,
       roughness: 0.8,
     });
+    // Grid slot markings, and only for the 2026 field. The eleven boxes
+    // are positioned off layoutPosition's team rows, so drawing them for
+    // the three-driver Sepang-history view put a row of white bars across
+    // empty track with nothing standing on them — furniture from a layout
+    // that view doesn't use.
+    const showGridFurniture = drivers[0]?.era !== "sepang-history";
     const laneGeos: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 11; i += 1) {
-      const laneGeo = new THREE.BoxGeometry(0.95, 0.008, 0.05);
-      const lane = new THREE.Mesh(laneGeo, laneMat);
-      lane.position.set(0, 0.001, i * 0.62 - 3.1);
-      scene.add(lane);
-      laneGeos.push(laneGeo);
+    if (showGridFurniture) {
+      for (let i = 0; i < 11; i += 1) {
+        const laneGeo = new THREE.BoxGeometry(0.95, 0.008, 0.05);
+        const lane = new THREE.Mesh(laneGeo, laneMat);
+        lane.position.set(0, 0.001, i * 0.62 - 3.1);
+        scene.add(lane);
+        laneGeos.push(laneGeo);
+      }
     }
 
     const disposables: Array<{ dispose: () => void }> = [
@@ -269,6 +289,11 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
         disposables,
       );
       group.position.set(x, 0, z);
+      // Markers were built at a scale that assumed a whole-field camera.
+      // With the closer framing above they can afford to be bigger, and
+      // the helmet portraits only become legible once they are — row
+      // spacing (0.62 deep, 0.76 across) still clears the wider marker.
+      group.scale.setScalar(MARKER_SCALE);
       shell.userData.driverId = driver.id;
       base.userData.driverId = driver.id;
 
@@ -278,9 +303,11 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
     });
     scene.add(markerRoot);
 
+    // The scale-reference car sits ahead of row 0, which only exists in
+    // the 2026 layout.
     const loader = new GLTFLoader();
     let carRoot: THREE.Object3D | null = null;
-    loader.load(
+    if (showGridFurniture) loader.load(
       "/models/car.glb",
       (gltf) => {
         carRoot = gltf.scene;
@@ -307,11 +334,32 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
 
     const box = new THREE.Box3().setFromObject(markerRoot);
     const center = box.getCenter(new THREE.Vector3());
-    const extent = box.getSize(new THREE.Vector3()).length();
-    const radius = Math.max(extent * 1.15, 2.4);
+    const isHistory = drivers[0]?.era === "sepang-history";
 
-    let azimuth = Math.PI * 0.28;
-    const elevation = 0.52;
+    // Framed like a grid shot rather than fitted to the whole field. The
+    // 2026 grid is ~6 units long and barely 1 wide, so a camera pulled far
+    // enough back to contain all of it renders every helmet at roughly 2%
+    // of the frame — which is exactly what made this read as a dark smear.
+    // Sitting low and near the front row instead puts the pole sitters at
+    // a readable size and lets the rest of the field recede into the fog,
+    // which is also how a real grid actually looks from the line.
+    // Row 0 sits at the minimum z (see layoutPosition), so that end is the
+    // front of the grid.
+    const front = box.min.z;
+    const target = new THREE.Vector3(
+      center.x,
+      0.34,
+      isHistory ? center.z : front + 1.6,
+    );
+    const radius = isHistory ? 2.4 : 4.6;
+    // Low, so the frame fills with grid rather than empty sky.
+    const elevation = isHistory ? 0.45 : 0.5;
+
+    // Start on the *front* side looking back down the field. The camera
+    // orbits, so this only sets where it opens — but opening from behind
+    // put the last row nearest and shrank the pole sitters to nothing,
+    // which is the opposite of what anyone looks at a grid to see.
+    let azimuth = isHistory ? Math.PI * 0.3 : Math.PI * -0.6;
     let autoRotate = true;
     let dragging = false;
     let lastX = 0;
@@ -319,11 +367,11 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
 
     const applyCamera = () => {
       camera.position.set(
-        center.x + radius * Math.cos(azimuth),
-        radius * elevation,
-        center.z + radius * Math.sin(azimuth),
+        target.x + radius * Math.cos(azimuth),
+        radius * elevation + 0.25,
+        target.z + radius * Math.sin(azimuth),
       );
-      camera.lookAt(center.x, 0.2, center.z);
+      camera.lookAt(target);
     };
     applyCamera();
 
@@ -392,22 +440,28 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
       }
       markersRef.current.forEach((entry, id) => {
         const active = id === selectedRef.current;
+        // Yaw-only billboard: the portraits face the camera wherever it
+        // orbits to, while the markers stay planted on their grid slots.
+        entry.group.rotation.y = Math.atan2(
+          camera.position.x - entry.group.position.x,
+          camera.position.z - entry.group.position.z,
+        );
         const shellMat = entry.shell.material as THREE.MeshStandardMaterial;
         const baseMat = entry.base.material as THREE.MeshStandardMaterial;
         if (active) {
           entry.group.position.y = Math.sin(t * 3) * 0.03 + 0.04;
-          entry.group.scale.setScalar(1.18);
+          entry.group.scale.setScalar(MARKER_SCALE * 1.18);
           shellMat.emissive.setHex(0xf5a623);
-          shellMat.emissiveIntensity = 0.45 + Math.sin(t * 4) * 0.12;
+          shellMat.emissiveIntensity = 0.16 + Math.sin(t * 4) * 0.06;
           baseMat.emissive.setHex(0xf5a623);
-          baseMat.emissiveIntensity = 0.5;
+          baseMat.emissiveIntensity = 0.75 + Math.sin(t * 4) * 0.2;
         } else {
           entry.group.position.y = 0;
-          entry.group.scale.setScalar(1);
+          entry.group.scale.setScalar(MARKER_SCALE);
           shellMat.emissive.setHex(entry.primary);
-          shellMat.emissiveIntensity = 0.12;
+          shellMat.emissiveIntensity = 0.04;
           baseMat.emissive.setHex(entry.primary);
-          baseMat.emissiveIntensity = 0.18;
+          baseMat.emissiveIntensity = 0.1;
         }
       });
       renderer.render(scene, camera);
@@ -434,7 +488,7 @@ export function DriverGridScene({ drivers, selectedId, onSelect }: DriverGridSce
   return (
     <div
       ref={mountRef}
-      className="h-[48vh] w-full cursor-grab overflow-hidden rounded-lg border border-paper/10 bg-[#080a0c] active:cursor-grabbing sm:h-[56vh]"
+      className="h-[40vh] w-full cursor-grab overflow-hidden rounded-lg border border-paper/10 bg-[#080a0c] active:cursor-grabbing sm:h-[46vh]"
       role="img"
       aria-label="Interactive 3D grid of stylized helmet markers paired by team. Drag to orbit, click a helmet to select that driver."
     />

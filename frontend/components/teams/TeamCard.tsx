@@ -2,44 +2,71 @@ import Link from "next/link";
 import type { Team } from "@/data/teams";
 import { drivers } from "@/data/drivers";
 import { DriverAvatar } from "@/components/drivers/DriverAvatar";
-import { logoForTeam } from "@/lib/teamAssets";
+import { carForTeam, logoForTeam } from "@/lib/teamAssets";
 
-// Neutral engineer sheet for /teams — team badge and driver headshots for
-// quick visual ID, but no constructor accent color washes (that's /fan's
-// job; see docs/BRAND.md Imagery). Same local, already-in-repo logo/photo
-// assets /fan uses — not fetched or re-sourced here.
+// Carries the constructor's own identity — accent wash, badge and car
+// render — rather than the neutral sheet this used to be. See
+// docs/BRAND.md Imagery: a neutral /teams was an earlier convention, and
+// leaning into team identity is now the preference on both /teams and
+// /fan. Assets are the local, already-in-repo ones under public/, not
+// fetched or re-sourced here.
 export function TeamCard({ team }: { team: Team }) {
   const roster = team.driverIds.map(
     (id) => drivers.find((driver) => driver.id === id) ?? null,
   );
   const logo = logoForTeam(team.id);
+  const car = carForTeam(team.id);
 
   return (
-    <div className="rounded-lg border border-paper/10 bg-asphalt px-4 py-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          {logo ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local static team badge
-            <img
-              src={logo}
-              alt=""
-              className="h-8 w-8 shrink-0 object-contain"
-              draggable={false}
-            />
-          ) : null}
-          <h2 className="font-display text-xl uppercase tracking-wide text-paper">{team.name}</h2>
-        </div>
-        <p className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-          {team.constructorTitles > 0
-            ? `${team.constructorTitles} constructors' title${team.constructorTitles === 1 ? "" : "s"}`
-            : "No constructors' title yet"}
-        </p>
+    <div
+      className="relative overflow-hidden rounded-lg border border-paper/10 bg-asphalt px-4 py-4"
+      style={{ borderTop: `2px solid ${team.primary}` }}
+    >
+      {/* Livery wash — the team's own two accents, kept faint enough that
+          mono data text over it still hits contrast. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-24 opacity-[0.16]"
+        style={{
+          background: `linear-gradient(135deg, ${team.primary} 0%, ${team.secondary} 55%, transparent 100%)`,
+        }}
+      />
+      {car ? (
+        // eslint-disable-next-line @next/next/no-img-element -- local static car render
+        <img
+          src={car}
+          alt=""
+          aria-hidden
+          draggable={false}
+          className="pointer-events-none absolute -right-5 top-7 h-16 w-auto object-contain opacity-25"
+        />
+      ) : null}
+
+      <div className="relative flex items-center gap-3">
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- local static team badge
+          <img
+            src={logo}
+            alt=""
+            className="h-8 w-8 shrink-0 object-contain"
+            draggable={false}
+          />
+        ) : null}
+        <h2 className="font-display text-xl uppercase tracking-wide text-paper">{team.name}</h2>
       </div>
-      <p className="mt-1 text-xs text-paper-dim">
+      {/* Meta sits under the name rather than opposite it: the car render
+          occupies the top-right of the card, and a right-aligned title
+          count was landing on top of the bodywork. */}
+      <p className="relative mt-1 max-w-[60%] text-xs text-paper-dim">
         {team.base} · {team.powerUnit} power unit · Est. {team.founded}
       </p>
+      <p className="relative mt-0.5 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
+        {team.constructorTitles > 0
+          ? `${team.constructorTitles} constructors' title${team.constructorTitles === 1 ? "" : "s"}`
+          : "No constructors' title yet"}
+      </p>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="relative mt-3 grid grid-cols-2 gap-2">
         {roster.map((driver, index) =>
           driver ? (
             <Link
@@ -71,8 +98,8 @@ export function TeamCard({ team }: { team: Team }) {
         )}
       </div>
 
-      <p className="mt-3 border-t border-paper/10 pt-3 text-xs leading-relaxed text-paper-dim">
-        <span className="font-mono text-[10px] uppercase tracking-wide text-amber">
+      <p className="relative mt-3 border-t border-paper/10 pt-3 text-xs leading-relaxed text-paper-dim">
+        <span className="font-mono text-[10px] uppercase tracking-wide" style={{ color: team.primary }}>
           Last time out ·{" "}
         </span>
         {team.recap}

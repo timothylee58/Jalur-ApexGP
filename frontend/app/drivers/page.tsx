@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { DriverAvatar } from "@/components/drivers/DriverAvatar";
+import { ConstructorGrid } from "@/components/drivers/ConstructorGrid";
 import { DriverGridScene } from "@/components/drivers/DriverGridScene";
+import { SepangHistoryTimeline } from "@/components/drivers/SepangHistoryTimeline";
 import { StandingsStrip } from "@/components/drivers/StandingsStrip";
 import { SiteHeader } from "@/components/site-chrome";
 import { drivers, type DriverEra } from "@/data/drivers";
@@ -62,12 +64,13 @@ function DriversView() {
           Every seat on the grid
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Real drivers, real career numbers — headshots in constructor-color
-          rings with race numbers. Stats are career totals through the 2025
-          season close, the season this grid enters 2026 with, not a live
-          in-season feed. Markers are paired by team, not a real qualifying
-          or grid order. Unofficial fan project — photos for identification
-          only, not licensed merch.
+          Real drivers, real career numbers, each in their constructor&apos;s
+          colours. Stats are career totals through the 2025 season close —
+          the season this grid enters 2026 with — not a live in-season feed.
+          The 3D view lines them up in grid formation <em>by team</em>: that
+          is a layout choice, not a qualifying result, so nothing about who
+          sits on pole there means anything. Unofficial fan project — photos
+          for identification only, not licensed merch.
         </p>
 
         <StandingsStrip />
@@ -93,8 +96,9 @@ function DriversView() {
 
         {era === "sepang-history" ? (
           <p className="mt-3 text-xs leading-relaxed text-paper-dim">
-            Three drivers, three separate years — 1999 and 2009 — never on
-            one podium together. See each moment in{" "}
+            Three drivers, two Sepang afternoons a decade apart — the 1999
+            opener and the 2009 monsoon. Each sits with the moment that put
+            it here; the full story is in{" "}
             <Link href="/lore" className="text-amber hover:underline">
               Circuit Lore
             </Link>
@@ -106,46 +110,12 @@ function DriversView() {
           <DriverGridScene drivers={filtered} selectedId={selectedId} onSelect={setSelectedId} />
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {filtered.map((driver) => (
-            <button
-              key={driver.id}
-              type="button"
-              onClick={() => setSelectedId(driver.id)}
-              aria-pressed={selectedId === driver.id}
-              className={`flex items-center gap-2 rounded-md border px-2.5 py-2 text-left transition-colors ${
-                selectedId === driver.id
-                  ? "border-amber bg-amber/10"
-                  : "border-paper/10 hover:border-paper/25"
-              }`}
-            >
-              {(() => {
-                const accent = accentForDriver(driver);
-                return (
-                  <DriverAvatar
-                    driverId={driver.id}
-                    initials={driver.initials}
-                    number={driver.number}
-                    accent={accent.primary}
-                    accentSecondary={accent.secondary}
-                    active={selectedId === driver.id}
-                  />
-                );
-              })()}
-              <span className="min-w-0">
-                <span
-                  className={`block truncate text-xs font-medium ${
-                    selectedId === driver.id ? "text-amber" : "text-paper"
-                  }`}
-                >
-                  {driver.name}
-                </span>
-                <span className="block truncate font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-                  {driver.team}
-                </span>
-              </span>
-            </button>
-          ))}
+        <div className="mt-5">
+          {era === "2026-grid" ? (
+            <ConstructorGrid selectedId={selectedId} onSelect={setSelectedId} />
+          ) : (
+            <SepangHistoryTimeline selectedId={selectedId} onSelect={setSelectedId} />
+          )}
         </div>
 
         {selected ? (

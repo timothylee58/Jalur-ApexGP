@@ -6,12 +6,29 @@ implementation rather than an aspirational spec that drifts from the code.
 
 ## Positioning
 
-Jalur APEXGP is a race engineer's read on the Sepang weekend, not a fan
-magazine and not an official product. Every design decision should
-reinforce "plainspoken technical tool," not "hype site." If a choice makes
-the app feel more like a broadcast graphics package, it's the wrong choice
-— that territory belongs to the officially licensed products, and blending
-into it is the opposite of what "no official misuse" is asking for.
+Jalur APEXGP is a race engineer's read on the Sepang weekend — a
+plainspoken technical tool, told in the visual language of the sport it
+covers. Lean into constructor identity: real team names, real driver
+names, real liveries and accent colours, real tyre compounds, real
+sponsor names where they're factually part of what's being described.
+This is a fan project about Formula 1, and looking like it belongs to
+that world is the point, not a risk to manage.
+
+The line that still holds is **affiliation, not aesthetics**. Never state
+or imply that this app is official, licensed, endorsed by, or partnered
+with Formula 1, the FIA, FOM, any team, or either circuit — that's a
+factual claim about a relationship that doesn't exist, and no amount of
+visual confidence makes it true. Every page carries the independence
+note for exactly that reason. Beyond that, "it would look too much like
+the real thing" is not by itself an objection.
+
+One practical constraint sits underneath this, and it's a rights
+question rather than a taste one: don't pull *new* third-party
+copyrighted media into the repo without knowing its licence — broadcast
+footage, press/agency photography, logo files lifted off a team site.
+Assets already committed under `public/` are the project owner's call.
+Originally-made artwork that evokes a real livery is always safe and is
+usually better anyway, because it can be drawn to fit the layout.
 
 ## Wordmark
 
@@ -100,21 +117,24 @@ explicit about being a heuristic, not a black box.
   Verbatim use of someone else's copyrighted broadcast (e.g. FOM's) is
   still off the table regardless of this — that's a licensing problem, not
   a style one.
-- Fan surfaces may use constructor accent colors and fan-card styling.
-  `/fan` ships per-team accent hexes and collectible cards on purpose —
-  that is fan identity, not an official product claim. Prefer originally
-  made graphics over scraped team media when possible; do not imply
-  partnership or licensing.
+- Constructor identity is welcome anywhere it helps a surface read
+  faster: accent colours, liveried gradients, team badges
+  (`public/teams/`), car renders (`public/cars/`), driver headshots
+  (`public/drivers/`). `lib/teamAssets.ts` and `lib/driverPhotos.ts` are
+  the lookup points.
+- `/teams` and `/fan` both lean into constructor identity — `/teams`
+  pairs the badge with the car render and the team's own accent, `/fan`
+  goes further with collectible-card styling. A "neutral" team surface
+  was an earlier convention and is no longer the preference.
 - `/drivers` uses constructor accent rings around driver headshots with
-  race-number badges (local assets under `public/drivers/`). Label the
-  page as an unofficial fan project; do not present photos as licensed
-  merch. Initials on an accent shell remain the fallback when a photo
-  is missing.
-- `/teams` can stay neutral for the engineer-tool read; `/fan` is the
-  place for colored team cards. Both are valid.
-- Driver photos and sponsor wordmarks are optional on fan cards; if you
-  add them, label the page as unofficial fan content and avoid framing
-  them as official merch.
+  race-number badges. Initials on an accent shell remain the fallback
+  when a photo is missing.
+- Real sponsor names are fine as *text* where they're part of the fact
+  being stated (a power-unit supplier, a tyre compound, a corner's
+  sponsored name like Berjaya Tioman). What isn't fine is presenting the
+  app as carrying those sponsors.
+- Every one of these surfaces still carries the independence note. That
+  is what makes the rest of it fair game.
 
 ## External content
 

@@ -6,3 +6,4 @@ gtfs-realtime-bindings==2.2.0
 pydantic==2.11.1
 pydantic-settings==2.8.1
 python-dotenv==1.1.0
+anthropic==1.5.0
