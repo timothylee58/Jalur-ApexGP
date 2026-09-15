@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { Bebas_Neue, Geist, Geist_Mono } from "next/font/google";
 import { BgmPlayer } from "@/components/shared/BgmPlayer";
+import { RaceEngineerChat } from "@/components/chat/RaceEngineerChat";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { isLang, LANG_COOKIE } from "@/lib/i18n/types";
 import "./globals.css";
@@ -65,6 +66,7 @@ export default async function RootLayout({
         <LanguageProvider initialLang={initialLang}>
           {children}
           <BgmPlayer />
+          <RaceEngineerChat />
         </LanguageProvider>
       </body>
     </html>

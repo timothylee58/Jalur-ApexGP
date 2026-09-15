@@ -311,6 +311,11 @@ repo — no other platform involved.
   `backend/.env.example`).
 - Env: `FRONTEND_ORIGIN` (the frontend project's deployed URL, for CORS),
   plus the MLflow vars above.
+- `ANTHROPIC_API_KEY` powers the race-engineer assistant (the "Ask the
+  engineer" sidebar). It is optional: with the key unset the chat route
+  answers 503 with a plain "not configured" message that the panel shows
+  as-is, and nothing else in the app is affected. `CHAT_MODEL` optionally
+  pins a different model; the default is `claude-opus-5`.
 - A wedged or misconfigured tracking backend can't stall `/predict` itself —
   `mlflow_client.py` bounds every MLflow call to 4s in a daemon thread.
   Verified this against a genuinely unreachable host: without it,
