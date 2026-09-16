@@ -17,26 +17,18 @@
  *
  * WHY APEX SPEEDS ARE TABULATED RATHER THAN DERIVED FROM CURVATURE.
  * The obvious approach — radius from local curvature, then
- * v = sqrt(a_lat * R) — was built first and measurably does not work on
- * this centreline. `data/sepang.json` is 18 hand-placed apex points, and
- * measuring it shows: the closed polygon is 6377 m against a published
- * 5543 m (15% long); T14 -> Back Straight Mid -> T15 forms a single
- * 1418 m straight where the real back straight is ~927 m; and the
- * start/finish point sits off the racing line entirely, so the lap
- * doubles back through ~160 deg at the timing line instead of running
- * straight past it. Curvature over that produced T4 (a real second-gear
- * 90-degree right) flat out at 321 km/h, a phantom braking zone at the
- * start/finish line, and a 1:19.9 lap — 14 s inside the real record.
- *
- * Correcting the geometry needs survey data (OpenStreetMap's raceway
- * way, or a real GPS trace). Both Overpass and the published circuit
- * guides are egress-blocked from the environment this was written in,
- * and hand-inventing "corrected" coordinates would be fabricating data,
- * which this codebase does not do. So the geometry supplies *shape* —
- * position, elevation, the line the car follows — and the table below
- * supplies *speed*. If better geometry lands later, the curvature route
- * becomes viable and this table becomes a cross-check rather than the
- * source.
+ * v = sqrt(a_lat * R) — needs corner radii, and these 18 points are one
+ * sample per corner: they sit on the OpenStreetMap-traced centreline in
+ * `data/sepang.json` (so the loop now measures 5236 m as a raw polygon
+ * against a published 5543 m — chord-cutting, not distortion — and
+ * T14 -> Back Straight Mid -> T15 is 914 m against the real 927 m back
+ * straight), but three points around a corner still describe its radius
+ * far too coarsely to solve a speed from. Deriving speeds instead wants
+ * the dense `centreline` array, which is a larger change than the shape
+ * fix this table predates. So the points supply *shape* — position,
+ * elevation, the line the car follows — and the table below supplies
+ * *speed*, with the curvature route now unblocked as a follow-up and
+ * this table its cross-check.
  *
  * HONESTY, same standard as strategy_service.py and data/sepang.json:
  * corner speeds marked `sourced` come from published circuit guides
@@ -50,10 +42,9 @@
  * — chosen to match how the layout is described: the T1-T4 opening
  * complex, then the Genting and KLIA curves, then the final sequence
  * through the T15 hairpin onto the straight. They do NOT come out as
- * even thirds (roughly 31/26/42 by distance): sector 3 swallows the back
- * straight, and the centreline's distance distortion above exaggerates
- * that. The FIA's actual timing-loop positions aren't published, so these
- * are derived landmarks, not official splits.
+ * even thirds by distance — sector 3 swallows the back straight. The
+ * FIA's actual timing-loop positions aren't published, so these are
+ * derived landmarks, not official splits.
  */
 
 import { circuitPointsMetres } from "@/data/sepangCircuit";
