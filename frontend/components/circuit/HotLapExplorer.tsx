@@ -350,11 +350,11 @@ export function HotLapExplorer() {
           <span className="text-paper">{REAL_LAP_RECORD.time}</span> (
           {REAL_LAP_RECORD.who}, {REAL_LAP_RECORD.year}) — about{" "}
           {Math.round(94.08 - lap.lapTimeS)} seconds quick. That gap is honest and
-          known: the centreline this is solved over measures 15% long as a raw
-          polygon and spaces the corners further apart than they really are, so the
-          car gets more room to accelerate between them than a real lap allows.
-          Closing it needs survey-grade circuit geometry rather than a tuning pass
-          on the physics.
+          known: the lap is solved over one point per corner, so each corner is a
+          single apex speed rather than an arc the car has to stay slow through,
+          and the car spends more of the lap accelerating than a real one does.
+          Closing it needs the solver run over the full traced centreline, not a
+          tuning pass on the physics.
         </p>
       </section>
     </div>

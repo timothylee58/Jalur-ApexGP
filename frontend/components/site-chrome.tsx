@@ -52,7 +52,7 @@ export function SiteHeader() {
             engages and the nav pushes the whole page wider than the
             viewport instead of scrolling in place. Deliberately
             scrollable at every breakpoint, not just mobile — 15 nav items
-            plus the language switcher can outgrow even an `sm:` desktop
+            can outgrow even an `sm:` desktop
             header width, and `html`'s overflow-x-clip means anything that
             overflows without a scroll affordance is just unreachable, not
             merely ugly (a real bug this used to have via `sm:flex-none`,
@@ -75,6 +75,8 @@ export function SiteHeader() {
               </Link>
             );
           })}
+        </div>
+        <div className="shrink-0 border-l border-paper/10 pl-3 sm:pl-4">
           <LanguageSwitcher />
         </div>
       </nav>

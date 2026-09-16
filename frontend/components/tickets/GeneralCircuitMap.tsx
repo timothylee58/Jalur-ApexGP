@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type KeyboardEvent } from "react";
-import { circuitPath } from "@/data/sepangCircuit";
+import { circuitPath, startFinish } from "@/data/sepangCircuit";
 
 /**
  * An original, interactive "general map" for /tickets — the real track
@@ -37,13 +37,36 @@ export interface StandMapMarker {
   overlook?: string | null;
 }
 
+type LandmarkKind = "facility" | "transport" | "amenity";
+
 interface Landmark {
   id: string;
   label: string;
   x: number;
   y: number;
+  kind: LandmarkKind;
   description: string;
 }
+
+type LegendKind = "grandstand" | "hillstand" | LandmarkKind | "parking";
+
+const KIND_COLOR: Record<LegendKind, string> = {
+  grandstand: "#f5a623",
+  hillstand: "#f5a623",
+  facility: "#7ec8e3",
+  transport: "#9ad46a",
+  amenity: "#e08fb6",
+  parking: "#a39b8f",
+};
+
+const LEGEND: { kind: LegendKind; label: string }[] = [
+  { kind: "grandstand", label: "Grandstand" },
+  { kind: "hillstand", label: "Hillstand" },
+  { kind: "facility", label: "Circuit facility" },
+  { kind: "transport", label: "Transport" },
+  { kind: "amenity", label: "Amenity" },
+  { kind: "parking", label: "Parking bay" },
+];
 
 interface ParkingBay {
   id: string;
@@ -82,6 +105,7 @@ const LANDMARKS: Landmark[] = [
     label: "Accreditation Centre",
     x: 665,
     y: 90,
+    kind: "facility",
     description: "Race-weekend pass pickup, and paddock & pit access — the north gate above the pit straight.",
   },
   {
@@ -89,6 +113,7 @@ const LANDMARKS: Landmark[] = [
     label: "SIC Motorsport Park",
     x: 760,
     y: 200,
+    kind: "facility",
     description: "Multi-use motorsport facility on the circuit grounds, separate from the Grand Prix track.",
   },
   {
@@ -96,6 +121,7 @@ const LANDMARKS: Landmark[] = [
     label: "Driving Experience Centre",
     x: 480,
     y: 195,
+    kind: "amenity",
     description: "Guided and self-drive experience circuit for visitors.",
   },
   {
@@ -103,6 +129,7 @@ const LANDMARKS: Landmark[] = [
     label: "Go Kart",
     x: 355,
     y: 275,
+    kind: "amenity",
     description: "Public go-kart track on the SIC grounds.",
   },
   {
@@ -110,6 +137,7 @@ const LANDMARKS: Landmark[] = [
     label: "Paddock / Pit Building",
     x: 700,
     y: 430,
+    kind: "facility",
     description: "Team garages and pit lane — the infield building the main straight runs past.",
   },
   {
@@ -117,6 +145,7 @@ const LANDMARKS: Landmark[] = [
     label: "South Paddock",
     x: 745,
     y: 545,
+    kind: "facility",
     description: "Secondary paddock area south of the pit building.",
   },
   {
@@ -124,6 +153,7 @@ const LANDMARKS: Landmark[] = [
     label: "Welcome Centre & Mall Area",
     x: 545,
     y: 470,
+    kind: "amenity",
     description: "Visitor welcome centre and retail area behind the Main Grandstand.",
   },
   {
@@ -131,6 +161,7 @@ const LANDMARKS: Landmark[] = [
     label: "Helipad",
     x: 210,
     y: 480,
+    kind: "transport",
     description: "Helicopter landing pad on the west side of the circuit grounds.",
   },
   {
@@ -138,6 +169,7 @@ const LANDMARKS: Landmark[] = [
     label: "Bus",
     x: 225,
     y: 530,
+    kind: "transport",
     description: "Bus set-down and parking.",
   },
   {
@@ -145,6 +177,7 @@ const LANDMARKS: Landmark[] = [
     label: "Taxi",
     x: 250,
     y: 400,
+    kind: "transport",
     description: "Taxi rank.",
   },
   {
@@ -152,6 +185,7 @@ const LANDMARKS: Landmark[] = [
     label: "Petronas Station",
     x: 95,
     y: 490,
+    kind: "amenity",
     description: "Fuel station just outside the west gate.",
   },
 ];
@@ -237,9 +271,34 @@ interface GeneralCircuitMapProps {
   className?: string;
 }
 
+function LandmarkIcon({ kind, x, y, active }: { kind: LandmarkKind; x: number; y: number; active: boolean }) {
+  const color = KIND_COLOR[kind];
+  const fill = active ? color : "#14181c";
+  const r = active ? 9 : 7;
+  if (kind === "transport") {
+    return (
+      <polygon
+        points={`${x},${y - r} ${x + r},${y} ${x},${y + r} ${x - r},${y}`}
+        fill={fill}
+        stroke={color}
+        strokeWidth={1.75}
+      />
+    );
+  }
+  if (kind === "amenity") {
+    return <circle cx={x} cy={y} r={r - 1} fill={fill} stroke={color} strokeWidth={1.75} />;
+  }
+  return (
+    <rect x={x - r} y={y - r} width={r * 2} height={r * 2} rx={2.5} fill={fill} stroke={color} strokeWidth={1.75} />
+  );
+}
+
 export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralCircuitMapProps) {
   const titleId = useId();
+  const gridId = useId();
+  const glowId = useId();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [spotlight, setSpotlight] = useState<LegendKind | null>(null);
 
   const activate = (id: string) => setActiveId(id);
   const deactivate = (id: string) => setActiveId((current) => (current === id ? null : current));
@@ -250,6 +309,11 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
       onActivate();
     }
   };
+  // Spotlighting a legend category dims everything else so one layer
+  // of the map can be read at a glance; the active (hovered) item is
+  // never dimmed so tooltips still point at a visible target.
+  const dimmed = (kind: LegendKind, id: string) => spotlight !== null && spotlight !== kind && activeId !== id;
+  const layerOpacity = (kind: LegendKind, id: string) => (dimmed(kind, id) ? 0.18 : 1);
 
   let hover: HoverInfo | null = null;
   const activeStand = stands.find((s) => s.id === activeId);
@@ -271,12 +335,23 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
     hover = { title: `Parking Bay ${activeBay.label}`, x: activeBay.x, y: activeBay.y };
   }
 
+  const sf = toOuter(startFinish.x, startFinish.y);
+
   return (
     <svg viewBox={GENERAL_MAP_VIEW_BOX} className={className} aria-labelledby={titleId}>
       <title id={titleId}>
         Sepang International Circuit general map — grandstands, facilities, and parking
       </title>
+      <defs>
+        <pattern id={gridId} width={40} height={40} patternUnits="userSpaceOnUse">
+          <path d="M40 0H0V40" fill="none" stroke="#f4efe6" strokeOpacity={0.045} strokeWidth={1} />
+        </pattern>
+        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation={10} />
+        </filter>
+      </defs>
       <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill="#14181c" />
+      <rect x={0} y={0} width={VIEW_W} height={VIEW_H} fill={`url(#${gridId})`} />
 
       <text
         x={26}
@@ -288,6 +363,64 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
       >
         GENERAL MAP
       </text>
+      <text
+        x={26}
+        y={68}
+        fontFamily="var(--font-geist-mono), monospace"
+        fontSize={11}
+        letterSpacing={2}
+        fill="#a39b8f"
+      >
+        SEPANG INTERNATIONAL CIRCUIT · 5.543 KM · 15 TURNS
+      </text>
+
+      {/* Legend — hover/focus a row to spotlight that layer of the map. */}
+      <g transform={`translate(26 ${VIEW_H - 24 - LEGEND.length * 22})`} aria-label="Legend">
+        {LEGEND.map((entry, i) => {
+          const y = i * 22;
+          const color = KIND_COLOR[entry.kind];
+          const on = spotlight === entry.kind;
+          const faded = spotlight !== null && !on;
+          return (
+            <g
+              key={entry.kind}
+              role="button"
+              tabIndex={0}
+              aria-pressed={on}
+              aria-label={`Highlight ${entry.label.toLowerCase()}s on the map`}
+              onMouseEnter={() => setSpotlight(entry.kind)}
+              onMouseLeave={() => setSpotlight((cur) => (cur === entry.kind ? null : cur))}
+              onFocus={() => setSpotlight(entry.kind)}
+              onBlur={() => setSpotlight((cur) => (cur === entry.kind ? null : cur))}
+              onClick={() => setSpotlight((cur) => (cur === entry.kind ? null : entry.kind))}
+              onKeyDown={onKeyActivate(() => setSpotlight((cur) => (cur === entry.kind ? null : entry.kind)))}
+              style={{ cursor: "pointer" }}
+              opacity={faded ? 0.4 : 1}
+            >
+              <rect x={-8} y={y - 11} width={170} height={22} rx={4} fill={on ? "#f4efe6" : "transparent"} opacity={on ? 0.06 : 1} />
+              {entry.kind === "grandstand" ? (
+                <rect x={-5} y={y - 5} width={10} height={10} rx={2} fill="none" stroke={color} strokeWidth={2} />
+              ) : entry.kind === "hillstand" ? (
+                <polygon points={`0,${y - 6} 6,${y + 5} -6,${y + 5}`} fill="none" stroke={color} strokeWidth={2} />
+              ) : entry.kind === "parking" ? (
+                <rect x={-6} y={y - 6} width={12} height={12} rx={2} fill="#14181c" stroke={color} strokeWidth={1.5} />
+              ) : (
+                <LandmarkIcon kind={entry.kind} x={0} y={y} active={false} />
+              )}
+              <text
+                x={16}
+                y={y + 4}
+                fontFamily="var(--font-geist-mono), monospace"
+                fontSize={11}
+                letterSpacing={0.5}
+                fill={on ? "#f4efe6" : "#a39b8f"}
+              >
+                {entry.label}
+              </text>
+            </g>
+          );
+        })}
+      </g>
 
       {/* Compass. */}
       <g transform={`translate(${VIEW_W - 60} ${VIEW_H - 68})`}>
@@ -306,20 +439,33 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
 
       {/* Track + grandstand/hillstand zones, inset. */}
       <g transform={`translate(${TRACK_TX} ${TRACK_TY}) scale(${TRACK_SCALE})`}>
-        <path d={circuitPath} fill="none" stroke="#3a4048" strokeWidth={26} strokeLinejoin="round" />
+        <path d={circuitPath} fill="none" stroke="#f5a623" strokeOpacity={0.12} strokeWidth={44} filter={`url(#${glowId})`} />
+        <path d={circuitPath} fill="#1a1f25" fillOpacity={0.6} stroke="#5b636d" strokeWidth={34} strokeLinejoin="round" />
+        <path d={circuitPath} fill="none" stroke="#2c323a" strokeWidth={26} strokeLinejoin="round" />
         <path
           d={circuitPath}
           fill="none"
-          stroke="#5b636d"
+          stroke="#8a929c"
           strokeWidth={2}
           strokeDasharray="2 12"
           strokeLinecap="round"
         />
 
+        {/* Start / finish line. */}
+        <g transform={`translate(${startFinish.x} ${startFinish.y})`} pointerEvents="none">
+          <rect x={-3} y={-18} width={6} height={36} fill="#f4efe6" />
+          <rect x={-3} y={-18} width={3} height={6} fill="#14181c" />
+          <rect x={0} y={-12} width={3} height={6} fill="#14181c" />
+          <rect x={-3} y={-6} width={3} height={6} fill="#14181c" />
+          <rect x={0} y={0} width={3} height={6} fill="#14181c" />
+          <rect x={-3} y={6} width={3} height={6} fill="#14181c" />
+          <rect x={0} y={12} width={3} height={6} fill="#14181c" />
+        </g>
+
         {stands.map((stand) => {
           const isActive = activeId === stand.id;
-          const color = stand.selected ? "#f5a623" : "#a39b8f";
-          const size = stand.selected ? 20 : 14;
+          const color = stand.selected ? "#f5a623" : "#d8d0c4";
+          const size = stand.selected ? 22 : 15;
           const select = () => {
             onSelectStand?.(stand.id);
             activate(stand.id);
@@ -337,10 +483,14 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
               onFocus={() => activate(stand.id)}
               onBlur={() => deactivate(stand.id)}
               onKeyDown={onKeyActivate(select)}
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", transition: "opacity 150ms" }}
+              opacity={layerOpacity(stand.kind, stand.id)}
             >
               {stand.selected || isActive ? (
-                <circle cx={stand.x} cy={stand.y} r={34} fill="#f5a623" opacity={0.15} />
+                <>
+                  <circle cx={stand.x} cy={stand.y} r={40} fill="#f5a623" opacity={0.12} />
+                  <circle cx={stand.x} cy={stand.y} r={30} fill="none" stroke="#f5a623" strokeWidth={1.5} opacity={0.5} />
+                </>
               ) : null}
               {stand.kind === "grandstand" ? (
                 <rect
@@ -351,14 +501,14 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
                   rx={3}
                   fill={stand.selected ? "#f5a623" : "#14181c"}
                   stroke={color}
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                 />
               ) : (
                 <polygon
                   points={`${stand.x},${stand.y - size * 0.6} ${stand.x - size * 0.55},${stand.y + size * 0.5} ${stand.x + size * 0.55},${stand.y + size * 0.5}`}
                   fill={stand.selected ? "#f5a623" : "#14181c"}
                   stroke={color}
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                 />
               )}
               <text
@@ -369,6 +519,9 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
                 fontFamily="var(--font-geist-mono), monospace"
                 fontWeight={700}
                 fill={color}
+                stroke="#14181c"
+                strokeWidth={5}
+                paintOrder="stroke"
               >
                 {stand.code}
               </text>
@@ -380,6 +533,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
       {/* Facility landmarks. */}
       {LANDMARKS.map((lm) => {
         const isActive = activeId === lm.id;
+        const color = KIND_COLOR[lm.kind];
         return (
           <g
             key={lm.id}
@@ -392,23 +546,22 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
             onFocus={() => activate(lm.id)}
             onBlur={() => deactivate(lm.id)}
             onKeyDown={onKeyActivate(() => toggle(lm.id))}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: "pointer", transition: "opacity 150ms" }}
+            opacity={layerOpacity(lm.kind, lm.id)}
           >
-            <circle
-              cx={lm.x}
-              cy={lm.y}
-              r={isActive ? 7 : 5}
-              fill={isActive ? "#f5a623" : "#5b636d"}
-              stroke="#a39b8f"
-              strokeWidth={1.5}
-            />
+            {isActive ? <circle cx={lm.x} cy={lm.y} r={18} fill={color} opacity={0.15} /> : null}
+            <LandmarkIcon kind={lm.kind} x={lm.x} y={lm.y} active={isActive} />
             <text
               x={lm.x}
-              y={lm.y - 12}
+              y={lm.y - 15}
               textAnchor="middle"
               fontSize={12}
               fontFamily="var(--font-geist-mono), monospace"
-              fill={isActive ? "#f5a623" : "#a39b8f"}
+              fontWeight={isActive ? 700 : 400}
+              fill={isActive ? "#f4efe6" : "#d8d0c4"}
+              stroke="#14181c"
+              strokeWidth={4}
+              paintOrder="stroke"
             >
               {lm.label}
             </text>
@@ -431,18 +584,29 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
             onFocus={() => activate(bay.id)}
             onBlur={() => deactivate(bay.id)}
             onKeyDown={onKeyActivate(() => toggle(bay.id))}
-            style={{ cursor: "pointer" }}
+            style={{ cursor: "pointer", transition: "opacity 150ms" }}
+            opacity={layerOpacity("parking", bay.id)}
           >
             <rect
-              x={bay.x - 12}
-              y={bay.y - 12}
-              width={24}
-              height={24}
+              x={bay.x - 13}
+              y={bay.y - 13}
+              width={26}
+              height={26}
               rx={4}
-              fill={isActive ? "#f5a623" : "#14181c"}
-              stroke={isActive ? "#f5a623" : "#5b636d"}
+              fill={isActive ? "#f5a623" : "#1a1f25"}
+              stroke={isActive ? "#f5a623" : "#6b7480"}
               strokeWidth={1.5}
             />
+            <text
+              x={bay.x}
+              y={bay.y - 16}
+              textAnchor="middle"
+              fontSize={7}
+              fontFamily="var(--font-geist-mono), monospace"
+              fill="#6b7480"
+            >
+              P
+            </text>
             <text
               x={bay.x}
               y={bay.y + 4}
@@ -450,7 +614,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
               fontSize={10}
               fontFamily="var(--font-geist-mono), monospace"
               fontWeight={700}
-              fill={isActive ? "#14181c" : "#a39b8f"}
+              fill={isActive ? "#14181c" : "#d8d0c4"}
             >
               {bay.label}
             </text>

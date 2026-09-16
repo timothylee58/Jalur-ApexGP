@@ -1,6 +1,8 @@
 /**
  * Static Sepang International Circuit geometry for the 2D SVG map and 3D
- * consumers. Points load from `data/sepang.json` — the same centreline
+ * consumers. Geometry loads from `data/sepang.json`: `centreline` is the
+ * traced outline the 2D path is drawn from, and `points` are the 18 named
+ * anchors on it (Start/Finish, the 15 apexes, ...) — the same centreline
  * `scripts/generate_circuit_models.py` sweeps into `sepang.glb` (Orbit Sepang)
  * and CircuitFlyoverHero uses via circuitPointsMetres.
  */
@@ -34,19 +36,31 @@ export interface XY {
   y: number;
 }
 
-const projected: XY[] = RAW_POINTS.map((p) => ({
-  x: (p.lon - LON0) * M_PER_DEG_LON,
-  y: -(p.lat - LAT0) * M_PER_DEG_LAT,
-}));
+function project(lat: number, lon: number): XY {
+  return { x: (lon - LON0) * M_PER_DEG_LON, y: -(lat - LAT0) * M_PER_DEG_LAT };
+}
+
+const projected: XY[] = RAW_POINTS.map((p) => project(p.lat, p.lon));
 
 /**
- * Same 18-point centreline as `circuitPath`, in real metres (clockwise,
- * Start/Finish first) — for 3D consumers that need world-space coords.
+ * Traced circuit outline (metres), one point roughly every 20 m. The 18
+ * named points are anchors *on* this line, so drawing the shape from the
+ * line rather than from those 18 anchors keeps every real corner radius
+ * instead of letting a spline guess them between apexes.
+ */
+const centrelineMetres: XY[] = (sepang.centreline as [number, number][]).map(([lat, lon]) =>
+  project(lat, lon),
+);
+
+/**
+ * The 18 named points in real metres (clockwise, Start/Finish first) — for
+ * 3D consumers that need world-space coords. These are anchors on the same
+ * traced line `circuitPath` draws, sampled down to one point per corner.
  */
 export const circuitPointsMetres: readonly XY[] = projected;
 
-const xs = projected.map((p) => p.x);
-const ys = projected.map((p) => p.y);
+const xs = centrelineMetres.map((p) => p.x);
+const ys = centrelineMetres.map((p) => p.y);
 const minX = Math.min(...xs);
 const maxX = Math.max(...xs);
 const minY = Math.min(...ys);
@@ -57,10 +71,13 @@ const scale = (VIEW - 2 * PADDING) / Math.max(spanX, spanY);
 const offsetX = PADDING + (VIEW - 2 * PADDING - spanX * scale) / 2;
 const offsetY = PADDING + (VIEW - 2 * PADDING - spanY * scale) / 2;
 
-const points: XY[] = projected.map((p) => ({
+const toView = (p: XY): XY => ({
   x: offsetX + (p.x - minX) * scale,
   y: offsetY + (p.y - minY) * scale,
-}));
+});
+
+const points: XY[] = projected.map(toView);
+const centreline: XY[] = centrelineMetres.map(toView);
 
 function pointFor(name: string): XY {
   const index = RAW_POINTS.findIndex((p) => p.name === name);
@@ -107,7 +124,7 @@ function closedSmoothPath(pts: XY[]): string {
 }
 
 export const circuitViewBox = `0 0 ${VIEW} ${VIEW}`;
-export const circuitPath = closedSmoothPath(points);
+export const circuitPath = closedSmoothPath(centreline);
 
 export interface CircuitMarker {
   code: string | null;
