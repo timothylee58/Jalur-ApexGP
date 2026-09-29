@@ -27,17 +27,16 @@ describe("buildDriveTrack", () => {
   });
 
   it("turns the way each corner is published to turn", () => {
-    // Curvature is signed positive to the right; averaged over each apex's
-    // arc it must agree with the reference direction. T11–T13 don't: the
-    // traced line bends the other way at those three anchors in
-    // sepang.json — a known disagreement between that file's anchor
-    // placement and the corner table, pinned here so it can't grow.
+    // Curvature is signed positive to the right; summed over each apex's
+    // arc it must agree with the corner table's direction. This is what
+    // caught the table calling T11–T13 left-right-left when the traced
+    // track (and every published guide) has them right-left-right.
     const disagree = track.corners.filter((c) => {
       let sum = 0;
       for (let d = -c.lengthM / 2; d <= c.lengthM / 2; d += 2) sum += track.at(c.s + d).curvature;
       return (sum > 0 ? "right" : "left") !== c.direction;
     });
-    expect(disagree.map((c) => c.turn)).toEqual([11, 12, 13]);
+    expect(disagree.map((c) => c.turn)).toEqual([]);
   });
 
   it("climbs to the T3 crest", () => {
