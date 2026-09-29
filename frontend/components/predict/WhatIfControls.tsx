@@ -1,8 +1,10 @@
 "use client";
 
 import { useRef, type KeyboardEvent } from "react";
+import dynamic from "next/dynamic";
 import { SafetyCarArt } from "@/components/predict/SafetyCarArt";
 import { TYRE_COLOR, TyreArt, type TyreOption } from "@/components/predict/TyreArt";
+import { useTyreThumbnails } from "@/components/predict/tyre3d/useTyreThumbnails";
 import { adjustedLife, tyreFit, type TyreFit } from "@/lib/tyreModel";
 import { COMPOUNDS, type Compound, type SimInputs, type WhatIf } from "@/types";
 
@@ -24,6 +26,22 @@ const SHORT_LABEL: Record<TyreOption, string> = {
   Wet: "Wet",
 };
 
+// three.js stays out of the /predict entry chunk; the SVG tyre holds the
+// stage until the model arrives.
+const TyreShowcase = dynamic(
+  () => import("@/components/predict/tyre3d/TyreShowcase").then((m) => m.TyreShowcase),
+  { ssr: false },
+);
+
+const PRODUCT: Record<TyreOption, string> = {
+  Auto: "Engine picks",
+  Soft: "P Zero · Soft",
+  Medium: "P Zero · Medium",
+  Hard: "P Zero · Hard",
+  Intermediate: "Cinturato · Intermediate",
+  Wet: "Cinturato · Full wet",
+};
+
 const FIT_COPY: Record<TyreFit, { label: string; tone: string }> = {
   good: { label: "Suits these conditions", tone: "text-teal" },
   marginal: { label: "Marginal here — small confidence hit", tone: "text-amber" },
@@ -40,6 +58,7 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
   // together (like a native <input type="radio"> group), with roving
   // tabindex — only the checked option sits in the tab order, everything
   // else is reached via arrow keys once the group has focus.
+  const thumbs = useTyreThumbnails();
   const tyreButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const selectTyreAt = (index: number) => {
@@ -189,12 +208,38 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
           <span id="whatif-tyre-label" className="font-mono text-[11px] text-paper-dim">
             Starting tyre
           </span>
+          <div className="relative mt-1.5 block aspect-[2/1] max-h-56 w-full overflow-hidden rounded-md border border-paper/15 bg-[radial-gradient(ellipse_at_50%_85%,rgba(125,140,255,0.10),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]">
+            <TyreShowcase
+              option={tyre}
+              fallback={
+                <span className="absolute inset-0 flex items-center justify-center p-6">
+                  <span className="aspect-square h-full">
+                    <TyreArt option={tyre} selected />
+                  </span>
+                </span>
+              }
+            />
+            <span className="pointer-events-none absolute bottom-2.5 left-3 font-mono text-[10px] uppercase tracking-[0.18em] text-paper-dim">
+              <span
+                aria-hidden="true"
+                className="mr-2 inline-block h-1.5 w-1.5 rounded-full align-middle"
+                style={{ background: tyre === "Auto" ? "#f5a623" : TYRE_COLOR[tyre] }}
+              />
+              {PRODUCT[tyre]}
+            </span>
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute bottom-2.5 right-3 hidden font-mono text-[10px] uppercase tracking-[0.18em] text-paper-dim/60 sm:inline"
+            >
+              Drag to turn
+            </span>
+          </div>
           <div
             role="radiogroup"
             aria-labelledby="whatif-tyre-label"
             aria-describedby="whatif-tyre-readout"
             onKeyDown={handleTyreKeyDown}
-            className="mt-1.5 grid grid-cols-3 gap-1.5 sm:grid-cols-6"
+            className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-6"
           >
             {TYRE_OPTIONS.map((option, index) => {
               const selected = tyre === option;
@@ -219,7 +264,18 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
                   }`}
                 >
                   <span className="h-11 w-11 sm:h-14 sm:w-14">
-                    <TyreArt option={option} selected={selected} />
+                    {thumbs && option !== "Auto" ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- data: URL rendered client-side
+                      <img
+                        src={thumbs[option]}
+                        alt=""
+                        className={`h-full w-full object-contain transition-transform duration-500 ease-out motion-reduce:transition-none ${
+                          selected ? "scale-110" : "opacity-80"
+                        }`}
+                      />
+                    ) : (
+                      <TyreArt option={option} selected={selected} />
+                    )}
                   </span>
                   <span
                     className={`font-mono text-[10px] uppercase tracking-[0.12em] ${
