@@ -59,6 +59,10 @@ class TelemetryCorner(BaseModel):
     number: int
     # Metres from the start line along the reference lap.
     distance: float
+    # The corner's position in the timing feed's frame. Internal only: used
+    # to line corners up with a lap's own distances, never sent to clients.
+    x: float | None = Field(default=None, exclude=True)
+    y: float | None = Field(default=None, exclude=True)
 
 
 class TelemetryLapTrace(BaseModel):

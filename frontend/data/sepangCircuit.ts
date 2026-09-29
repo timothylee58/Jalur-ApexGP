@@ -59,6 +59,16 @@ const centrelineMetres: XY[] = (sepang.centreline as [number, number][]).map(([l
  */
 export const circuitPointsMetres: readonly XY[] = projected;
 
+/** The traced centreline itself in metres — Start/Finish first, in race
+ * direction, a point roughly every 20 m. For consumers that need the real
+ * corner radii rather than one point per corner (/drive). */
+export const circuitCentrelineMetres: readonly XY[] = centrelineMetres;
+
+/** The 18 named anchors in metres with their surveyed elevation, in lap order. */
+export const circuitAnchorsMetres: readonly (XY & { name: string; elevM: number | null })[] = RAW_POINTS.map(
+  (p, i) => ({ name: p.name, x: projected[i].x, y: projected[i].y, elevM: p.elevM ?? null }),
+);
+
 const xs = centrelineMetres.map((p) => p.x);
 const ys = centrelineMetres.map((p) => p.y);
 const minX = Math.min(...xs);

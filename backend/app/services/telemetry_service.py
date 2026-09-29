@@ -61,6 +61,9 @@ _RETRY_DELAY_S = (0.3, 2.0)
 # after that is its data final and safe to cache.
 _LIVE_TAIL = timedelta(minutes=30)
 _TRACE_CACHE_SIZE = 64
+# Lap lists are small, but one per (session, driver) across every season a
+# visitor can pick adds up on a long-lived instance — bounded like traces.
+_LAPS_CACHE_SIZE = 256
 
 
 @dataclass(frozen=True)
@@ -78,7 +81,7 @@ class _SessionRef:
 # are cached too, but only once the session is final (see _SessionRef).
 _session_key_cache: dict[tuple[int, str, str], _SessionRef] = {}
 _drivers_cache: dict[int, list[TelemetryDriver]] = {}
-_laps_cache: dict[tuple[int, int], list[TelemetryLap]] = {}
+_laps_cache: OrderedDict[tuple[int, int], list[TelemetryLap]] = OrderedDict()
 _trace_cache: OrderedDict[tuple[int, int, int], TelemetryLapTrace] = OrderedDict()
 
 
@@ -123,7 +126,12 @@ async def _get(client: httpx.AsyncClient, path: str, query: str) -> list[dict[st
         response.raise_for_status()
     except httpx.HTTPStatusError as exc:
         raise TelemetryUpstreamError(f"OpenF1 returned {response.status_code} for {url}") from exc
-    payload = response.json()
+    try:
+        payload = response.json()
+    except ValueError as exc:
+        # A 200 with a body that isn't JSON (a proxy's HTML error page, a
+        # truncated response) is a transport failure like any other.
+        raise TelemetryUpstreamError(f"OpenF1 returned invalid JSON from {url}") from exc
     if not isinstance(payload, list):
         raise TelemetryUpstreamError(f"Unexpected OpenF1 response shape from {url}")
     return payload
@@ -199,6 +207,11 @@ async def get_drivers(
             except (KeyError, TypeError, ValueError):
                 continue
         drivers = sorted(by_number.values(), key=lambda d: d.driver_number)
+        # An empty roster is "no data yet", not an answer: raising lets the
+        # pipeline try TracingInsights, and keeps the empty list out of the
+        # lifetime cache.
+        if not drivers:
+            raise TelemetryUnavailable("OpenF1 has no drivers for this session yet.")
         _drivers_cache[session.key] = drivers
         return drivers
 
@@ -213,6 +226,7 @@ async def get_laps(
         session = await _resolve_session(client, year, circuit_short_name, session_name)
         cached = _laps_cache.get((session.key, driver_number))
         if cached is not None:
+            _laps_cache.move_to_end((session.key, driver_number))
             return cached
         rows = await _get(
             client, "/laps", f"session_key={session.key}&driver_number={driver_number}"
@@ -235,6 +249,8 @@ async def get_laps(
         raise TelemetryUnavailable(f"No timed laps found for driver {driver_number} in this session.")
     if session.final:
         _laps_cache[(session.key, driver_number)] = laps
+        while len(_laps_cache) > _LAPS_CACHE_SIZE:
+            _laps_cache.popitem(last=False)
     return laps
 
 
@@ -339,7 +355,11 @@ async def get_lap_trace(
         except TelemetryUpstreamError:
             location_rows = []
 
-        drivers = await get_drivers(year, circuit_short_name, session_name)
+        # The roster only supplies the driver's name for the trace header.
+        try:
+            drivers = await get_drivers(year, circuit_short_name, session_name)
+        except TelemetryUnavailable:
+            drivers = []
 
     driver = next((d for d in drivers if d.driver_number == driver_number), None)
     if driver is None:

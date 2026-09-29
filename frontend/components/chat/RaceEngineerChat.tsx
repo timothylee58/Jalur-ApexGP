@@ -185,6 +185,7 @@ export function RaceEngineerChat() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="race-engineer-panel"
+        data-floating-widget=""
         className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full border border-amber/40 bg-asphalt/95 px-4 py-2.5 font-mono text-xs uppercase tracking-wide text-amber shadow-lg backdrop-blur transition-colors hover:border-amber"
       >
         <span aria-hidden>📻</span>

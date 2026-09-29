@@ -20,12 +20,24 @@ const YAW_RETURN_S = 1.4;
  * prefers-reduced-motion it neither rolls nor spins up — it simply changes.
  * If WebGL is unavailable, `fallback` renders instead.
  */
-export function TyreShowcase({ option, fallback }: { option: TyreOption; fallback: ReactNode }) {
+export function TyreShowcase({
+  option,
+  fallback,
+  onReady,
+}: {
+  option: TyreOption;
+  fallback: ReactNode;
+  /** Called once the first frame is on screen (or WebGL has failed and the
+   * fallback is showing), so the host can stop showing its placeholder. */
+  onReady?: () => void;
+}) {
   const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const optionRef = useRef(option);
   const kickRef = useRef<() => void>(() => {});
   const [failed, setFailed] = useState(false);
+  const readyRef = useRef(onReady);
+  readyRef.current = onReady;
 
   optionRef.current = option;
 
@@ -36,6 +48,7 @@ export function TyreShowcase({ option, fallback }: { option: TyreOption; fallbac
     const renderer = createRenderer(canvas);
     if (!renderer) {
       setFailed(true);
+      readyRef.current?.();
       return;
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -109,40 +122,58 @@ export function TyreShowcase({ option, fallback }: { option: TyreOption; fallbac
     canvas.addEventListener("pointerup", onUp);
     canvas.addEventListener("pointercancel", onUp);
 
+    // The loop only runs while the stage is on screen and the tab is
+    // visible: off screen, no frames are scheduled at all.
     let visible = true;
-    const io = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-    });
-    io.observe(host);
-
     let raf = 0;
     let last = performance.now();
+    let announced = false;
     const frame = (now: number) => {
-      raf = requestAnimationFrame(frame);
+      raf = 0;
+      if (!visible || document.hidden) return;
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (!visible || document.hidden) return;
       if (shown !== optionRef.current) show(optionRef.current);
-      if (!current) return;
+      if (current) {
+        const idle = reduce ? 0 : IDLE_SPIN;
+        spin = idle + (spin - idle) * Math.exp(-dt / SETTLE_S);
+        roll -= spin * dt;
+        // Under reduced motion a released tyre snaps square instead of
+        // easing back.
+        if (!dragging) yaw = reduce ? 0 : yaw + (0 - yaw) * (1 - Math.exp(-dt / YAW_RETURN_S));
+        const target = shown === "Auto" ? 0 : reduce ? 1.4 : 1.2;
+        heat = target + (heat - target) * Math.exp(-dt / 0.6);
+        stage.heat.intensity = heat;
 
-      const idle = reduce ? 0 : IDLE_SPIN;
-      spin = idle + (spin - idle) * Math.exp(-dt / SETTLE_S);
-      roll -= spin * dt;
-      if (!dragging) yaw += (0 - yaw) * (1 - Math.exp(-dt / YAW_RETURN_S));
-      const target = shown === "Auto" ? 0 : reduce ? 1.4 : 1.2;
-      heat = target + (heat - target) * Math.exp(-dt / 0.6);
-      stage.heat.intensity = heat;
-
-      current.wheel.rotation.z = roll;
-      current.root.rotation.y = yaw;
-      renderer.render(stage.scene, stage.camera);
+        current.wheel.rotation.z = roll;
+        current.root.rotation.y = yaw;
+        renderer.render(stage.scene, stage.camera);
+        if (!announced) {
+          announced = true;
+          readyRef.current?.();
+        }
+      }
+      raf = requestAnimationFrame(frame);
     };
-    raf = requestAnimationFrame(frame);
+    const start = () => {
+      if (raf || !visible || document.hidden) return;
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    };
+    const io = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+      start();
+    });
+    io.observe(host);
+    const onVisibility = () => start();
+    document.addEventListener("visibilitychange", onVisibility);
+    start();
 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);

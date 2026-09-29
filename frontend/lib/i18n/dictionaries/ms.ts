@@ -92,7 +92,7 @@ export const ms: Dictionary = {
       {
         id: "ers",
         title: "ERS (Sistem Pemulihan Tenaga)",
-        body: "Separuh hibrid enjin kuasa 2026 — kira-kira separuh kuasa kereta kini elektrik. MGU-K menukar kelajuan kereta kepada cas semasa membrek (MGU-H yang memulihkan haba ekzos telah digugurkan untuk 2026), menyimpannya dalam bateri, dan mengembalikannya sebagai kuasa tambahan apabila diperlukan. Pemandu dan jurutera menguruskan berapa banyak tenaga untuk disimpan sepanjang satu pusingan bagi pergerakan defensif atau serangan kemudian.",
+        body: "Bahagian hibrid enjin kuasa 2026 — kira-kira separuh kuasa kereta kini elektrik. MGU-K menukar kelajuan kereta kepada cas semasa membrek (MGU-H yang memulihkan haba ekzos telah digugurkan untuk 2026), menyimpannya dalam bateri, dan mengembalikannya sebagai kuasa tambahan apabila diperlukan. Pemandu dan jurutera menguruskan berapa banyak tenaga untuk disimpan sepanjang satu pusingan bagi pergerakan defensif atau serangan kemudian.",
       },
     ],
     demos: {

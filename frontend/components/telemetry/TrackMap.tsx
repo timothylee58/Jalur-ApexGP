@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { sampleAt } from "@/lib/telemetry";
 import { distances, miniSectorLeaders, rampColour, teamColour } from "@/lib/telemetryCharts";
 import { MAP_WIDTH, buildTrackLayout, type Pt, type TrackLayout } from "@/lib/trackMap";
@@ -19,18 +19,19 @@ interface Props {
   corners?: TelemetryCorner[];
 }
 
-/** Rendered width of an element, so type can be sized for the screen. */
+/** Rendered width of an element, so type can be sized for the screen. A
+ * callback ref, so the observer follows the element when it is swapped
+ * (the no-positions placeholder and the map are different nodes). */
 function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
+  const [node, setNode] = useState<T | null>(null);
   const [width, setWidth] = useState(0);
   useEffect(() => {
-    const el = ref.current;
-    if (!el || typeof ResizeObserver === "undefined") return;
+    if (!node || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width));
-    observer.observe(el);
+    observer.observe(node);
     return () => observer.disconnect();
-  }, []);
-  return [ref, width] as const;
+  }, [node]);
+  return [setNode, width] as const;
 }
 
 const positioned = (samples: TelemetrySample[]) => samples.filter((s) => s.x != null && s.y != null);
@@ -45,7 +46,7 @@ const positioned = (samples: TelemetrySample[]) => samples.filter((s) => s.x != 
  * their own lap start, so the gap between the dots *is* the gap on track.
  */
 export function TrackMap({ trace, compare, time, corners = [] }: Props) {
-  const [frameRef, width] = useWidth<HTMLDivElement>();
+  const [frameRef, width] = useWidth<HTMLElement>();
   // The viewBox scales everything down on a phone; keep labels ~11px+.
   const textScale = width ? Math.round(Math.min(2.2, Math.max(1, (11 * MAP_WIDTH) / width / 25)) * 10) / 10 : 1;
   const [requested, setRequested] = useState<ColourMode>("speed");
@@ -165,7 +166,9 @@ export function TrackMap({ trace, compare, time, corners = [] }: Props) {
   const cars = useMemo(
     () => ({
       a: positioned(trace.samples),
-      b: compare ? positioned(compare.samples) : [],
+      // Two sources can place a car in different coordinate frames; only a
+      // comparison lap from the same source shares the primary's map.
+      b: compare && compare.source === trace.source ? positioned(compare.samples) : [],
     }),
     [trace.samples, compare],
   );

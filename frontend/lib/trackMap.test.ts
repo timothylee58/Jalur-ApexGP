@@ -72,6 +72,22 @@ describe("buildTrackLayout", () => {
     }
   });
 
+  it("treats a straight that crosses the line as one straight", () => {
+    // The same lap, timed from halfway down the first straight: that
+    // straight now spans the end and the start of the lap.
+    const { samples } = stadium();
+    const total = samples[samples.length - 1].distance!;
+    const cut = samples.findIndex((s) => s.distance === 500);
+    const shifted = [...samples.slice(cut), ...samples.slice(1, cut + 1)].map((s, i) => ({
+      ...s,
+      distance: i * 10,
+      t: (i * 10) / 60,
+    }));
+    expect(shifted[shifted.length - 1].distance).toBeCloseTo(total, 0);
+    const layout = buildTrackLayout(shifted)!;
+    expect(layout.chevrons).toHaveLength(2);
+  });
+
   it("lays the start/finish band along the first straight", () => {
     const layout = buildTrackLayout(stadium().samples)!;
     // The first straight runs along +x in the feed; the map keeps x.

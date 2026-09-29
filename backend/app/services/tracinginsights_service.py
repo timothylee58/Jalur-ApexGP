@@ -134,6 +134,16 @@ def _column(payload: dict[str, Any], key: str, length: int) -> list[Any]:
     return [None] * length
 
 
+def _segment(value: str) -> str:
+    """One path segment of the raw URL. The session name comes straight
+    from the query string, and quote() leaves "/" alone and can't make "."
+    or ".." safe, so anything that could climb out of the event folder is
+    refused rather than escaped."""
+    if not value or value in (".", "..") or "/" in value or "\\" in value:
+        raise SessionNotPublished(f"{value!r} isn't a TracingInsights session or file name.")
+    return quote(value, safe="")
+
+
 def _url(year: int, circuit_short_name: str, session_name: str, *path: str) -> str:
     event = event_folder(year, circuit_short_name)
     if event is None:
@@ -141,7 +151,7 @@ def _url(year: int, circuit_short_name: str, session_name: str, *path: str) -> s
             f"TracingInsights has no event mapping for circuit {circuit_short_name!r}."
         )
     parts = [event, session_name, *path]
-    return f"{settings.tracinginsights_raw_base_url}/{year}/main/" + "/".join(quote(p) for p in parts)
+    return f"{settings.tracinginsights_raw_base_url}/{year}/main/" + "/".join(_segment(p) for p in parts)
 
 
 async def _get_json(client: httpx.AsyncClient, url: str) -> Any:
@@ -320,9 +330,11 @@ async def get_corners(year: int, circuit_short_name: str, session_name: str) -> 
         return []
     numbers = payload.get("CornerNumber") or []
     distances = _column(payload, "Distance", len(numbers))
+    xs = _column(payload, "X", len(numbers))
+    ys = _column(payload, "Y", len(numbers))
     corners = [
-        TelemetryCorner(number=int(n), distance=d)
-        for n, d in ((_na(n), _num(d)) for n, d in zip(numbers, distances))
+        TelemetryCorner(number=int(n), distance=d, x=_num(x), y=_num(y))
+        for n, d, x, y in ((_na(n), _num(d), x, y) for n, d, x, y in zip(numbers, distances, xs, ys))
         if n is not None and d is not None
     ]
     return sorted(corners, key=lambda c: c.distance)

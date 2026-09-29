@@ -178,7 +178,10 @@ export interface CornerReference {
  * circuit guides (driver61.com's Sepang guide and sepangtravel.com's
  * 15-turn walkthrough); `sourced: false` entries are reasoned from the
  * surrounding corners and the described character of that section, and
- * should be treated as the weakest numbers here.
+ * should be treated as the weakest numbers here. Every corner's direction
+ * is sourced either way (Wikipedia's Sepang Circuit article and the
+ * driver61 guide agree: T10–T11 right, T12 left, T13–T14 right), and the
+ * traced track in /drive checks each one against its own curvature.
  *
  * Two guides disagree on which corner is genuinely slowest — one calls
  * T15 "the slowest point on the circuit", the other gives T9 a specific
@@ -216,15 +219,15 @@ export const SEPANG_CORNER_REFERENCE: CornerReference[] = [
   { turn: 10, label: null, direction: "right", apexKmh: 150, gear: 4, lengthM: 70, sourced: false,
     linkedToNext: false,
     note: "Medium-slow right out of the Berjaya Tioman complex. Estimated." },
-  { turn: 11, label: null, direction: "left", apexKmh: 195, gear: 5, lengthM: 80, sourced: false,
+  { turn: 11, label: null, direction: "right", apexKmh: 195, gear: 5, lengthM: 80, sourced: false,
     linkedToNext: false,
-    note: "Medium left opening the final sector. Estimated." },
-  { turn: 12, label: null, direction: "right", apexKmh: 235, gear: 6, lengthM: 100, sourced: false,
+    note: "Medium-speed right straight out of the long T10 sweep, so it's braked for with lock still on — easy to overshoot. Speed estimated." },
+  { turn: 12, label: null, direction: "left", apexKmh: 235, gear: 6, lengthM: 100, sourced: false,
     linkedToNext: false,
-    note: "Quick right, close to flat in a good car. Estimated." },
-  { turn: 13, label: null, direction: "left", apexKmh: 170, gear: 4, lengthM: 70, sourced: false,
+    note: "Fast, bumpy left over a dip that lightens the rear — the first half of the final-sector left-right. Speed estimated." },
+  { turn: 13, label: null, direction: "right", apexKmh: 170, gear: 4, lengthM: 70, sourced: false,
     linkedToNext: false,
-    note: "Medium-slow left. Estimated." },
+    note: "Sweeping right that completes the left-right; the braking for T14 starts inside it, which is why its speed is set conservatively here. Speed estimated." },
   { turn: 14, label: null, direction: "right", apexKmh: 155, gear: 4, lengthM: 70, sourced: false,
     linkedToNext: false,
     note: "Slower right feeding the back straight — exit speed here sets up the whole run to T15. Estimated." },

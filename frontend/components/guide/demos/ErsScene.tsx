@@ -12,6 +12,31 @@ const PARTICLES = 7;
 const speed = (t: number) => keyframes(t, TIMES, [312, 96, 96, 318, 312], [easeOut, linear, easeIn, linear]);
 const charge = (t: number) => keyframes(t, TIMES, [0.28, 0.72, 0.72, 0.3, 0.28]);
 const harvesting = (t: number) => windowed(t, 0.2, 3.0, 0.2);
+
+// Road scroll per loop: a whole number of 22-unit dash repeats (10 dash +
+// 12 gap), so the loop is seamless.
+const LOOP_TRAVEL = 50 * 22;
+const PERIOD = TIMES[TIMES.length - 1];
+const STEPS = 480;
+// Distance covered, integrated from the speed readout (trapezoids), then
+// scaled to LOOP_TRAVEL — so the dashes crawl through the slow apex and race
+// away on deployment, at exactly the rate the km/h figure implies.
+const DISTANCE = (() => {
+  const out = [0];
+  for (let i = 1; i <= STEPS; i += 1) {
+    const a = ((i - 1) / STEPS) * PERIOD;
+    const b = (i / STEPS) * PERIOD;
+    out.push(out[i - 1] + ((speed(a) + speed(b)) / 2) * (b - a));
+  }
+  const total = out[STEPS];
+  return out.map((d) => (d / total) * LOOP_TRAVEL);
+})();
+
+function travelAt(t: number) {
+  const f = (Math.min(Math.max(t, 0), PERIOD) / PERIOD) * STEPS;
+  const i = Math.min(Math.floor(f), STEPS - 1);
+  return DISTANCE[i] + (DISTANCE[i + 1] - DISTANCE[i]) * (f - i);
+}
 const deploying = (t: number) => windowed(t, 4.0, 7.0, 0.2);
 
 /** Point `s` (0–1) along the arc from the car's rear axle to the battery. */
@@ -30,10 +55,7 @@ function arc(s: number) {
  * the battery drains. The track scrolls at the car's speed throughout.
  */
 export function ErsScene({ clock, labels }: SceneProps) {
-  // Distance covered, integrated by hand so the scroll matches the speed
-  // readout: slowing, a slow apex, then accelerating. A whole number of
-  // dash repeats, so the loop is seamless.
-  const travel = useAt(clock, (t) => keyframes(t, TIMES, [0, 440, 488, 1012, 1100], [easeOut, linear, easeIn, linear]));
+  const travel = useAt(clock, travelAt);
   const readout = useAt(clock, (t) => `${Math.round(speed(t))}`);
   const level = useAt(clock, charge);
   const harvest = useAt(clock, harvesting);

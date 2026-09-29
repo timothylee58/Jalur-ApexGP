@@ -194,3 +194,12 @@ button:focus-visible .tyre-idle {
     opacity: 0.35;
   }
 }
+
+/* While a phone-sized game fills the screen (/drive sets data-immersive on
+   <body>), the site's floating buttons step aside so they don't sit on
+   the touch controls. They stay mounted — the playlist keeps playing. */
+@media (max-width: 639px) {
+  body[data-immersive="true"] [data-floating-widget] {
+    visibility: hidden;
+  }
+}

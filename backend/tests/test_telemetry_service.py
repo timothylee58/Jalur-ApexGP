@@ -82,7 +82,7 @@ async def test_session_key_is_cached_across_calls(monkeypatch: pytest.MonkeyPatc
             session_calls += 1
             return httpx.Response(200, json=[{"session_key": 9999}])
         if request.url.path == "/v1/drivers":
-            return httpx.Response(200, json=[])
+            return httpx.Response(200, json=[{"driver_number": 1, "full_name": "Max Verstappen"}])
         raise AssertionError(f"unexpected path {request.url.path}")
 
     _patch_client(monkeypatch, handler)
@@ -421,3 +421,56 @@ async def test_a_refused_location_call_costs_the_map_not_the_lap(
     # Not cached without positions, so a later request can still fill them.
     await get_lap_trace(driver_number=1, lap_number=6)
     assert calls["/v1/car_data"] == 2
+
+
+@pytest.mark.asyncio
+async def test_a_location_body_that_is_not_json_costs_the_map_not_the_lap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    inner, _ = _real_2026_handler()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/location":
+            return httpx.Response(200, text="<html>upstream hiccup</html>")
+        return inner(request)
+
+    _patch_client(monkeypatch, handler)
+    trace = await get_lap_trace(driver_number=1, lap_number=6)
+    assert len(trace.samples) == 2
+    assert all(sample.x is None for sample in trace.samples)
+
+
+@pytest.mark.asyncio
+async def test_an_empty_roster_is_unavailable_and_never_cached(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls = {"drivers": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/sessions":
+            return httpx.Response(200, json=[{"session_key": 1, "date_end": FINISHED}])
+        if request.url.path == "/v1/drivers":
+            calls["drivers"] += 1
+            return httpx.Response(200, json=[])
+        raise AssertionError(f"unexpected path {request.url.path}")
+
+    _patch_client(monkeypatch, handler)
+    for _ in range(2):
+        with pytest.raises(TelemetryUnavailable):
+            await get_drivers(year=2050, circuit_short_name="Testville", session_name="Race")
+    assert calls["drivers"] == 2
+
+
+@pytest.mark.asyncio
+async def test_the_laps_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/v1/sessions":
+            return httpx.Response(200, json=[{"session_key": 1, "date_end": FINISHED}])
+        if request.url.path == "/v1/laps":
+            return httpx.Response(200, json=[{"lap_number": 2, "lap_duration": 80.1}])
+        raise AssertionError(f"unexpected path {request.url.path}")
+
+    _patch_client(monkeypatch, handler)
+    monkeypatch.setattr(telemetry_service, "_LAPS_CACHE_SIZE", 2)
+    for driver in (1, 4, 16):
+        await get_laps(driver, year=2050, circuit_short_name="Testville", session_name="Race")
+    # The least recently used driver's laps are the ones evicted.
+    assert list(telemetry_service._laps_cache) == [(1, 4), (1, 16)]
