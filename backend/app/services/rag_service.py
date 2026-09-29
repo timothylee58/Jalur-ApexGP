@@ -33,11 +33,13 @@ import logging
 import re
 from collections.abc import AsyncIterator
 from dataclasses import dataclass
-
-import anthropic
+from typing import TYPE_CHECKING
 
 from app.config import settings
 from app.services import knowledge_base
+
+if TYPE_CHECKING:
+    import anthropic
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +109,34 @@ class ChatMessage:
     content: str
 
 
-def _client() -> anthropic.AsyncAnthropic:
+def _load_sdk():
+    """The SDK is imported here, not at module top, on purpose.
+
+    This whole feature is optional — no key is a supported deployment — so
+    its dependency must not be able to fail the import of the app. It did:
+    a top-level `import anthropic` plus a dependency declared in only one
+    of the backend's two manifests took every route down in production,
+    /predict and /health included, not just /chat. Deferring the import
+    confines a missing package to the one route that needs it, where it
+    surfaces as the same clean 503 as a missing key.
+    """
+    try:
+        import anthropic
+    except ImportError as exc:
+        raise ChatUnavailable(
+            "The race engineer assistant isn't installed on this deployment — "
+            "the anthropic package is missing from the backend's dependencies."
+        ) from exc
+    return anthropic
+
+
+def _client() -> "anthropic.AsyncAnthropic":
     if not settings.anthropic_api_key:
         raise ChatUnavailable(
             "The race engineer assistant isn't configured on this deployment — "
             "it needs an Anthropic API key set as ANTHROPIC_API_KEY."
         )
-    return anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
+    return _load_sdk().AsyncAnthropic(api_key=settings.anthropic_api_key)
 
 
 async def _live_standings() -> str | None:
@@ -215,6 +238,7 @@ async def stream_answer(
     sources up front lets the UI show what it's grounding on while the
     answer is still streaming."""
     client = _client()
+    anthropic = _load_sdk()
     live = await _gather_live_context(question)
     context, source_ids = build_context_block(question, live)
 

@@ -18,6 +18,37 @@ export const en: Dictionary = {
     seats: "Seats",
     calendar: "Calendar",
   },
+  header: {
+    primaryNav: "Primary",
+    scrollBack: "Scroll menu back",
+    scrollForward: "Scroll menu forward",
+    language: "Language",
+    machineTranslated: "BM and 中文 are machine-translated.",
+  },
+  hero: {
+    pickSession: "Pick a session",
+    next: "Next up",
+    live: "Live",
+    runStrategy: "Run strategy for {session}",
+    sessionNames: {
+      FP1: "Practice 1",
+      FP2: "Practice 2",
+      FP3: "Practice 3",
+      Quali: "Qualifying",
+      Race: "Grand Prix",
+    },
+    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    dateFormat: "{weekday} {day} {month}",
+    links: {
+      circuit: "Corner-by-corner 3D",
+      accuracy: "Prediction accuracy",
+      lore: "Circuit lore",
+      tickets: "Tickets & seating",
+      flyover: "3D flyover",
+      lapVideo: "Lap video",
+    },
+  },
   guide: {
     kicker: "New to F1?",
     title: "The rules, plainly",
@@ -30,7 +61,7 @@ export const en: Dictionary = {
       {
         id: "overtake-mode",
         title: "Overtake Mode (DRS's replacement)",
-        body: "F1 retired the 14-year-old Drag Reduction System — a single rear-wing flap — after the 2025 season. From 2026, overtaking help comes from a fully active-aero system adjusting both front and rear wings. The fairness rule stays the same as DRS's: a driver has to be within one second of the car ahead at a track's detection point to unlock it in the following zone.",
+        body: "DRS — the single rear-wing flap a chasing car could open — was retired after 2025. From 2026 every car has active aero instead: on designated straights both the front and rear wings flatten (Straight Mode), then close again for the corners. The overtaking help is now electrical. A driver within one second of the car ahead at the detection point unlocks Overtake Mode for the next lap — extra battery energy, and full electric power held to a higher speed than the car in front, spent in one burst or spread around the lap.",
       },
       {
         id: "tyre-compounds",
@@ -55,9 +86,78 @@ export const en: Dictionary = {
       {
         id: "ers",
         title: "ERS (Energy Recovery System)",
-        body: "The hybrid side of an F1 power unit — electrical energy recovered from braking and exhaust heat, stored in a battery, and deployed for extra power on demand. Drivers and engineers manage how much to save across a lap for a defensive move or an attacking one later on.",
+        body: "The hybrid half of a 2026 power unit — roughly half the car's power is now electric. The MGU-K turns the car's speed into charge under braking (the exhaust-heat MGU-H was dropped for 2026), stores it in the battery, and gives it back as extra power on demand. Drivers and engineers manage how much to save across a lap for a defensive move or an attacking one later on.",
       },
     ],
+    demos: {
+      "overtake-mode": {
+        steps: [
+          "Within 1 s of the car ahead at the detection point — Overtake Mode is unlocked for the next lap.",
+          "Straight Mode: on the straight, every car flattens its front and rear wings.",
+          "Overtake Mode's extra electric power gets the chaser by.",
+        ],
+        labels: { detection: "Detection", straight: "Straight mode", overtake: "Overtake" },
+      },
+      "tyre-compounds": {
+        steps: [
+          "A tough, high-wear track: Pirelli brings C1, C2 and C3 as the Hard, Medium and Soft.",
+          "A low-grip street track: C3, C4 and C5 — the same C3 is now the Hard.",
+        ],
+        labels: { hard: "Hard", medium: "Medium", soft: "Soft" },
+      },
+      flags: {
+        steps: [
+          "Yellow: hazard ahead — slow down, no overtaking.",
+          "Red: the session is stopped.",
+          "Blue: a lapped car must let the faster one through.",
+          "Chequered: the session is over.",
+        ],
+        labels: {},
+      },
+      "pit-strategy": {
+        steps: [
+          "You're a second behind. Pit first…",
+          "…and fresh tyres make you seconds a lap quicker.",
+          "When your rival stops, they come out behind you.",
+        ],
+        altSteps: [
+          "Your rival pits first — and rejoins on cold tyres, in traffic.",
+          "You stay out in clean air and keep lapping fast.",
+          "Pit a lap later and come out ahead.",
+        ],
+        labels: {
+          undercut: "Undercut",
+          overcut: "Overcut",
+          you: "You",
+          rival: "Rival",
+          pit: "Pit",
+          fresh: "Fresh tyres",
+          cleanAir: "Clean air",
+          cold: "Cold tyres",
+        },
+      },
+      "safety-car": {
+        steps: [
+          "Racing: the field is spread out, seconds apart.",
+          "Safety car: everyone slows and closes up behind it.",
+          "A pit stop now costs about half the usual time.",
+        ],
+        labels: { sc: "SC", green: "Normal stop", underSc: "Under SC", pitLoss: "Time lost in the pits" },
+      },
+      ers: {
+        steps: [
+          "Braking: the MGU-K turns the car's speed into charge.",
+          "On the straight, the battery gives it back as power.",
+        ],
+        labels: { battery: "Battery", harvest: "Harvest", deploy: "Deploy" },
+      },
+    },
+    demoUi: {
+      pause: "Pause",
+      play: "Play",
+      step: "Step {n}",
+      example: "{title} — animated example",
+    },
     quiz: [
       {
         id: "points-win",
@@ -84,13 +184,13 @@ export const en: Dictionary = {
         question: "What replaced DRS for the 2026 season?",
         options: [
           "Nothing — DRS is unchanged",
-          "Overtake Mode, part of a new active-aero system",
-          "A push-to-pass button",
+          "Overtake Mode — extra electric power for a car within one second",
+          "A bigger rear-wing flap for every car",
           "Sprint-only DRS",
         ],
         correctIndex: 1,
         explanation:
-          "F1's 2026 regulations retired the single rear-wing-flap DRS after 14 seasons, replacing it with active aero that adjusts both wings.",
+          "Within one second of the car ahead at the detection point, a driver gets Overtake Mode for the next lap: extra battery energy and full power to a higher speed. The flattening wings (Straight Mode) are a separate system every car uses on the straights.",
       },
       {
         id: "mandatory-compounds",

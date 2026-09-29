@@ -91,6 +91,7 @@ interface HoverInfo {
 const VIEW_W = 1160;
 const VIEW_H = 820;
 export const GENERAL_MAP_VIEW_BOX = `0 0 ${VIEW_W} ${VIEW_H}`;
+export const GENERAL_MAP_ASPECT = VIEW_W / VIEW_H;
 const TRACK_SCALE = 0.58;
 const TRACK_TX = 380;
 const TRACK_TY = 150;

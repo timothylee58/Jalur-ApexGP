@@ -30,26 +30,167 @@
   }
 }
 
-/* Tyre picker (components/predict/WhatIfControls.tsx): a slow, continuous
-   Y-axis rotation on a flat 2D disc — no WebGL/Three.js needed, a plain
-   CSS 3D transform on a face-on circle already foreshortens correctly
-   into the classic "spinning wheel" silhouette. Respects
-   prefers-reduced-motion, same standard as LoreTimeline's animation. */
-@keyframes tyre-spin {
+/* Motion for the /predict what-if art (components/predict/SafetyCarArt.tsx,
+   TyreArt.tsx). The rule, from docs/design/instrument-light.md: something
+   moves only because the real thing moves, and every state must still read
+   when frozen — which, under prefers-reduced-motion, it is. */
+
+/* Safety car ------------------------------------------------------------ */
+
+/* The photo faces front-left, so the car arrives from the right and slightly
+   from depth (scale), then decelerates into place: long ease-out, no
+   overshoot, the way a heavy car pulls up to lead the field. */
+@keyframes sc-enter {
   from {
-    transform: rotateY(0deg);
+    transform: translateX(34%) scale(0.9);
+    opacity: 0;
+  }
+  35% {
+    opacity: 1;
   }
   to {
-    transform: rotateY(360deg);
+    transform: translateX(0) scale(1);
+    opacity: 1;
   }
 }
 
-.animate-tyre-spin {
-  animation: tyre-spin 7s linear infinite;
+.sc-enter {
+  transform-origin: 50% 90%;
+  animation: sc-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* The light bar alternates halves on a fixed 1.2s beat. Steps, not easing:
+   a strobe is on or off. */
+.sc-beacon-a {
+  animation: sc-beacon 1.2s steps(1, end) infinite;
+}
+
+.sc-beacon-b {
+  animation: sc-beacon 1.2s steps(1, end) -0.6s infinite;
+}
+
+@keyframes sc-beacon {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.12;
+  }
+}
+
+.sc-streaks line {
+  animation: sc-streak 700ms linear infinite;
+}
+
+.sc-streaks line:nth-child(2) {
+  animation-duration: 900ms;
+  animation-delay: -300ms;
+}
+
+.sc-streaks line:nth-child(3) {
+  animation-duration: 800ms;
+  animation-delay: -550ms;
+}
+
+/* Negative offset runs the dashes along +x: air leaving the tail, away
+   from a car travelling leftwards. */
+@keyframes sc-streak {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -350;
+  }
+}
+
+/* Applied on a freshly mounted <image> (the car group is re-keyed per
+   state), so it takes effect instantly: the lights go out, nothing eases. */
+.sc-parked {
+  filter: saturate(0.3) brightness(0.55);
+}
+
+/* Tyres ----------------------------------------------------------------- */
+
+/* Unselected tyres sit still until hovered, then roll slowly — an
+   invitation, not a demand for attention. */
+.tyre-idle {
+  transition: transform 1.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+button:hover .tyre-idle,
+button:focus-visible .tyre-idle {
+  transform: rotate(120deg);
+}
+
+/* Selection: spun up hard, then settles to a slow constant turn. Two
+   animations chained so the settle is continuous with the spin-up. */
+.tyre-spinup {
+  animation:
+    tyre-spinup 900ms cubic-bezier(0.2, 0.7, 0.3, 1) both,
+    tyre-roll 9s linear 900ms infinite;
+}
+
+@keyframes tyre-spinup {
+  from {
+    transform: rotate(-540deg) scale(0.92);
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes tyre-roll {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tyre-heat {
+  animation: tyre-heat 900ms ease-out both;
+}
+
+@keyframes tyre-heat {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tyre-heat {
+  transform-origin: 50px 50px;
+}
+
+.tyre-auto-orbit {
+  animation: tyre-roll 14s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-tyre-spin {
+  .sc-enter,
+  .sc-beacon-a,
+  .sc-beacon-b,
+  .sc-streaks line,
+  .tyre-spinup,
+  .tyre-heat,
+  .tyre-auto-orbit {
     animation: none;
+  }
+
+  .tyre-idle {
+    transition: none;
+  }
+
+  button:hover .tyre-idle,
+  button:focus-visible .tyre-idle {
+    transform: none;
+  }
+
+  /* With the strobe frozen both halves would sit fully lit; dim one so the
+     light bar still reads as a two-colour beacon rather than a lamp. */
+  .sc-beacon-b {
+    opacity: 0.35;
   }
 }

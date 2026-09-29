@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchTelemetryLapTrace } from "@/lib/api";
-import { buildDistanceProgress } from "@/lib/telemetry";
+import { buildDistanceProgress, describeTelemetryError } from "@/lib/telemetry";
 import type { TelemetryLapTrace } from "@/types/telemetry";
 
 interface TelemetryPlaybackState {
   loading: boolean;
-  error: boolean;
+  /** Why the lap couldn't be loaded, ready to show; null when it could. */
+  error: string | null;
   trace: TelemetryLapTrace | null;
   /** Same length/order as trace.samples — see buildDistanceProgress. */
   distanceProgress: number[];
@@ -17,7 +18,7 @@ interface TelemetryPlaybackState {
 
 const initialState: TelemetryPlaybackState = {
   loading: false,
-  error: false,
+  error: null,
   trace: null,
   distanceProgress: [],
   currentTime: 0,
@@ -59,15 +60,15 @@ export function useTelemetryPlayback(
         if (cancelled) return;
         setState({
           loading: false,
-          error: false,
+          error: null,
           trace,
           distanceProgress: buildDistanceProgress(trace.samples),
           currentTime: 0,
           playing: false,
         });
       })
-      .catch(() => {
-        if (!cancelled) setState({ ...initialState, error: true });
+      .catch((err: unknown) => {
+        if (!cancelled) setState({ ...initialState, error: describeTelemetryError(err) });
       });
 
     return () => {

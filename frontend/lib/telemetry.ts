@@ -81,8 +81,31 @@ export function formatLapTime(seconds: number): string {
  * showing — several numeric codes all mean "open," several mean
  * "closed/unavailable." See telemetry_service.py for why the raw code is
  * still what's stored/transmitted. */
-export function isDrsActive(drs: number): boolean {
+export function isDrsActive(drs: number | null): boolean {
   return drs === 10 || drs === 12 || drs === 14;
+}
+
+/** True when the lap carries no DRS channel at all (2026 cars have none). */
+export function lapHasDrs(samples: TelemetrySample[]): boolean {
+  return samples.some((sample) => sample.drs !== null);
+}
+
+/** What to tell someone when a telemetry call fails — the cause, not a
+ * shrug: an outage, missing data and OpenF1 rate limiting all need a
+ * different next step from the reader. */
+export function describeTelemetryError(error: unknown): string {
+  const status = typeof error === "object" && error && "status" in error ? Number(error.status) : 0;
+  const detail =
+    typeof error === "object" && error && "detail" in error && typeof error.detail === "string"
+      ? error.detail
+      : null;
+  if (status === 404) return detail ?? "OpenF1 has no data for this selection.";
+  if (status === 502) {
+    return detail?.includes("rate limiting")
+      ? detail
+      : "OpenF1 didn't answer — it may be briefly down. Try again in a minute.";
+  }
+  return "The telemetry backend isn't responding right now — try again shortly.";
 }
 
 export function lapProgressLabel(trace: TelemetryLapTrace, currentTime: number): string {

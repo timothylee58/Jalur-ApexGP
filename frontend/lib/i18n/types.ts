@@ -3,8 +3,9 @@
  * catches a missing translation key at compile time rather than a blank
  * string shipping silently.
  *
- * Scope is deliberate, not an oversight: only the global nav chrome and
- * /guide's own content are translated (v1). Everything else — /circuit,
+ * Scope is deliberate, not an oversight: only the global chrome (header,
+ * language menu), the landing hero and /guide's own content are
+ * translated. Everything else — /circuit,
  * /lore, /picks, backend-generated strategy reasoning, etc. — stays
  * English regardless of the language switcher, since those aren't
  * translated yet. AboutNote (shared across nearly every page) is
@@ -30,6 +31,16 @@ export interface GuideCardText {
   id: string;
   title: string;
   body: string;
+}
+
+/** Words for one rule's animated example on /guide (components/guide/demos). */
+export interface GuideDemoText {
+  /** One caption per step of the animation, in order. */
+  steps: string[];
+  /** A second sequence, for demos with two variants (undercut / overcut). */
+  altSteps?: string[];
+  /** Short labels drawn inside the scene. */
+  labels: Record<string, string>;
 }
 
 export interface QuizQuestionText {
@@ -58,6 +69,35 @@ export interface Dictionary {
     seats: string;
     calendar: string;
   };
+  header: {
+    primaryNav: string;
+    scrollBack: string;
+    scrollForward: string;
+    language: string;
+    /** Honesty note shown in the language menu; empty where not needed. */
+    machineTranslated: string;
+  };
+  hero: {
+    pickSession: string;
+    next: string;
+    live: string;
+    /** Screen-reader action, e.g. "Run strategy for {session}". */
+    runStrategy: string;
+    sessionNames: Record<"FP1" | "FP2" | "FP3" | "Quali" | "Race", string>;
+    /** Sunday-first, to index with Date#getUTCDay. */
+    weekdays: [string, string, string, string, string, string, string];
+    months: [string, string, string, string, string, string, string, string, string, string, string, string];
+    /** Word order differs by language: "{weekday} {day} {month}" vs "{month}{day}日 {weekday}". */
+    dateFormat: string;
+    links: {
+      circuit: string;
+      accuracy: string;
+      lore: string;
+      tickets: string;
+      flyover: string;
+      lapVideo: string;
+    };
+  };
   guide: {
     kicker: string;
     title: string;
@@ -65,6 +105,16 @@ export interface Dictionary {
     quizLabel: string;
     disclaimer: string;
     cards: GuideCardText[];
+    /** Keyed by card id. */
+    demos: Record<string, GuideDemoText>;
+    demoUi: {
+      pause: string;
+      play: string;
+      /** "Step {n}" — {n} replaced at render. */
+      step: string;
+      /** Accessible name for the animation, "{title}, animated example". */
+      example: string;
+    };
     quiz: QuizQuestionText[];
   };
   quizUi: {
