@@ -163,7 +163,7 @@ export function TelemetryStack({ trace, compare, time, corners = [], onSeek }: P
               // In the colour of whoever is ahead at this point on the lap.
               <span style={{ color: deltaNow >= 0 ? colourA : colourB }}>
                 {deltaNow > 0 ? "+" : ""}
-                {deltaNow.toFixed(3)}
+                {deltaNow.toFixed(3)} <span className="normal-case tracking-normal">{channel.unit}</span>
               </span>
             ) : null}
           </div>

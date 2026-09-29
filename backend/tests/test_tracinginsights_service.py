@@ -8,6 +8,7 @@ JSON, "None" strings for missing values, a 0/1 brake flag.
 from __future__ import annotations
 
 from collections.abc import Callable
+from urllib.parse import unquote
 
 import httpx
 import pytest
@@ -15,6 +16,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services import telemetry_pipeline, telemetry_service, tracinginsights_service
+from app.schemas.telemetry import TelemetryCorner, TelemetrySample
 from app.services.telemetry_service import TelemetryUnavailable, TelemetryUpstreamError
 
 _RealAsyncClient = httpx.AsyncClient
@@ -84,7 +86,9 @@ def _patch(monkeypatch: pytest.MonkeyPatch, handler: Callable[[httpx.Request], h
 
 
 def _ti(request: httpx.Request) -> httpx.Response:
-    payload = TI_FILES.get(request.url.path)
+    # Paths arrive percent-encoded ("Dutch%20Grand%20Prix/..."); the fixture
+    # keys are written plainly.
+    payload = TI_FILES.get(unquote(request.url.path))
     return httpx.Response(200, json=payload) if payload is not None else httpx.Response(404, text="404: Not Found")
 
 
@@ -268,3 +272,71 @@ async def test_an_unpublished_session_keeps_the_primary_error(monkeypatch: pytes
         await telemetry_pipeline.laps(1, 2026, "Zandvoort", "Race")
     with pytest.raises(tracinginsights_service.SessionNotPublished):
         await tracinginsights_service.get_laps(1, 2026, "Nowhere", "Race")
+
+
+@pytest.mark.parametrize("session_name", ["..", ".", "", "../../2025/main/x", "Race/../..", "Race\\..\\x"])
+def test_a_session_name_cannot_leave_the_event_folder(session_name: str) -> None:
+    with pytest.raises(tracinginsights_service.SessionNotPublished):
+        tracinginsights_service._url(2026, "Zandvoort", session_name, "drivers.json")
+
+
+def test_session_names_are_encoded_as_one_segment() -> None:
+    url = tracinginsights_service._url(2026, "Zandvoort", "Sprint Qualifying", "drivers.json")
+    assert url.endswith("/2026/main/Dutch%20Grand%20Prix/Sprint%20Qualifying/drivers.json")
+
+
+@pytest.mark.asyncio
+async def test_an_empty_openf1_roster_falls_back_to_tracinginsights(monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "raw.githubusercontent.com":
+            return _ti(request)
+        if request.url.path == "/v1/sessions":
+            return httpx.Response(200, json=[{"session_key": 1, "date_end": "2026-08-23T15:00:00+00:00"}])
+        if request.url.path == "/v1/drivers":
+            return httpx.Response(200, json=[])
+        raise AssertionError(f"unexpected path {request.url.path}")
+
+    _patch(monkeypatch, handler)
+    result = await telemetry_pipeline.drivers(2026, "Zandvoort", "Race")
+    assert result.source == "tracinginsights"
+    assert [d.driver_number for d in result.data] == [1, 3]
+
+
+# --- corner alignment ------------------------------------------------------
+
+
+def _lap_along_x(stretch: float) -> list[TelemetrySample]:
+    """A straight 1000 m lap in the timing frame (1/10 m units), with
+    integrated distance off by `stretch` — as speed integration drifts."""
+    return [
+        TelemetrySample(t=i, speed=200, throttle=100, brake=0, rpm=11000, gear=7,
+                        distance=i * 10 * stretch, x=i * 100.0, y=0.0)
+        for i in range(101)
+    ]
+
+
+def test_corners_snap_to_the_laps_own_distances() -> None:
+    corners = [
+        TelemetryCorner(number=1, distance=300, x=3000, y=40),
+        TelemetryCorner(number=2, distance=700, x=7000, y=-40),
+    ]
+    aligned = telemetry_pipeline.align_corners(corners, _lap_along_x(1.03))
+    assert [round(c.distance) for c in aligned] == [309, 721]
+
+
+def test_corners_keep_published_distances_when_the_frames_disagree() -> None:
+    corners = [TelemetryCorner(number=1, distance=300, x=3000, y=9000)]
+    assert telemetry_pipeline.align_corners(corners, _lap_along_x(1.03)) == corners
+
+
+def test_corners_keep_published_distances_without_positions() -> None:
+    samples = _lap_along_x(1.03)
+    for s in samples:
+        s.x = s.y = None
+    corners = [TelemetryCorner(number=1, distance=300, x=3000, y=40)]
+    assert telemetry_pipeline.align_corners(corners, samples) == corners
+
+
+def test_corner_positions_stay_out_of_the_api() -> None:
+    corner = TelemetryCorner(number=1, distance=484.42, x=2045.2, y=6685.9)
+    assert corner.model_dump(by_alias=True) == {"number": 1, "distance": 484.42}

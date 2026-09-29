@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { SafetyCarArt } from "@/components/predict/SafetyCarArt";
 import { TYRE_COLOR, TyreArt, type TyreOption } from "@/components/predict/TyreArt";
@@ -27,7 +27,7 @@ const SHORT_LABEL: Record<TyreOption, string> = {
 };
 
 // three.js stays out of the /predict entry chunk; the SVG tyre holds the
-// stage until the model arrives.
+// stage until the model has drawn its first frame.
 const TyreShowcase = dynamic(
   () => import("@/components/predict/tyre3d/TyreShowcase").then((m) => m.TyreShowcase),
   { ssr: false },
@@ -63,6 +63,14 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
   // tabindex — only the checked option sits in the tab order, everything
   // else is reached via arrow keys once the group has focus.
   const thumbs = useTyreThumbnails();
+  const [showcaseReady, setShowcaseReady] = useState(false);
+  const tyreFallback = (
+    <span className="absolute inset-0 flex items-center justify-center p-6">
+      <span className="aspect-square h-full">
+        <TyreArt option={tyre} selected />
+      </span>
+    </span>
+  );
   const tyreButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const selectTyreAt = (index: number) => {
@@ -213,16 +221,10 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
             Starting tyre
           </span>
           <div className="relative mt-1.5 block aspect-[2/1] max-h-56 w-full overflow-hidden rounded-md border border-paper/15 bg-[radial-gradient(ellipse_at_50%_85%,rgba(125,140,255,0.10),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]">
-            <TyreShowcase
-              option={tyre}
-              fallback={
-                <span className="absolute inset-0 flex items-center justify-center p-6">
-                  <span className="aspect-square h-full">
-                    <TyreArt option={tyre} selected />
-                  </span>
-                </span>
-              }
-            />
+            {/* The SVG tyre holds the stage while the 3D chunk loads and
+                until its first frame is drawn. */}
+            {showcaseReady ? null : tyreFallback}
+            <TyreShowcase option={tyre} fallback={tyreFallback} onReady={() => setShowcaseReady(true)} />
             <span className="pointer-events-none absolute bottom-2.5 left-3 font-mono text-[10px] uppercase tracking-[0.18em] text-paper-dim">
               <span
                 aria-hidden="true"

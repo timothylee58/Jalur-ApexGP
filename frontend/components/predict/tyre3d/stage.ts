@@ -19,7 +19,8 @@ export interface TyreStage {
 export function createStage(renderer: THREE.WebGLRenderer): TyreStage {
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const room = new RoomEnvironment();
+  const env = pmrem.fromScene(room, 0.04).texture;
   scene.environment = env;
   scene.environmentIntensity = 0.55;
 
@@ -35,7 +36,8 @@ export function createStage(renderer: THREE.WebGLRenderer): TyreStage {
   heat.position.set(0.3, -1.05, 1.1);
   scene.add(heat);
 
-  scene.add(contactShadow());
+  const shadow = contactShadow();
+  scene.add(shadow);
 
   // Three-quarter view, like standing in front of the display: the outer
   // sidewall faces the camera, the tread turns away to the right.
@@ -50,6 +52,11 @@ export function createStage(renderer: THREE.WebGLRenderer): TyreStage {
     dispose: () => {
       env.dispose();
       pmrem.dispose();
+      room.dispose();
+      shadow.geometry.dispose();
+      const material = shadow.material as THREE.MeshBasicMaterial;
+      material.map?.dispose();
+      material.dispose();
     },
   };
 }

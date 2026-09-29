@@ -87,10 +87,17 @@ export function MapLightbox({ open, onClose, title, children, footer, contentAsp
     setView(FIT);
   }, []);
 
+  // Callers pass an inline onClose; reading it through a ref keeps `close`
+  // stable, so the open/close lifecycle below runs only when `open` flips —
+  // not on every parent render (which would snap a zoomed map back to Fit).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
   const close = useCallback(() => {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
-    onClose();
-  }, [onClose]);
+    onCloseRef.current();
+  }, []);
 
   // While open: lock page scroll, close on Escape, hand focus back to
   // whatever opened the viewer when it closes, and start from "fit".
@@ -193,6 +200,9 @@ export function MapLightbox({ open, onClose, title, children, footer, contentAsp
     const tap = lastTap.current;
     if (tap && now - tap.time < 320 && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) < 30) {
       lastTap.current = null;
+      // The second tap zooms; it mustn't also reach the map as a click, or
+      // a double-tapped legend item would toggle straight back.
+      suppressClick.current = true;
       const frame = size();
       setSmooth(true);
       setView((v) => (v.k >= 5.9 ? FIT : zoomAt(v, 2, e.clientX - frame.left, e.clientY - frame.top, frame)));
@@ -214,8 +224,10 @@ export function MapLightbox({ open, onClose, title, children, footer, contentAsp
       ArrowUp: () => setView((v) => panBy(v, 0, pan, frame)),
       ArrowDown: () => setView((v) => panBy(v, 0, -pan, frame)),
     };
+    // Also when focus is on a map marker inside the viewport: the markers
+    // only use Enter/Space, so the arrows and zoom keys stay the map's.
     const action = actions[e.key];
-    if (action && e.target === e.currentTarget) {
+    if (action) {
       e.preventDefault();
       setSmooth(true);
       action();

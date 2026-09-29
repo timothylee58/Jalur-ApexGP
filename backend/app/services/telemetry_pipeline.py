@@ -24,15 +24,18 @@ is the more useful one.
 from __future__ import annotations
 
 import logging
+import math
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Generic, TypeVar
 
 from app.schemas.telemetry import (
     SessionOverview,
+    TelemetryCorner,
     TelemetryDriver,
     TelemetryLap,
     TelemetryLapTrace,
+    TelemetrySample,
     TelemetrySource,
 )
 from app.services import telemetry_service, tracinginsights_service
@@ -40,6 +43,15 @@ from app.services.telemetry_service import TelemetryUnavailable, TelemetryUpstre
 from app.services.tracinginsights_service import SessionNotPublished
 
 logger = logging.getLogger(__name__)
+
+# How far a lap's nearest position fix may sit from a corner's published
+# point and still count as that corner, as a share of the lap's bounding-box
+# diagonal (~40 m at a typical circuit): wider than the spacing of position
+# fixes plus a racing line's offset, far narrower than two legs of track.
+_CORNER_SNAP_TOLERANCE = 0.04
+# How far along the lap a corner may move when snapped, as a share of the
+# lap: integrated distance drifts by a percent or two, not more.
+_CORNER_SNAP_WINDOW = 0.08
 
 T = TypeVar("T")
 
@@ -121,13 +133,43 @@ async def lap_trace(
     # come from TracingInsights whichever source served the lap. Optional:
     # the charts simply go without corner labels if they're unavailable.
     try:
-        trace.corners = await tracinginsights_service.get_corners(year, circuit, session)
+        corners = await tracinginsights_service.get_corners(year, circuit, session)
+        trace.corners = align_corners(corners, trace.samples) if result.source == "openf1" else corners
     except (TelemetryUpstreamError, TelemetryUnavailable) as exc:
         logger.info("telemetry corners unavailable: %s", exc)
     # An OpenF1 lap that came back without positions (its /location call was
     # refused) is complete enough to show but not to cache for a day.
     complete = result.source != "openf1" or any(s.x is not None for s in trace.samples)
     return Sourced(trace, result.source, result.final and complete, result.fallback_reason)
+
+
+def align_corners(corners: list[TelemetryCorner], samples: list[TelemetrySample]) -> list[TelemetryCorner]:
+    """TracingInsights' corner distances are metres along its reference lap;
+    an OpenF1 lap's distances are integrated from speed and drift from that
+    by the end of the lap, so plotted as-is the markers creep off their
+    corners. Where the lap has positions, each corner takes the distance of
+    this lap's own nearest position fix instead (both sources share the
+    timing feed's coordinate frame). If any corner fails to land — the
+    frames disagree, or the lap is missing positions — the published
+    distances are kept rather than risk a wrong snap."""
+    placed = [s for s in samples if s.x is not None and s.y is not None and s.distance is not None]
+    if not corners or len(placed) < 2 or any(c.x is None or c.y is None for c in corners):
+        return corners
+    xs = [s.x for s in placed]
+    ys = [s.y for s in placed]
+    tolerance = math.hypot(max(xs) - min(xs), max(ys) - min(ys)) * _CORNER_SNAP_TOLERANCE
+    window = max(placed[-1].distance * _CORNER_SNAP_WINDOW, 1.0)
+
+    aligned: list[TelemetryCorner] = []
+    for corner in corners:
+        nearby = [s for s in placed if abs(s.distance - corner.distance) <= window]
+        best = min(nearby, key=lambda s: math.hypot(s.x - corner.x, s.y - corner.y), default=None)
+        if best is None or math.hypot(best.x - corner.x, best.y - corner.y) > tolerance:
+            return corners
+        aligned.append(corner.model_copy(update={"distance": best.distance}))
+    if any(b.distance < a.distance for a, b in zip(aligned, aligned[1:])):
+        return corners
+    return aligned
 
 
 async def session_overview(year: int, circuit: str, session: str) -> Sourced[SessionOverview]:

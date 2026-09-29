@@ -256,15 +256,33 @@ function chevronsFor(points: Pt[], path: number[], total: number, half: number):
     }
   });
 
+  // The lap is a loop, so a straight that crosses the line is one run, not
+  // two: the lap-end part is merged with the lap-start part, carried on
+  // past `total` so the run stays contiguous.
+  if (runs.length > 1 && runs[0].a === path[0] && runs[runs.length - 1].b === total) {
+    const head = runs.shift()!;
+    runs[runs.length - 1].b = total + head.b;
+  }
+
   const placed: number[] = [];
   const keepClear = 90;
+  // Distance around the loop, for runs and arrows either side of the line.
+  const apart = (p: number, s: number) => {
+    const d = Math.abs(p - s) % total;
+    return Math.min(d, total - d);
+  };
   for (const run of runs.filter((r) => r.b - r.a >= 110).sort((x, y) => y.b - y.a - (x.b - x.a))) {
     if (placed.length >= 5) break;
-    const lo = Math.max(run.a + 30, keepClear);
-    const hi = Math.min(run.b - 30, total - keepClear);
-    if (hi <= lo) continue;
-    const s = Math.max(lo, Math.min(hi, (run.a + run.b) / 2));
-    if (placed.some((p) => Math.abs(p - s) < 150)) continue;
+    // Where an arrow may go: inside the run, clear of the start/finish band
+    // — on a run that crosses the line, that's either side of it.
+    const spans = [
+      [Math.max(run.a + 30, keepClear), Math.min(run.b - 30, total - keepClear)],
+      [Math.max(run.a + 30, total + keepClear), Math.min(run.b - 30, 2 * total - keepClear)],
+    ].filter(([lo, hi]) => hi > lo);
+    if (!spans.length) continue;
+    const [lo, hi] = spans.reduce((best, span) => (span[1] - span[0] > best[1] - best[0] ? span : best));
+    const s = Math.max(lo, Math.min(hi, (run.a + run.b) / 2)) % total;
+    if (placed.some((p) => apart(p, s) < 150)) continue;
     placed.push(s);
   }
 

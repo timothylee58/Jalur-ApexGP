@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { fetchSessionOverview } from "@/lib/api";
 import { describeTelemetryError, formatLapTime } from "@/lib/telemetry";
 import {
@@ -78,8 +78,11 @@ export function RaceOverview({ highlight, selectedLap, onPickLap }: Props) {
 
   const { order, byDriver, maxLap, sorted, lapTime, bestLap, drivers } = model;
   const chartW = 1000;
-  const lapX = (lap: number) => LABEL + ((lap - 1) / Math.max(maxLap - 1, 1)) * (chartW - LABEL - 8);
-  const lapW = (chartW - LABEL - 8) / Math.max(maxLap - 1, 1);
+  // One cell per lap, the first starting at the plot's left edge; lapX is a
+  // lap's centre, so a one-lap session still fits inside the plot.
+  const lapW = (chartW - LABEL - 8) / Math.max(maxLap, 1);
+  const cellX = (lap: number) => LABEL + (lap - 1) * lapW;
+  const lapX = (lap: number) => cellX(lap) + lapW / 2;
   const isHot = (code: string) => highlight.includes(code);
 
   return (
@@ -109,7 +112,7 @@ export function RaceOverview({ highlight, selectedLap, onPickLap }: Props) {
                 {stintsOf(byDriver.get(code) ?? []).map((stint) => (
                   <rect
                     key={stint.stint}
-                    x={lapX(stint.firstLap) - lapW / 2 + 1}
+                    x={cellX(stint.firstLap) + 1}
                     y={y + 3}
                     width={Math.max((stint.lastLap - stint.firstLap + 1) * lapW - 2, 1)}
                     height={ROW - 6}
@@ -221,51 +224,163 @@ export function RaceOverview({ highlight, selectedLap, onPickLap }: Props) {
             ? "Fuel-corrected: ~0.03 s per kg with the fuel burned evenly (TracingInsights' approximation), which removes the early-race weight penalty."
             : "Select a lap to load its telemetry above."}
         </p>
-        <div className="mt-2 overflow-x-auto">
-          <svg
-            viewBox={`0 0 ${LABEL + maxLap * 12} ${order.length * 12 + 16}`}
-            style={{ minWidth: 640 }}
-            className="w-full"
-            role="img"
-            aria-label="Lap times for every driver and lap, coloured from quickest to slowest"
-          >
-            {order.map((code, row) => (
-              <g key={code}>
-                <text x={LABEL - 6} y={row * 12 + 6} textAnchor="end" dominantBaseline="central" className="fill-paper-dim font-mono" fontSize={8}>
-                  {code}
-                </text>
-                {(byDriver.get(code) ?? []).map((lap) => {
-                  if (lap.time == null) return null;
-                  const picked = selectedLap?.driver === code && selectedLap.lap === lap.lap;
-                  const driverNumber = drivers.get(code)?.driverNumber;
-                  return (
-                    <rect
-                      key={lap.lap}
-                      x={LABEL + (lap.lap - 1) * 12 + 0.5}
-                      y={row * 12 + 0.5}
-                      width={11}
-                      height={11}
-                      rx={1.5}
-                      fill={heatColour(percentileRank(sorted, lapTime(lap)))}
-                      stroke={picked ? "#f5a623" : "none"}
-                      strokeWidth={picked ? 2 : 0}
-                      className="cursor-pointer transition-opacity hover:opacity-70"
-                      onClick={() => driverNumber != null && onPickLap(driverNumber, lap.lap)}
-                    >
-                      <title>{`${code} · lap ${lap.lap} · ${formatLapTime(lap.time)} · ${lap.compound?.toLowerCase() ?? "?"}${lap.pitIn ? " · in-lap" : ""}${lap.pitOut ? " · out-lap" : ""}`}</title>
-                    </rect>
-                  );
-                })}
-              </g>
-            ))}
-            {[1, ...Array.from({ length: Math.floor(maxLap / 10) }, (_, i) => (i + 1) * 10)].map((lap) => (
-              <text key={lap} x={LABEL + (lap - 1) * 12 + 6} y={order.length * 12 + 10} textAnchor="middle" className="fill-paper-dim font-mono" fontSize={8}>
-                {lap}
-              </text>
-            ))}
-          </svg>
-        </div>
+        <LapHeatmap
+          order={order}
+          byDriver={byDriver}
+          maxLap={maxLap}
+          colourOf={(lap) => heatColour(percentileRank(sorted, lapTime(lap)))}
+          selectedLap={selectedLap}
+          onPick={(code, lap) => {
+            const driverNumber = drivers.get(code)?.driverNumber;
+            if (driverNumber != null) onPickLap(driverNumber, lap);
+          }}
+        />
       </section>
+    </div>
+  );
+}
+
+const CELL = 12;
+
+function describeLap(code: string, lap: SessionLap) {
+  return `${code} · lap ${lap.lap} · ${formatLapTime(lap.time as number)} · ${lap.compound?.toLowerCase() ?? "?"}${lap.pitIn ? " · in-lap" : ""}${lap.pitOut ? " · out-lap" : ""}`;
+}
+
+/**
+ * Every timed lap as a cell, as an ARIA grid: one tab stop, arrow keys move
+ * between laps (up/down keeps the lap number where the other driver has
+ * it), Home/End jump to a driver's first and last lap, and Enter or Space
+ * loads the lap into the panel above — the same as clicking it.
+ */
+function LapHeatmap({
+  order,
+  byDriver,
+  maxLap,
+  colourOf,
+  selectedLap,
+  onPick,
+}: {
+  order: string[];
+  byDriver: Map<string, SessionLap[]>;
+  maxLap: number;
+  colourOf: (lap: SessionLap) => string;
+  selectedLap?: { driver: string; lap: number } | null;
+  onPick: (code: string, lap: number) => void;
+}) {
+  const cells = useRef(new Map<string, SVGRectElement>());
+  const [cursor, setCursor] = useState<{ row: number; lap: number } | null>(null);
+  const timedLaps = (row: number) =>
+    (byDriver.get(order[row]) ?? []).filter((l) => l.time != null).map((l) => l.lap);
+
+  const firstRow = order.findIndex((_, row) => timedLaps(row).length > 0);
+  const active = cursor ?? (firstRow >= 0 ? { row: firstRow, lap: timedLaps(firstRow)[0] } : null);
+
+  const moveTo = (row: number, lap: number) => {
+    setCursor({ row, lap });
+    cells.current.get(`${row}:${lap}`)?.focus();
+  };
+
+  const nearest = (laps: number[], lap: number) =>
+    laps.reduce((best, l) => (Math.abs(l - lap) < Math.abs(best - lap) ? l : best), laps[0]);
+
+  const onKeyDown = (e: KeyboardEvent<SVGSVGElement>) => {
+    if (!active) return;
+    const laps = timedLaps(active.row);
+    const at = laps.indexOf(active.lap);
+    const vertical = (step: number) => {
+      for (let row = active.row + step; row >= 0 && row < order.length; row += step) {
+        const other = timedLaps(row);
+        if (other.length) return moveTo(row, nearest(other, active.lap));
+      }
+    };
+    const actions: Record<string, () => void> = {
+      ArrowRight: () => at < laps.length - 1 && moveTo(active.row, laps[at + 1]),
+      ArrowLeft: () => at > 0 && moveTo(active.row, laps[at - 1]),
+      ArrowDown: () => vertical(1),
+      ArrowUp: () => vertical(-1),
+      Home: () => moveTo(active.row, laps[0]),
+      End: () => moveTo(active.row, laps[laps.length - 1]),
+      Enter: () => onPick(order[active.row], active.lap),
+      " ": () => onPick(order[active.row], active.lap),
+    };
+    const action = actions[e.key];
+    if (action) {
+      e.preventDefault();
+      action();
+    }
+  };
+
+  return (
+    <div className="mt-2 overflow-x-auto">
+      <svg
+        viewBox={`0 0 ${LABEL + maxLap * CELL} ${order.length * CELL + 16}`}
+        style={{ minWidth: 640 }}
+        className="w-full"
+        role="grid"
+        aria-label="Lap times for every driver and lap, coloured from quickest to slowest. Arrow keys move between laps; Enter loads one."
+        onKeyDown={onKeyDown}
+      >
+        {order.map((code, row) => (
+          <g key={code} role="row">
+            <text
+              role="rowheader"
+              x={LABEL - 6}
+              y={row * CELL + 6}
+              textAnchor="end"
+              dominantBaseline="central"
+              className="fill-paper-dim font-mono"
+              fontSize={8}
+            >
+              {code}
+            </text>
+            {(byDriver.get(code) ?? []).map((lap) => {
+              if (lap.time == null) return null;
+              const picked = selectedLap?.driver === code && selectedLap.lap === lap.lap;
+              const focusable = active?.row === row && active.lap === lap.lap;
+              const label = describeLap(code, lap);
+              return (
+                <rect
+                  key={lap.lap}
+                  ref={(el) => {
+                    if (el) cells.current.set(`${row}:${lap.lap}`, el);
+                    else cells.current.delete(`${row}:${lap.lap}`);
+                  }}
+                  role="gridcell"
+                  tabIndex={focusable ? 0 : -1}
+                  aria-label={label}
+                  aria-selected={picked}
+                  x={LABEL + (lap.lap - 1) * CELL + 0.5}
+                  y={row * CELL + 0.5}
+                  width={CELL - 1}
+                  height={CELL - 1}
+                  rx={1.5}
+                  fill={colourOf(lap)}
+                  stroke={picked ? "#f5a623" : "none"}
+                  strokeWidth={picked ? 2 : 0}
+                  className="cursor-pointer outline-none transition-opacity hover:opacity-70 focus-visible:[stroke-width:2] focus-visible:[stroke:#f4efe6]"
+                  onFocus={() => setCursor({ row, lap: lap.lap })}
+                  onClick={() => onPick(code, lap.lap)}
+                >
+                  <title>{label}</title>
+                </rect>
+              );
+            })}
+          </g>
+        ))}
+        {[1, ...Array.from({ length: Math.floor(maxLap / 10) }, (_, i) => (i + 1) * 10)].map((lap) => (
+          <text
+            key={lap}
+            aria-hidden="true"
+            x={LABEL + (lap - 1) * CELL + CELL / 2}
+            y={order.length * CELL + 10}
+            textAnchor="middle"
+            className="fill-paper-dim font-mono"
+            fontSize={8}
+          >
+            {lap}
+          </text>
+        ))}
+      </svg>
     </div>
   );
 }

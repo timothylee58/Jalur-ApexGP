@@ -210,13 +210,23 @@ export function TelemetryDashboard() {
     ) : null;
   const highlighted = [trace?.driver.nameAcronym, compare?.driver.nameAcronym].filter(Boolean) as string[];
 
-  const pickFromOverview = (number: number, lap: number) => {
-    if (number === driverNumber) {
-      setLapNumber(lap);
-    } else {
-      setWantedLap(lap);
-      setDriverNumber(number);
+  // A new primary driver: the old driver's lap may not exist for them, so
+  // it is cleared until theirs arrive, and a comparison against the same
+  // driver is dropped rather than left comparing a car with itself.
+  const selectDriver = (number: number, wanted: number | null = null) => {
+    if (number === driverNumber) return;
+    setLapNumber(null);
+    setWantedLap(wanted);
+    setDriverNumber(number);
+    if (number === compareDriver) {
+      setCompareDriver(null);
+      setCompareLap(null);
     }
+  };
+
+  const pickFromOverview = (number: number, lap: number) => {
+    if (number === driverNumber) setLapNumber(lap);
+    else selectDriver(number, lap);
     document.getElementById("lap-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -247,7 +257,7 @@ export function TelemetryDashboard() {
             label="Lap"
             drivers={driverList}
             driverNumber={driverNumber}
-            onDriver={(n) => n != null && setDriverNumber(n)}
+            onDriver={(n) => n != null && selectDriver(n)}
             laps={laps}
             lapNumber={lapNumber}
             onLap={setLapNumber}
@@ -258,7 +268,7 @@ export function TelemetryDashboard() {
             driverNumber={compareDriver}
             onDriver={(n) => {
               setCompareDriver(n);
-              if (n == null) setCompareLap(null);
+              setCompareLap(null);
             }}
             laps={compareLaps}
             lapNumber={compareLap}
