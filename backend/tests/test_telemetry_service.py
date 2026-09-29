@@ -40,6 +40,9 @@ def _patch_client(
 
 
 def _clear() -> None:
+    from app.services import tracinginsights_service
+
+    tracinginsights_service._json_cache.clear()
     telemetry_service._session_key_cache.clear()
     telemetry_service._drivers_cache.clear()
     telemetry_service._laps_cache.clear()
@@ -203,6 +206,8 @@ async def test_lap_trace_computes_relative_time_and_sorts_samples(monkeypatch: p
             )
         if request.url.path == "/v1/drivers":
             return httpx.Response(200, json=[{"driver_number": 4, "full_name": "Lando Norris", "name_acronym": "NOR", "team_name": "McLaren"}])
+        if request.url.path == "/v1/location":
+            return httpx.Response(200, json=[])
         raise AssertionError(f"unexpected path {request.url.path}")
 
     _patch_client(monkeypatch, handler)
@@ -215,7 +220,9 @@ async def test_lap_trace_computes_relative_time_and_sorts_samples(monkeypatch: p
     assert trace.samples[1].speed == 250
 
 
-def _real_2026_handler(date_end: str = FINISHED, car_rows: list[dict] | None = None):
+def _real_2026_handler(
+    date_end: str = FINISHED, car_rows: list[dict] | None = None, location_status: int = 200
+):
     """Rows shaped exactly like OpenF1's live responses for the 2026 Dutch GP
     (session 11353): note `"drs": null` on every car_data row."""
     lap_start = "2026-08-23T13:41:02.648000+00:00"
@@ -229,6 +236,11 @@ def _real_2026_handler(date_end: str = FINISHED, car_rows: list[dict] | None = N
 
     def handler(request: httpx.Request) -> httpx.Response:
         calls[request.url.path] = calls.get(request.url.path, 0) + 1
+        if request.url.host == "raw.githubusercontent.com":
+            # Corner distances for the charts come from TracingInsights.
+            if request.url.path.endswith("/corners.json"):
+                return httpx.Response(200, json={"CornerNumber": [1], "Distance": [484.42]})
+            return httpx.Response(404)
         if request.url.path == "/v1/sessions":
             return httpx.Response(200, json=[{"session_key": 11353, "date_end": date_end}])
         if request.url.path == "/v1/laps":
@@ -241,7 +253,19 @@ def _real_2026_handler(date_end: str = FINISHED, car_rows: list[dict] | None = N
         if request.url.path == "/v1/drivers":
             return httpx.Response(
                 200,
-                json=[{"driver_number": 1, "full_name": "Lando NORRIS", "name_acronym": "NOR", "team_name": "McLaren"}],
+                json=[{"driver_number": 1, "full_name": "Lando NORRIS", "name_acronym": "NOR",
+                       "team_name": "McLaren", "team_colour": "F47600"}],
+            )
+        if request.url.path == "/v1/location":
+            if location_status != 200:
+                return httpx.Response(location_status)
+            # Real /location rows from the same lap (x/y in the feed's frame).
+            return httpx.Response(
+                200,
+                json=[
+                    {"date": "2026-08-23T13:41:02.781000+00:00", "x": 645, "y": 4112, "z": 537},
+                    {"date": "2026-08-23T13:41:04.781000+00:00", "x": 1242, "y": 5622, "z": 538},
+                ],
             )
         raise AssertionError(f"unexpected path {request.url.path}")
 
@@ -366,3 +390,34 @@ def test_routes_cache_final_sessions_at_the_edge_and_nothing_else(monkeypatch: p
     live = client.get("/api/telemetry/lap-trace?driver_number=1&lap_number=6")
     assert live.status_code == 200
     assert live.headers["cache-control"] == "no-store"
+
+
+@pytest.mark.asyncio
+async def test_lap_trace_gains_distance_positions_and_team_colour(monkeypatch: pytest.MonkeyPatch) -> None:
+    handler, _ = _real_2026_handler()
+    _patch_client(monkeypatch, handler)
+
+    trace = await get_lap_trace(driver_number=1, lap_number=6)
+    first, second = trace.samples
+    # 310 -> 285 km/h over 2.201 s: trapezoidal distance ≈ 181.6 m.
+    assert first.distance == 0.0
+    assert second.distance == pytest.approx((310 + 285) / 2 / 3.6 * 2.201, rel=1e-6)
+    # Each car sample takes the nearest /location fix within half a second.
+    assert (first.x, first.y) == (645, 4112)
+    assert (second.x, second.y) == (1242, 5622)
+    assert trace.driver.team_colour == "F47600"
+
+
+@pytest.mark.asyncio
+async def test_a_refused_location_call_costs_the_map_not_the_lap(
+    monkeypatch: pytest.MonkeyPatch, no_sleep: list[float]
+) -> None:
+    handler, calls = _real_2026_handler(location_status=429)
+    _patch_client(monkeypatch, handler)
+
+    trace = await get_lap_trace(driver_number=1, lap_number=6)
+    assert len(trace.samples) == 2
+    assert all(sample.x is None for sample in trace.samples)
+    # Not cached without positions, so a later request can still fill them.
+    await get_lap_trace(driver_number=1, lap_number=6)
+    assert calls["/v1/car_data"] == 2

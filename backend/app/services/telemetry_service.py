@@ -188,11 +188,13 @@ async def get_drivers(
         for row in rows:
             try:
                 number = int(row["driver_number"])
+                colour = row.get("team_colour")
                 by_number[number] = TelemetryDriver(
                     driver_number=number,
                     full_name=str(row.get("full_name", "")),
                     name_acronym=str(row.get("name_acronym", "")),
                     team_name=str(row.get("team_name", "")),
+                    team_colour=str(colour) if colour else None,
                 )
             except (KeyError, TypeError, ValueError):
                 continue
@@ -249,6 +251,48 @@ def _num(row: dict[str, Any], key: str) -> float:
     return 0.0 if value is None else float(value)
 
 
+def _integrate_distance(samples: list[TelemetrySample]) -> None:
+    """Metres from the line, by trapezoidal integration of speed over time.
+    OpenF1's car_data has no distance channel; this is what lets two laps
+    be lined up by track position (within a percent or two of the real
+    lap length, which the comparison normalises away)."""
+    total = 0.0
+    samples[0].distance = 0.0
+    for prev, cur in zip(samples, samples[1:]):
+        dt = max(cur.t - prev.t, 0.0)
+        total += (prev.speed + cur.speed) / 2 / 3.6 * dt
+        cur.distance = total
+
+
+def _attach_positions(
+    samples: list[TelemetrySample], location_rows: list[dict[str, Any]], lap_start: datetime
+) -> bool:
+    """Give each car sample the nearest-in-time /location fix (OpenF1 samples
+    position and car data on separate ~3.7 Hz clocks). Returns whether any
+    position was attached."""
+    fixes: list[tuple[float, float, float]] = []
+    for row in location_rows:
+        date, x, y = row.get("date"), row.get("x"), row.get("y")
+        if date is None or x is None or y is None:
+            continue
+        try:
+            fixes.append(((_parse_openf1_date(date) - lap_start).total_seconds(), float(x), float(y)))
+        except (TypeError, ValueError):
+            continue
+    if not fixes:
+        return False
+    fixes.sort()
+    j = 0
+    for sample in samples:
+        while j + 1 < len(fixes) and abs(fixes[j + 1][0] - sample.t) <= abs(fixes[j][0] - sample.t):
+            j += 1
+        t, x, y = fixes[j]
+        # Farther than half a second away isn't this point on track.
+        if abs(t - sample.t) <= 0.5:
+            sample.x, sample.y = x, y
+    return any(sample.x is not None for sample in samples)
+
+
 async def get_lap_trace(
     driver_number: int,
     lap_number: int,
@@ -287,6 +331,13 @@ async def get_lap_trace(
             f"&date<{quote(datetime.fromtimestamp(lap_end, tz=lap_start.tzinfo).isoformat())}"
         )
         car_rows = await _get(client, "/car_data", date_query)
+        # Position for the track map is a nice-to-have: if this one extra
+        # call is refused (most likely the rate limit), the lap still loads,
+        # just without a map — and isn't cached, so a later view can fill it.
+        try:
+            location_rows = await _get(client, "/location", date_query)
+        except TelemetryUpstreamError:
+            location_rows = []
 
         drivers = await get_drivers(year, circuit_short_name, session_name)
 
@@ -324,6 +375,8 @@ async def get_lap_trace(
         raise TelemetryUnavailable(
             f"OpenF1 returned no car_data samples for driver {driver_number}'s lap {lap_number}."
         )
+    _integrate_distance(samples)
+    has_positions = _attach_positions(samples, location_rows, lap_start)
 
     trace = TelemetryLapTrace(
         year=year,
@@ -334,7 +387,7 @@ async def get_lap_trace(
         lap_duration=lap_duration,
         samples=samples,
     )
-    if session.final:
+    if session.final and has_positions:
         _trace_cache[(session.key, driver_number, lap_number)] = trace
         while len(_trace_cache) > _TRACE_CACHE_SIZE:
             _trace_cache.popitem(last=False)

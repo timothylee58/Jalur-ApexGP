@@ -22,6 +22,9 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    # Lets the telemetry page read which source answered (OpenF1 or the
+    # TracingInsights fallback) and say so.
+    expose_headers=["X-Telemetry-Source"],
 )
 
 # /api prefix matches Vercel's zero-config FastAPI routing convention

@@ -13,7 +13,7 @@ import type {
   PickSubmission,
   PickSubmitted,
 } from "@/types/picks";
-import type { TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
+import type { SessionOverview, TelemetryDriver, TelemetryLap, TelemetryLapTrace } from "@/types/telemetry";
 import type { SepangAccessPayload } from "@/types/transit";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
@@ -94,6 +94,11 @@ export function fetchTelemetryLapTrace(driverNumber: number, lapNumber: number):
     `/telemetry/lap-trace?driver_number=${driverNumber}&lap_number=${lapNumber}`,
     "Telemetry lap-trace",
   );
+}
+
+/** Every driver's laps for the session (TracingInsights' single file). */
+export function fetchSessionOverview(): Promise<SessionOverview> {
+  return telemetryGet("/telemetry/session-overview", "Session overview");
 }
 
 export async function fetchWeekendSchedule(): Promise<WeekendSchedule> {

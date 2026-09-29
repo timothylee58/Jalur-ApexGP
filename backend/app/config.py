@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     # onward; real-time MQTT streaming needs a paid account, which this app
     # doesn't use (see telemetry_service.py's module docstring).
     openf1_base_url: str = "https://api.openf1.org/v1"
+    # TracingInsights (github.com/TracingInsights) — Apache-2.0 public F1
+    # data, one repo per season, built from FastF1 and published ~30 min
+    # after each session. Keyless and served from GitHub's raw CDN, so it has
+    # no OpenF1-style rate limit: the telemetry fallback, and the source for
+    # whole-session views (see tracinginsights_service.py).
+    tracinginsights_raw_base_url: str = "https://raw.githubusercontent.com/TracingInsights"
     # Jolpica (api.jolpi.ca) — open-source Ergast-compatible F1 results API,
     # free and keyless. Used for the Sepang weekend schedule and 2025
     # championship standings; not an official F1/FIA/FOM product.
