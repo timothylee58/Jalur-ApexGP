@@ -30,12 +30,13 @@ def _pyproject_deps() -> set[str]:
 
 
 def _requirements_deps() -> set[str]:
-    lines = (BACKEND / "requirements.txt").read_text().splitlines()
-    return {
-        _normalise(line)
-        for line in lines
-        if line.strip() and not line.strip().startswith(("#", "-"))
-    }
+    # pip allows trailing "  # note" on a requirement line; drop it so an
+    # annotated pin still compares equal to the bare one in pyproject.
+    lines = (
+        line.split("#", 1)[0].strip()
+        for line in (BACKEND / "requirements.txt").read_text().splitlines()
+    )
+    return {_normalise(line) for line in lines if line and not line.startswith("-")}
 
 
 def test_pyproject_and_requirements_declare_the_same_runtime_dependencies():
