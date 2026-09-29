@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchTelemetryDrivers, fetchTelemetryLaps } from "@/lib/api";
-import { formatLapTime, isDrsActive, sampleAt } from "@/lib/telemetry";
+import { describeTelemetryError, formatLapTime, isDrsActive, lapHasDrs, sampleAt } from "@/lib/telemetry";
 import { useTelemetryPlayback } from "@/hooks/useTelemetryPlayback";
 import type { TelemetryDriver, TelemetryLap } from "@/types/telemetry";
 
-type FetchState<T> = { status: "loading" | "ready" | "error"; data: T | null };
+type FetchState<T> = { status: "loading" | "ready" | "error"; data: T | null; error?: string };
 
 function Bar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
@@ -25,18 +25,20 @@ function Bar({ label, value, max = 100 }: { label: string; value: number; max?: 
 
 export function TelemetryDashboard() {
   const [drivers, setDrivers] = useState<FetchState<TelemetryDriver[]>>({ status: "loading", data: null });
+  const [attempt, setAttempt] = useState(0);
   const [driverNumber, setDriverNumber] = useState<number | null>(null);
   const [laps, setLaps] = useState<FetchState<TelemetryLap[]>>({ status: "loading", data: null });
   const [lapNumber, setLapNumber] = useState<number | null>(null);
 
   useEffect(() => {
+    setDrivers({ status: "loading", data: null });
     fetchTelemetryDrivers()
       .then((data) => {
         setDrivers({ status: "ready", data });
         if (data[0]) setDriverNumber(data[0].driverNumber);
       })
-      .catch(() => setDrivers({ status: "error", data: null }));
-  }, []);
+      .catch((err: unknown) => setDrivers({ status: "error", data: null, error: describeTelemetryError(err) }));
+  }, [attempt]);
 
   useEffect(() => {
     if (driverNumber == null) return;
@@ -51,7 +53,7 @@ export function TelemetryDashboard() {
         );
         setLapNumber(fastest?.lapNumber ?? null);
       })
-      .catch(() => setLaps({ status: "error", data: null }));
+      .catch((err: unknown) => setLaps({ status: "error", data: null, error: describeTelemetryError(err) }));
   }, [driverNumber]);
 
   const { loading, error, trace, distanceProgress, currentTime, playing, play, pause, seek } =
@@ -83,10 +85,18 @@ export function TelemetryDashboard() {
 
   if (drivers.status === "error") {
     return (
-      <p className="rounded-lg border border-paper/10 bg-asphalt px-4 py-6 text-center text-sm text-paper-dim">
-        Couldn&apos;t reach the telemetry backend. OpenF1 may be unavailable, or this specific
-        session isn&apos;t in its archive yet — try again later.
-      </p>
+      <div className="rounded-lg border border-paper/10 bg-asphalt px-4 py-6 text-center">
+        <p role="alert" className="text-sm text-paper-dim">
+          {drivers.error}
+        </p>
+        <button
+          type="button"
+          onClick={() => setAttempt((n) => n + 1)}
+          className="mt-3 rounded-full border border-paper/20 px-4 py-1.5 font-mono text-xs uppercase tracking-wide text-paper hover:border-amber hover:text-amber"
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 
@@ -127,9 +137,14 @@ export function TelemetryDashboard() {
           Loading lap telemetry…
         </p>
       ) : null}
+      {laps.status === "error" ? (
+        <p role="alert" className="rounded-lg border border-paper/10 bg-asphalt px-4 py-6 text-center text-sm text-paper-dim">
+          {laps.error}
+        </p>
+      ) : null}
       {error ? (
-        <p className="rounded-lg border border-paper/10 bg-asphalt px-4 py-6 text-center text-sm text-paper-dim">
-          Couldn&apos;t load this lap&apos;s telemetry — pick a different driver or lap, or try again.
+        <p role="alert" className="rounded-lg border border-paper/10 bg-asphalt px-4 py-6 text-center text-sm text-paper-dim">
+          {error}
         </p>
       ) : null}
 
@@ -201,9 +216,16 @@ export function TelemetryDashboard() {
             </div>
             <div className="rounded-md border border-paper/10 px-3 py-2">
               <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper-dim">DRS</p>
-              <p className={`mt-1 font-mono text-lg ${isDrsActive(sample.drs) ? "text-pit-lime" : "text-paper-dim"}`}>
-                {isDrsActive(sample.drs) ? "Open" : "Closed"}
-              </p>
+              {lapHasDrs(trace.samples) ? (
+                <p className={`mt-1 font-mono text-lg ${isDrsActive(sample.drs) ? "text-pit-lime" : "text-paper-dim"}`}>
+                  {isDrsActive(sample.drs) ? "Open" : "Closed"}
+                </p>
+              ) : (
+                // 2026 cars have no DRS; OpenF1 reports the channel as null.
+                <p className="mt-1 font-mono text-sm leading-7 text-paper-dim" title="The 2026 rules replaced DRS with Overtake Mode">
+                  None in 2026
+                </p>
+              )}
             </div>
           </div>
 

@@ -25,8 +25,10 @@ export interface TelemetrySample {
   brake: number;
   rpm: number;
   gear: number;
-  /** OpenF1's raw DRS status code (0/1 off, 8 detected-eligible, 10/12/14 active variants). */
-  drs: number;
+  /** OpenF1's raw DRS status code (0/1 off, 8 detected-eligible, 10/12/14
+   * active variants), or null when the car has no DRS — every 2026 sample,
+   * since the 2026 rules replaced it with Overtake Mode. */
+  drs: number | null;
 }
 
 export interface TelemetryLapTrace {

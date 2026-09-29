@@ -31,8 +31,10 @@ class TelemetrySample(BaseModel):
     gear: int
     # OpenF1's raw DRS status codes (0/1 off, 8 detected-eligible, 10/12/14
     # various active states) — passed through rather than collapsed to a
-    # boolean so the frontend can decide how much nuance to show.
-    drs: int
+    # boolean so the frontend can decide how much nuance to show. None when
+    # the car has no DRS at all: every 2026 sample, since the 2026 rules
+    # replaced it with Overtake Mode.
+    drs: int | None = None
 
 
 class TelemetryLapTrace(BaseModel):

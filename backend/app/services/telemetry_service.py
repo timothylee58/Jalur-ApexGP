@@ -14,24 +14,31 @@ data/drivers.ts and data/teams.ts. `year`/`circuit_short_name`/
 (or a future admin script) can point this at a different real session
 without a code change.
 
-IMPORTANT — verification gap: this module was written and unit-tested
-against a mocked OpenF1 transport (see tests/test_telemetry_service.py)
-because api.openf1.org is blocked by this sandbox's own network egress
-policy (org policy, not something to route around — see
-/root/.ccr/README.md). Field names and query syntax below are taken from
-OpenF1's public docs and third-party write-ups, cross-checked across
-several independent sources, but have NOT been confirmed against a live
-response from this environment. Test this against the real API (this
-runs fine outside this sandbox — a normal dev machine, CI runner, or the
-deployed Vercel function all have ordinary internet access) before
-trusting it in production; the most likely failure mode is the target
-session not existing yet in OpenF1's archive, which surfaces as a clean
-404 from the endpoints below rather than a crash.
+VERIFIED AGAINST THE LIVE API (2026-09-29). api.openf1.org is blocked by
+the dev sandbox's egress policy, so the endpoints were exercised from an
+external fetcher instead: /sessions, /drivers, /laps and the hand-built
+`date>`/`date<` /car_data range query (offset-encoded timestamps included)
+all return the shapes parsed below for the default session (key 11353).
+Two things that check surfaced, both handled here:
+
+  - 2026 cars have no DRS (Overtake Mode replaced it), and OpenF1 reports
+    `"drs": null` on every 2026 sample. The parser used to feed that to
+    int(), drop every sample as malformed, and 404 every lap. Null channels
+    are now tolerated; only a sample with no timestamp or no speed is
+    skipped.
+  - The free tier is rate limited (3 req/s, 30 req/min, per OpenF1's FAQ)
+    and one cold page view costs up to seven upstream calls. A 429 is
+    retried once after its Retry-After, and a finished session's responses
+    are cached — in this process, and (via the routes' Cache-Control) at
+    Vercel's edge — because historical telemetry never changes.
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+import asyncio
+from collections import OrderedDict
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 
@@ -45,13 +52,34 @@ DEFAULT_CIRCUIT = "Zandvoort"
 DEFAULT_SESSION_NAME = "Race"
 
 _TIMEOUT = httpx.Timeout(10.0)
+# One retry for a 429, waiting what the server asks for within these bounds
+# — long enough to clear a per-second burst, short enough to stay well
+# inside the function's time budget.
+_MAX_ATTEMPTS = 2
+_RETRY_DELAY_S = (0.3, 2.0)
+# OpenF1 treats a session as live until 30 minutes after it ends; only
+# after that is its data final and safe to cache.
+_LIVE_TAIL = timedelta(minutes=30)
+_TRACE_CACHE_SIZE = 64
 
-# Session-key lookups and driver rosters for a real, already-completed
-# session never change — cache them for this process's lifetime (a warm
-# Vercel function instance) rather than re-querying OpenF1 on every
-# request. Keyed by (year, circuit_short_name, session_name).
-_session_key_cache: dict[tuple[int, str, str], int] = {}
+
+@dataclass(frozen=True)
+class _SessionRef:
+    key: int
+    ends_at: datetime | None
+
+    @property
+    def final(self) -> bool:
+        return self.ends_at is not None and datetime.now(UTC) > self.ends_at + _LIVE_TAIL
+
+
+# Session lookups and driver rosters never change — cached for this
+# process's lifetime (a warm Vercel function instance). Laps and lap traces
+# are cached too, but only once the session is final (see _SessionRef).
+_session_key_cache: dict[tuple[int, str, str], _SessionRef] = {}
 _drivers_cache: dict[int, list[TelemetryDriver]] = {}
+_laps_cache: dict[tuple[int, int], list[TelemetryLap]] = {}
+_trace_cache: OrderedDict[tuple[int, int, int], TelemetryLapTrace] = OrderedDict()
 
 
 class TelemetryUnavailable(Exception):
@@ -66,22 +94,44 @@ class TelemetryUpstreamError(Exception):
     502."""
 
 
+def _retry_delay(response: httpx.Response) -> float:
+    low, high = _RETRY_DELAY_S
+    try:
+        wanted = float(response.headers.get("retry-after", low))
+    except ValueError:
+        wanted = low
+    return min(max(wanted, low), high)
+
+
 async def _get(client: httpx.AsyncClient, path: str, query: str) -> list[dict[str, Any]]:
     url = f"{settings.openf1_base_url}{path}?{query}"
+    for attempt in range(_MAX_ATTEMPTS):
+        try:
+            response = await client.get(url)
+        except httpx.HTTPError as exc:
+            raise TelemetryUpstreamError(f"OpenF1 request failed: {url}") from exc
+        if response.status_code == 429 and attempt + 1 < _MAX_ATTEMPTS:
+            await asyncio.sleep(_retry_delay(response))
+            continue
+        break
+    if response.status_code == 429:
+        raise TelemetryUpstreamError(
+            "OpenF1 is rate limiting this app right now (free tier: 3 requests/second, "
+            "30/minute) — try again in a minute."
+        )
     try:
-        response = await client.get(url)
         response.raise_for_status()
-    except httpx.HTTPError as exc:
-        raise TelemetryUpstreamError(f"OpenF1 request failed: {url}") from exc
+    except httpx.HTTPStatusError as exc:
+        raise TelemetryUpstreamError(f"OpenF1 returned {response.status_code} for {url}") from exc
     payload = response.json()
     if not isinstance(payload, list):
         raise TelemetryUpstreamError(f"Unexpected OpenF1 response shape from {url}")
     return payload
 
 
-async def _resolve_session_key(
+async def _resolve_session(
     client: httpx.AsyncClient, year: int, circuit_short_name: str, session_name: str
-) -> int:
+) -> _SessionRef:
     cache_key = (year, circuit_short_name, session_name)
     cached = _session_key_cache.get(cache_key)
     if cached is not None:
@@ -98,9 +148,25 @@ async def _resolve_session_key(
             f"No OpenF1 session found for year={year}, circuit={circuit_short_name}, "
             f"session={session_name} — it may not be in OpenF1's archive yet."
         )
-    session_key = int(rows[0]["session_key"])
-    _session_key_cache[cache_key] = session_key
-    return session_key
+    ends_at = rows[0].get("date_end")
+    ref = _SessionRef(
+        key=int(rows[0]["session_key"]),
+        ends_at=_parse_openf1_date(ends_at) if isinstance(ends_at, str) else None,
+    )
+    _session_key_cache[cache_key] = ref
+    return ref
+
+
+def session_is_final(
+    year: int = DEFAULT_YEAR,
+    circuit_short_name: str = DEFAULT_CIRCUIT,
+    session_name: str = DEFAULT_SESSION_NAME,
+) -> bool:
+    """Whether a session already resolved in this process has finished for
+    good — the routes use it to decide whether a response may be cached at
+    the edge. Unknown sessions answer False (never cache on a guess)."""
+    ref = _session_key_cache.get((year, circuit_short_name, session_name))
+    return ref is not None and ref.final
 
 
 async def get_drivers(
@@ -109,12 +175,12 @@ async def get_drivers(
     session_name: str = DEFAULT_SESSION_NAME,
 ) -> list[TelemetryDriver]:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        session_key = await _resolve_session_key(client, year, circuit_short_name, session_name)
-        cached = _drivers_cache.get(session_key)
+        session = await _resolve_session(client, year, circuit_short_name, session_name)
+        cached = _drivers_cache.get(session.key)
         if cached is not None:
             return cached
 
-        rows = await _get(client, "/drivers", f"session_key={session_key}")
+        rows = await _get(client, "/drivers", f"session_key={session.key}")
         # OpenF1 can list a driver more than once per session (e.g. a team
         # colour or name change mid-weekend) — keep the last row per
         # driver_number rather than the first, so a late correction wins.
@@ -131,7 +197,7 @@ async def get_drivers(
             except (KeyError, TypeError, ValueError):
                 continue
         drivers = sorted(by_number.values(), key=lambda d: d.driver_number)
-        _drivers_cache[session_key] = drivers
+        _drivers_cache[session.key] = drivers
         return drivers
 
 
@@ -142,9 +208,12 @@ async def get_laps(
     session_name: str = DEFAULT_SESSION_NAME,
 ) -> list[TelemetryLap]:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        session_key = await _resolve_session_key(client, year, circuit_short_name, session_name)
+        session = await _resolve_session(client, year, circuit_short_name, session_name)
+        cached = _laps_cache.get((session.key, driver_number))
+        if cached is not None:
+            return cached
         rows = await _get(
-            client, "/laps", f"session_key={session_key}&driver_number={driver_number}"
+            client, "/laps", f"session_key={session.key}&driver_number={driver_number}"
         )
 
     laps: list[TelemetryLap] = []
@@ -162,6 +231,8 @@ async def get_laps(
     laps.sort(key=lambda lap: lap.lap_number)
     if not laps:
         raise TelemetryUnavailable(f"No timed laps found for driver {driver_number} in this session.")
+    if session.final:
+        _laps_cache[(session.key, driver_number)] = laps
     return laps
 
 
@@ -169,6 +240,13 @@ def _parse_openf1_date(value: str) -> datetime:
     # OpenF1 dates are ISO 8601 with an explicit offset (e.g.
     # "...+00:00") — fromisoformat handles that natively on Python 3.11+.
     return datetime.fromisoformat(value)
+
+
+def _num(row: dict[str, Any], key: str) -> float:
+    # A channel OpenF1 reports as null (or omits) reads as 0 rather than
+    # invalidating the whole sample.
+    value = row.get(key)
+    return 0.0 if value is None else float(value)
 
 
 async def get_lap_trace(
@@ -179,12 +257,16 @@ async def get_lap_trace(
     session_name: str = DEFAULT_SESSION_NAME,
 ) -> TelemetryLapTrace:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        session_key = await _resolve_session_key(client, year, circuit_short_name, session_name)
+        session = await _resolve_session(client, year, circuit_short_name, session_name)
+        cached = _trace_cache.get((session.key, driver_number, lap_number))
+        if cached is not None:
+            _trace_cache.move_to_end((session.key, driver_number, lap_number))
+            return cached
 
         lap_rows = await _get(
             client,
             "/laps",
-            f"session_key={session_key}&driver_number={driver_number}&lap_number={lap_number}",
+            f"session_key={session.key}&driver_number={driver_number}&lap_number={lap_number}",
         )
         if not lap_rows or lap_rows[0].get("lap_duration") is None or lap_rows[0].get("date_start") is None:
             raise TelemetryUnavailable(
@@ -199,7 +281,7 @@ async def get_lap_trace(
         # so this builds the query string by hand instead.
         lap_end = lap_start.timestamp() + lap_duration
         date_query = (
-            f"session_key={session_key}"
+            f"session_key={session.key}"
             f"&driver_number={driver_number}"
             f"&date>{quote(lap_start.isoformat())}"
             f"&date<{quote(datetime.fromtimestamp(lap_end, tz=lap_start.tzinfo).isoformat())}"
@@ -216,20 +298,25 @@ async def get_lap_trace(
 
     samples: list[TelemetrySample] = []
     for row in car_rows:
+        # A sample is only useless without a timestamp or a speed; any other
+        # channel may be null. (DRS is null on every 2026 sample — the cars
+        # don't have it — and must not cost the sample.)
+        date, speed, drs = row.get("date"), row.get("speed"), row.get("drs")
+        if date is None or speed is None:
+            continue
         try:
-            sample_time = _parse_openf1_date(row["date"])
             samples.append(
                 TelemetrySample(
-                    t=(sample_time - lap_start).total_seconds(),
-                    speed=float(row.get("speed", 0.0)),
-                    throttle=float(row.get("throttle", 0.0)),
-                    brake=float(row.get("brake", 0.0)),
-                    rpm=float(row.get("rpm", 0.0)),
-                    gear=int(row.get("n_gear", 0)),
-                    drs=int(row.get("drs", 0)),
+                    t=(_parse_openf1_date(date) - lap_start).total_seconds(),
+                    speed=float(speed),
+                    throttle=_num(row, "throttle"),
+                    brake=_num(row, "brake"),
+                    rpm=_num(row, "rpm"),
+                    gear=int(_num(row, "n_gear")),
+                    drs=None if drs is None else int(drs),
                 )
             )
-        except (KeyError, TypeError, ValueError):
+        except (TypeError, ValueError):
             continue
     samples.sort(key=lambda s: s.t)
 
@@ -238,7 +325,7 @@ async def get_lap_trace(
             f"OpenF1 returned no car_data samples for driver {driver_number}'s lap {lap_number}."
         )
 
-    return TelemetryLapTrace(
+    trace = TelemetryLapTrace(
         year=year,
         session_name=session_name,
         circuit_short_name=circuit_short_name,
@@ -247,3 +334,8 @@ async def get_lap_trace(
         lap_duration=lap_duration,
         samples=samples,
     )
+    if session.final:
+        _trace_cache[(session.key, driver_number, lap_number)] = trace
+        while len(_trace_cache) > _TRACE_CACHE_SIZE:
+            _trace_cache.popitem(last=False)
+    return trace

@@ -42,31 +42,58 @@ export async function fetchPrediction(
   return res.json() as Promise<PredictionResponse>;
 }
 
-export async function fetchTelemetryDrivers(): Promise<TelemetryDriver[]> {
-  const res = await fetch(`${API_URL}/telemetry/drivers`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Telemetry drivers request failed (${res.status})`);
-  return res.json() as Promise<TelemetryDriver[]>;
+/** A failed backend call that keeps what the UI needs to explain it: the
+ * HTTP status (0 when the request never got a response — which is also
+ * what a crashed function looks like from the browser, since its error
+ * page carries no CORS headers) and FastAPI's `detail`, if any. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly detail: string | null,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
 }
 
-export async function fetchTelemetryLaps(driverNumber: number): Promise<TelemetryLap[]> {
-  const res = await fetch(
-    `${API_URL}/telemetry/laps?driver_number=${driverNumber}`,
-    { cache: "no-store" },
-  );
-  if (!res.ok) throw new Error(`Telemetry laps request failed (${res.status})`);
-  return res.json() as Promise<TelemetryLap[]>;
+// Telemetry for a finished session is immutable and the backend marks it
+// cacheable (see routes/telemetry.py). The default cache mode lets that
+// work; "no-store" would send Cache-Control: no-cache on every request and
+// push every page view through to OpenF1's rate-limited free tier.
+async function telemetryGet<T>(path: string, what: string): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`);
+  } catch {
+    throw new ApiError(`${what} request failed (no response)`, 0, null);
+  }
+  if (!res.ok) {
+    let detail: string | null = null;
+    try {
+      const body = (await res.json()) as { detail?: unknown };
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch {
+      // Not JSON (e.g. a platform error page) — the status says enough.
+    }
+    throw new ApiError(`${what} request failed (${res.status})`, res.status, detail);
+  }
+  return res.json() as Promise<T>;
 }
 
-export async function fetchTelemetryLapTrace(
-  driverNumber: number,
-  lapNumber: number,
-): Promise<TelemetryLapTrace> {
-  const res = await fetch(
-    `${API_URL}/telemetry/lap-trace?driver_number=${driverNumber}&lap_number=${lapNumber}`,
-    { cache: "no-store" },
+export function fetchTelemetryDrivers(): Promise<TelemetryDriver[]> {
+  return telemetryGet("/telemetry/drivers", "Telemetry drivers");
+}
+
+export function fetchTelemetryLaps(driverNumber: number): Promise<TelemetryLap[]> {
+  return telemetryGet(`/telemetry/laps?driver_number=${driverNumber}`, "Telemetry laps");
+}
+
+export function fetchTelemetryLapTrace(driverNumber: number, lapNumber: number): Promise<TelemetryLapTrace> {
+  return telemetryGet(
+    `/telemetry/lap-trace?driver_number=${driverNumber}&lap_number=${lapNumber}`,
+    "Telemetry lap-trace",
   );
-  if (!res.ok) throw new Error(`Telemetry lap-trace request failed (${res.status})`);
-  return res.json() as Promise<TelemetryLapTrace>;
 }
 
 export async function fetchWeekendSchedule(): Promise<WeekendSchedule> {
