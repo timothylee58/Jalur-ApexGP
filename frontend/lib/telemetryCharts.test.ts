@@ -5,6 +5,7 @@ import {
   finishingOrder,
   interpolate,
   lapDelta,
+  miniSectorLeaders,
   fuelCorrected,
   heatColour,
   percentileRank,
@@ -56,6 +57,20 @@ describe("lapDelta", () => {
     expect(delta[0].delta).toBe(0);
     expect(delta[delta.length - 1].delta).toBeCloseTo(1, 9);
     expect(delta[2].delta).toBeCloseTo(0.5, 9);
+  });
+});
+
+describe("miniSectorLeaders", () => {
+  it("gives each mini-sector to whoever covers it quicker", () => {
+    const a = [s(0, 200, 0), s(10, 200, 500), s(20, 200, 1000)];
+    // B loses 1 s in the first half and gains 2 s back in the second.
+    const b = [s(0, 190, 0), s(11, 190, 500), s(19, 190, 1000)];
+    expect(miniSectorLeaders(a, b, 4)).toEqual(["a", "a", "b", "b"]);
+  });
+
+  it("hands a dead heat to A", () => {
+    const lap = [s(0, 200, 0), s(10, 200, 500), s(20, 200, 1000)];
+    expect(miniSectorLeaders(lap, lap, 3)).toEqual(["a", "a", "a"]);
   });
 });
 

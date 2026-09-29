@@ -1,8 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
-import { GeneralCircuitMap, type StandMapMarker } from "@/components/tickets/GeneralCircuitMap";
+import { GENERAL_MAP_ASPECT, GeneralCircuitMap, type StandMapMarker } from "@/components/tickets/GeneralCircuitMap";
 import { circuitCenter, pointForName } from "@/data/sepangCircuit";
+
+// Loaded on first use: the viewer (and the motion library it animates
+// with) stays out of /tickets' first load until someone opens it.
+const MapLightbox = dynamic(() => import("@/components/shared/MapLightbox").then((m) => m.MapLightbox), {
+  ssr: false,
+});
 
 const ORGANISER_URL = "https://www.sepangcircuit.com/home";
 
@@ -100,6 +107,8 @@ function formatMyr(value: number): string {
 export function SeatFinder() {
   const [selectedId, setSelectedId] = useState<string>("b");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapUsed, setMapUsed] = useState(false);
   const selected = STANDS.find((s) => s.id === selectedId) ?? STANDS[0];
 
   // Offset each stand out along the centre→apex-point ray — several
@@ -214,10 +223,56 @@ export function SeatFinder() {
       </div>
 
       <div className="rounded-lg border border-paper/10 bg-asphalt/80 p-4">
-        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-          General map · click or hover anything
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
+            General map · click or hover anything
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setMapUsed(true);
+              setMapOpen(true);
+            }}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-paper/15 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.15em] text-paper-dim transition-colors hover:border-amber hover:text-amber focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+              <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Full screen
+          </button>
+        </div>
         <GeneralCircuitMap stands={standMarkers} onSelectStand={setSelectedId} className="mt-2 w-full" />
+        {mapUsed ? (
+          <MapLightbox
+            open={mapOpen}
+            onClose={() => setMapOpen(false)}
+            title="Sepang general map"
+            contentAspect={GENERAL_MAP_ASPECT}
+            footer={
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="font-display text-base uppercase tracking-wide text-paper">{selected.name}</span>
+                <span className={`font-mono text-xs ${selected.priceMyr === null ? "text-paper-dim" : "text-amber"}`}>
+                  {selected.priceMyr === null ? "Sold out" : `${formatMyr(selected.priceMyr)} · 3 days`}
+                </span>
+                {selected.cornerLabel ? (
+                  <span className="font-mono text-xs uppercase tracking-wide text-paper-dim">
+                    Overlooks {selected.cornerLabel}
+                  </span>
+                ) : null}
+                <a
+                  href={ORGANISER_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono text-xs uppercase tracking-wide text-amber underline-offset-4 hover:underline"
+                >
+                  Check tickets ↗
+                </a>
+              </div>
+            }
+          >
+            <GeneralCircuitMap stands={standMarkers} onSelectStand={setSelectedId} className="h-full w-full" />
+          </MapLightbox>
+        ) : null}
         <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
           Original artwork — this app&apos;s own redrawn general map, not a copy of the
           organiser&apos;s venue-map graphic. Grandstand/hillstand positions and the corners each one

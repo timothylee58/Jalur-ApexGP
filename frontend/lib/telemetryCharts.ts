@@ -64,6 +64,30 @@ export function lapDelta(
   return out;
 }
 
+/**
+ * Which lap is quicker through each of `count` equal mini-sectors — the
+ * track-dominance map TracingInsights draws for head-to-heads. Laps are
+ * aligned on relative distance, as in lapDelta; a dead heat goes to A.
+ */
+export function miniSectorLeaders(a: TelemetrySample[], b: TelemetrySample[], count = 25): ("a" | "b")[] {
+  if (a.length < 2 || b.length < 2) return [];
+  const da = distances(a);
+  const db = distances(b);
+  const ra = da.map((d) => d / (da[da.length - 1] || 1));
+  const rb = db.map((d) => d / (db[db.length - 1] || 1));
+  const ta = a.map((s) => s.t);
+  const tb = b.map((s) => s.t);
+  const out: ("a" | "b")[] = [];
+  for (let k = 0; k < count; k += 1) {
+    const r0 = k / count;
+    const r1 = (k + 1) / count;
+    const timeA = interpolate(ra, ta, r1) - interpolate(ra, ta, r0);
+    const timeB = interpolate(rb, tb, r1) - interpolate(rb, tb, r0);
+    out.push(timeB < timeA ? "b" : "a");
+  }
+  return out;
+}
+
 /** Colour ramp for speed on the track map: slow is warm, fast is cool —
  * the same reading TracingInsights' heatmaps use (cooler = quicker). */
 const SPEED_STOPS: [number, [number, number, number]][] = [
