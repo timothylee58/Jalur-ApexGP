@@ -33,6 +33,16 @@ export interface GuideCardText {
   body: string;
 }
 
+/** Words for one rule's animated example on /guide (components/guide/demos). */
+export interface GuideDemoText {
+  /** One caption per step of the animation, in order. */
+  steps: string[];
+  /** A second sequence, for demos with two variants (undercut / overcut). */
+  altSteps?: string[];
+  /** Short labels drawn inside the scene. */
+  labels: Record<string, string>;
+}
+
 export interface QuizQuestionText {
   id: string;
   question: string;
@@ -95,6 +105,16 @@ export interface Dictionary {
     quizLabel: string;
     disclaimer: string;
     cards: GuideCardText[];
+    /** Keyed by card id. */
+    demos: Record<string, GuideDemoText>;
+    demoUi: {
+      pause: string;
+      play: string;
+      /** "Step {n}" — {n} replaced at render. */
+      step: string;
+      /** Accessible name for the animation, "{title}, animated example". */
+      example: string;
+    };
     quiz: QuizQuestionText[];
   };
   quizUi: {

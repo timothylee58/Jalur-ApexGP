@@ -67,7 +67,7 @@ export const ms: Dictionary = {
       {
         id: "overtake-mode",
         title: "Mod Overtake (pengganti DRS)",
-        body: "F1 memansuhkan sistem Drag Reduction System (DRS) yang berusia 14 tahun — satu kepak sayap belakang tunggal — selepas musim 2025. Bermula 2026, bantuan memotong (overtake) datang daripada sistem aerodinamik aktif sepenuhnya yang melaraskan kedua-dua sayap depan dan belakang. Peraturan keadilan kekal sama seperti DRS: pemandu perlu berada dalam jarak satu saat daripada kereta di hadapan pada titik pengesanan litar untuk membuka mod ini di zon berikutnya.",
+        body: "DRS — kepak sayap belakang tunggal yang boleh dibuka oleh kereta yang mengejar — dimansuhkan selepas musim 2025. Mulai 2026, setiap kereta menggunakan aerodinamik aktif: di jalan lurus yang ditetapkan, sayap depan dan belakang dirata (Straight Mode), kemudian ditutup semula untuk selekoh. Bantuan memotong kini datang daripada kuasa elektrik. Pemandu yang berada dalam jarak satu saat daripada kereta di hadapan pada titik pengesanan membuka Mod Overtake untuk pusingan seterusnya — tenaga bateri tambahan, dan kuasa elektrik penuh dikekalkan hingga kelajuan lebih tinggi berbanding kereta di hadapan, digunakan sekali gus atau diagihkan sepanjang pusingan.",
       },
       {
         id: "tyre-compounds",
@@ -92,9 +92,78 @@ export const ms: Dictionary = {
       {
         id: "ers",
         title: "ERS (Sistem Pemulihan Tenaga)",
-        body: "Bahagian hibrid enjin kuasa F1 — tenaga elektrik yang dipulihkan daripada brek dan haba ekzos, disimpan dalam bateri, dan digunakan untuk kuasa tambahan mengikut keperluan. Pemandu dan jurutera menguruskan berapa banyak tenaga untuk disimpan sepanjang satu pusingan bagi pergerakan defensif atau serangan kemudian.",
+        body: "Separuh hibrid enjin kuasa 2026 — kira-kira separuh kuasa kereta kini elektrik. MGU-K menukar kelajuan kereta kepada cas semasa membrek (MGU-H yang memulihkan haba ekzos telah digugurkan untuk 2026), menyimpannya dalam bateri, dan mengembalikannya sebagai kuasa tambahan apabila diperlukan. Pemandu dan jurutera menguruskan berapa banyak tenaga untuk disimpan sepanjang satu pusingan bagi pergerakan defensif atau serangan kemudian.",
       },
     ],
+    demos: {
+      "overtake-mode": {
+        steps: [
+          "Dalam jarak 1 saat daripada kereta di hadapan pada titik pengesanan — Mod Overtake dibuka untuk pusingan seterusnya.",
+          "Straight Mode: di jalan lurus, setiap kereta meratakan sayap depan dan belakangnya.",
+          "Kuasa elektrik tambahan Mod Overtake membantu kereta pengejar memotong.",
+        ],
+        labels: { detection: "Pengesanan", straight: "Straight mode", overtake: "Overtake" },
+      },
+      "tyre-compounds": {
+        steps: [
+          "Litar lasak yang tinggi haus: Pirelli membawa C1, C2 dan C3 sebagai Hard, Medium dan Soft.",
+          "Litar jalan raya bercengkaman rendah: C3, C4 dan C5 — C3 yang sama kini menjadi Hard.",
+        ],
+        labels: { hard: "Hard", medium: "Medium", soft: "Soft" },
+      },
+      flags: {
+        steps: [
+          "Kuning: bahaya di hadapan — perlahan, tiada memotong.",
+          "Merah: sesi dihentikan.",
+          "Biru: kereta yang ketinggalan pusingan mesti memberi laluan kepada kereta yang lebih laju.",
+          "Berpetak: sesi tamat.",
+        ],
+        labels: {},
+      },
+      "pit-strategy": {
+        steps: [
+          "Anda satu saat di belakang. Masuk pit dahulu…",
+          "…dan tayar baharu menjadikan anda beberapa saat lebih laju setiap pusingan.",
+          "Apabila pesaing anda berhenti, dia keluar di belakang anda.",
+        ],
+        altSteps: [
+          "Pesaing anda masuk pit dahulu — dan kembali dengan tayar sejuk, dalam kesesakan.",
+          "Anda kekal di trek dalam udara bersih dan terus laju.",
+          "Masuk pit sepusingan kemudian dan keluar di hadapan.",
+        ],
+        labels: {
+          undercut: "Undercut",
+          overcut: "Overcut",
+          you: "Anda",
+          rival: "Pesaing",
+          pit: "Pit",
+          fresh: "Tayar baharu",
+          cleanAir: "Udara bersih",
+          cold: "Tayar sejuk",
+        },
+      },
+      "safety-car": {
+        steps: [
+          "Berlumba: kereta berjarak beberapa saat antara satu sama lain.",
+          "Kereta keselamatan: semua kereta perlahan dan rapat di belakangnya.",
+          "Masuk pit sekarang hanya kos kira-kira separuh masa biasa.",
+        ],
+        labels: { sc: "SC", green: "Pit biasa", underSc: "Semasa SC", pitLoss: "Masa hilang di pit" },
+      },
+      ers: {
+        steps: [
+          "Membrek: MGU-K menukar kelajuan kereta kepada cas.",
+          "Di jalan lurus, bateri mengembalikannya sebagai kuasa.",
+        ],
+        labels: { battery: "Bateri", harvest: "Kumpul", deploy: "Guna" },
+      },
+    },
+    demoUi: {
+      pause: "Jeda",
+      play: "Main",
+      step: "Langkah {n}",
+      example: "{title} — contoh animasi",
+    },
     quiz: [
       {
         id: "points-win",
@@ -121,13 +190,13 @@ export const ms: Dictionary = {
         question: "Apakah yang menggantikan DRS untuk musim 2026?",
         options: [
           "Tiada apa-apa — DRS kekal sama",
-          "Mod Overtake, sebahagian daripada sistem aerodinamik aktif baharu",
-          "Butang push-to-pass",
+          "Mod Overtake — kuasa elektrik tambahan untuk kereta dalam jarak satu saat",
+          "Kepak sayap belakang yang lebih besar untuk setiap kereta",
           "DRS khas sprint sahaja",
         ],
         correctIndex: 1,
         explanation:
-          "Peraturan 2026 F1 memansuhkan DRS kepak sayap belakang tunggal selepas 14 musim, digantikan dengan aerodinamik aktif yang melaraskan kedua-dua sayap.",
+          "Dalam jarak satu saat daripada kereta di hadapan pada titik pengesanan, pemandu mendapat Mod Overtake untuk pusingan seterusnya: tenaga bateri tambahan dan kuasa penuh hingga kelajuan lebih tinggi. Sayap yang dirata (Straight Mode) ialah sistem berasingan yang digunakan oleh setiap kereta di jalan lurus.",
       },
       {
         id: "mandatory-compounds",
