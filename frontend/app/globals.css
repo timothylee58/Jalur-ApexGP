@@ -37,34 +37,26 @@
 
 /* Safety car ------------------------------------------------------------ */
 
-/* Arrives from the left and decelerates into place: long ease-out, a small
-   overshoot-free settle, the way a heavy car pulls up to lead the field. */
+/* The photo faces front-left, so the car arrives from the right and slightly
+   from depth (scale), then decelerates into place: long ease-out, no
+   overshoot, the way a heavy car pulls up to lead the field. */
 @keyframes sc-enter {
   from {
-    transform: translateX(-46%);
+    transform: translateX(34%) scale(0.9);
     opacity: 0;
   }
   35% {
     opacity: 1;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
   }
 }
 
 .sc-enter {
+  transform-origin: 50% 90%;
   animation: sc-enter 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-.sc-wheel-spin {
-  animation: sc-wheel 420ms linear infinite;
-}
-
-@keyframes sc-wheel {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* The light bar alternates halves on a fixed 1.2s beat. Steps, not easing:
@@ -86,16 +78,6 @@
   }
 }
 
-.sc-road {
-  animation: sc-road 360ms linear infinite;
-}
-
-@keyframes sc-road {
-  to {
-    stroke-dashoffset: 48;
-  }
-}
-
 .sc-streaks line {
   animation: sc-streak 700ms linear infinite;
 }
@@ -110,21 +92,19 @@
   animation-delay: -550ms;
 }
 
+/* Negative offset runs the dashes along +x: air leaving the tail, away
+   from a car travelling leftwards. */
 @keyframes sc-streak {
   from {
     stroke-dashoffset: 0;
   }
   to {
-    stroke-dashoffset: 160;
+    stroke-dashoffset: -350;
   }
 }
 
-.sc-headlamp {
-  filter: drop-shadow(0 0 3px rgba(255, 244, 220, 0.9));
-}
-
 .sc-parked {
-  filter: saturate(0.35) brightness(0.62);
+  filter: saturate(0.3) brightness(0.55);
   transition: filter 400ms ease;
 }
 
@@ -189,10 +169,8 @@ button:focus-visible .tyre-idle {
 
 @media (prefers-reduced-motion: reduce) {
   .sc-enter,
-  .sc-wheel-spin,
   .sc-beacon-a,
   .sc-beacon-b,
-  .sc-road,
   .sc-streaks line,
   .tyre-spinup,
   .tyre-heat,

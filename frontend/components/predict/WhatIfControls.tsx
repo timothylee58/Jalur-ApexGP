@@ -138,7 +138,7 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
             }`}
           >
             <span
-              className={`relative block aspect-[8/3] max-h-44 w-full transition-colors duration-500 ${
+              className={`relative block aspect-[2/1] max-h-56 w-full transition-colors duration-500 ${
                 safetyCar
                   ? "bg-[radial-gradient(ellipse_at_45%_20%,rgba(245,166,35,0.16),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]"
                   : "bg-[linear-gradient(#0d1013,#0a0c0e)]"
