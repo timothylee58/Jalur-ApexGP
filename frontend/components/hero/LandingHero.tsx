@@ -3,10 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { BookOpen, Clapperboard, Map as MapIcon, Rotate3d, Target, Ticket, type LucideIcon } from "lucide-react";
 import { CircuitFlyoverHero } from "@/components/hero/CircuitFlyoverHero";
 import { CircuitVideoHero } from "@/components/hero/CircuitVideoHero";
 import { HeroOverlay } from "@/components/hero/HeroOverlay";
 import { SessionPicker } from "@/components/hero/SessionPicker";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import type { Dictionary } from "@/lib/i18n/types";
 
 const ease = [0.22, 1, 0.36, 1] as const;
 
@@ -19,7 +22,20 @@ const fadeUp = {
   }),
 };
 
+const LINKS: { href: string; key: Exclude<keyof Dictionary["hero"]["links"], "flyover" | "lapVideo">; Icon: LucideIcon }[] = [
+  { href: "/circuit", key: "circuit", Icon: MapIcon },
+  { href: "/accuracy", key: "accuracy", Icon: Target },
+  { href: "/lore", key: "lore", Icon: BookOpen },
+  { href: "/tickets", key: "tickets", Icon: Ticket },
+];
+
+// Chips, not bare text links: a visible edge and a 36px+ target tell the
+// eye these are tappable, which uppercase grey text on video did not.
+const chipClass =
+  "group inline-flex min-h-9 items-center gap-1.5 rounded-full border border-paper/15 bg-pit-carbon/55 px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide text-paper/85 backdrop-blur-sm transition-colors hover:border-paper/40 hover:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-asphalt";
+
 export function LandingHero() {
+  const { t } = useLanguage();
   // Original synthetic video is the default backdrop (CircuitVideoHero) —
   // the landing hero's earlier *real* scroll-scrubbed flyover was retired
   // for good reasons (see README/BRAND.md): real broadcast/aerial footage
@@ -90,34 +106,33 @@ export function LandingHero() {
           />
         </motion.h1>
         <motion.div custom={0.4} variants={fadeUp} initial="hidden" animate="show">
-          <SessionPicker className="mt-5 sm:mt-8" />
+          <SessionPicker className="mt-5 sm:mt-7" />
         </motion.div>
         <motion.div
           custom={0.52}
           variants={fadeUp}
           initial="hidden"
           animate="show"
-          className="mt-3 flex flex-wrap gap-x-5 gap-y-2 font-mono text-xs uppercase tracking-wide text-paper-dim sm:mt-4"
+          className="mt-4 flex flex-wrap gap-2 sm:mt-5"
         >
-          <Link href="/circuit" className="hover:text-paper">
-            Corner-by-corner 3D
-          </Link>
-          <Link href="/accuracy" className="hover:text-paper">
-            Prediction accuracy
-          </Link>
-          <Link href="/lore" className="hover:text-paper">
-            Circuit lore (1999 → 2026)
-          </Link>
-          <Link href="/tickets" className="hover:text-paper">
-            Tickets &amp; seating
-          </Link>
+          {LINKS.map(({ href, key, Icon }) => (
+            <Link key={href} href={href} className={chipClass}>
+              <Icon aria-hidden="true" className="h-3.5 w-3.5 text-paper-dim transition-colors group-hover:text-amber" />
+              {t.hero.links[key]}
+            </Link>
+          ))}
           <button
             type="button"
             onClick={() => setShow3D((prev) => !prev)}
             aria-pressed={show3D}
-            className="hover:text-paper"
+            className={`${chipClass} ${show3D ? "border-amber/60 text-amber" : ""}`}
           >
-            {show3D ? "Lap video" : "3D flyover"}
+            {show3D ? (
+              <Clapperboard aria-hidden="true" className="h-3.5 w-3.5" />
+            ) : (
+              <Rotate3d aria-hidden="true" className="h-3.5 w-3.5 text-paper-dim transition-colors group-hover:text-amber" />
+            )}
+            {show3D ? t.hero.links.lapVideo : t.hero.links.flyover}
           </button>
         </motion.div>
       </HeroOverlay>
