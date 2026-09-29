@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AboutNote } from "@/components/shared/AboutNote";
 import { DriveTheLap } from "@/components/drive/DriveTheLap";
 import { SiteHeader } from "@/components/site-chrome";
@@ -5,14 +6,14 @@ import { SiteHeader } from "@/components/site-chrome";
 export const metadata = {
   title: "Drive the lap — Jalur APEXGP",
   description:
-    "Throttle-and-brake lap-time attack around the real Sepang apex-point centreline — no steering, just corner speed.",
+    "Time attack at Sepang International Circuit in a 2026-spec F1 car: throttle, brake and Boost, the five-light start, a ghost to chase, and broadcast cameras.",
 };
 
 export default function DrivePage() {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-3xl px-4 py-6">
+      <main className="mx-auto w-full max-w-5xl px-4 py-6">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Mini game
         </p>
@@ -20,11 +21,15 @@ export default function DrivePage() {
           Drive the lap
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-relaxed text-paper-dim">
-          No steering — the car runs the real apex-point centreline itself. Your job is speed:
-          hold throttle down the straights, lift and brake before each corner. Push past a
-          corner&apos;s safe speed (the trackside boards ahead go green → amber → red) and it
-          counts as off-track — a time penalty and a spin, same shape as a real track-limits
-          call.
+          A 2026-spec car on the real Sepang centreline, hills and all. The car steers itself —
+          your lap is made on the pedals: brake at the boards, carry speed to each corner&apos;s
+          apex figure, and spend the battery you harvest under braking on Boost. Go more than 10%
+          over a corner&apos;s speed and you&apos;re off: a spin and a three-second penalty. Wait for
+          the five red lights to go out, then chase the ghost — the simulated lap from{" "}
+          <Link href="/circuit" className="underline decoration-paper/30 underline-offset-2 hover:text-paper">
+            /circuit
+          </Link>
+          , until you&apos;ve set a clean lap of your own.
         </p>
 
         <div className="mt-6">
@@ -32,9 +37,9 @@ export default function DrivePage() {
         </div>
 
         <p className="mt-4 text-[11px] leading-relaxed text-paper-dim/70">
-          Corner-safe speeds are derived from this centreline&apos;s own curvature, not a real
-          tyre model — a guide for &quot;did you lift here,&quot; not telemetry. Best lap is
-          stored on this device only.
+          Corner speeds are the same sourced apex figures /circuit&apos;s simulator uses, and the car
+          uses its public 2026 ballpark numbers (768 kg, ~750 kW, 5 g braking) — a game, not a
+          simulator of any real car. Your best lap and its ghost are stored on this device only.
         </p>
 
         <AboutNote />

@@ -70,6 +70,7 @@ export function BgmPlayer() {
           type="button"
           onClick={() => toggle(false)}
           aria-label="Show Formula 1 playlist player"
+          data-floating-widget=""
           className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-paper/10 bg-asphalt shadow-lg shadow-black/40 hover:border-amber"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber" fill="currentColor" aria-hidden>
@@ -88,6 +89,7 @@ export function BgmPlayer() {
           player should. */}
       <div
         hidden={minimized}
+        data-floating-widget=""
         className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 w-[min(300px,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-lg shadow-black/40"
       >
         <div className="flex items-center justify-end bg-asphalt px-2 py-1">
