@@ -137,6 +137,15 @@ describe("race control", () => {
     expect(deltaTo(trace, 0.3, 22.5)).toBeCloseTo(0.3 - 0.25, 9);
   });
 
+  it("times a recorded lap by where its trace crosses the line", () => {
+    // A 170 m "lap" sampled every 0.1 s, the last sample one tick past the
+    // line. The line falls halfway through the last tick, so the lap took
+    // 0.45 s, not the 0.5 s that counting samples implies.
+    const trace = [0, 40, 80, 120, 150, 190];
+    expect(timeAtDistance(trace, 170)).toBeCloseTo(0.45, 9);
+    expect((trace.length - 1) * 0.1).toBeCloseTo(0.5, 9);
+  });
+
   it("splits the lap into sectors and colours the times like F1 timing", () => {
     expect(sectorOf(100, [1500, 3500])).toBe(0);
     expect(sectorOf(2000, [1500, 3500])).toBe(1);

@@ -8,6 +8,7 @@ import {
   sectorOf,
   splitColour,
   startLights,
+  timeAtDistance,
   TRACE_DT,
   type Trace,
 } from "@/lib/drive/timing";
@@ -132,6 +133,7 @@ export class DriveGame {
   private clock = 0;
   private phase: Phase = "intro";
   private phaseBeforePause: Phase = "intro";
+  private phaseTimeBeforePause = 0;
   private phaseTime = 0;
   private hold = randomHold();
   private litShown = -1;
@@ -319,9 +321,17 @@ export class DriveGame {
   }
 
   togglePause() {
-    if (this.phase === "paused") this.setPhase(this.phaseBeforePause);
-    else {
+    if (this.phase === "paused") {
+      // Resume exactly where it stopped: paused mid-sequence, the start
+      // lights carry on from the lamp they were on rather than starting
+      // the procedure again (setPhase would zero the clock and the lamps).
+      this.phase = this.phaseBeforePause;
+      this.phaseTime = this.phaseTimeBeforePause;
+      this.litShown = -1; // re-announce the lamps that are lit
+      this.opts.events.phase(this.phase);
+    } else {
       this.phaseBeforePause = this.phase;
+      this.phaseTimeBeforePause = this.phaseTime;
       this.setPhase("paused");
     }
   }
@@ -451,7 +461,7 @@ export class DriveGame {
       this.traceClock += dt;
       while (this.traceClock >= TRACE_DT) {
         this.traceClock -= TRACE_DT;
-        this.currentTrace.push(Math.min(this.s, this.track.length));
+        this.currentTrace.push(this.s);
       }
       const sectorNow = sectorOf(Math.min(this.s, this.track.length - 0.01), this.track.sectorEnds);
       if (sectorNow > this.sectorTimes.length) this.closeSector(this.sectorTimes.length);
@@ -529,7 +539,10 @@ export class DriveGame {
     if (this.sessionBest == null || time < this.sessionBest) this.sessionBest = time;
     if (best && this.penalties === 0) {
       this.bestTime = time;
-      this.currentTrace.push(this.track.length);
+      // One more tick past the line, extrapolated at the finishing speed
+      // (`s` has already wrapped): the samples stay one TRACE_DT apart, so
+      // the moment the trace reaches the line can be interpolated.
+      this.currentTrace.push(this.track.length + this.s + this.v * (TRACE_DT - this.traceClock));
       this.bestTrace = this.currentTrace.map((d) => Math.round(d * 10) / 10);
       save(KEYS.best, Math.round(time * 1000));
       save(KEYS.trace, this.bestTrace);
@@ -558,7 +571,7 @@ export class DriveGame {
     const mode = this.ghostMode;
     if (mode === "off") return null;
     if ((mode === "best" || mode === "auto") && this.bestTrace && this.bestTrace.length > 10) {
-      return { trace: this.bestTrace, label: "Best", time: (this.bestTrace.length - 1) * TRACE_DT };
+      return { trace: this.bestTrace, label: "Best", time: timeAtDistance(this.bestTrace, this.track.length) };
     }
     if (mode === "best") return null;
     return { trace: this.sim.trace, label: "Sim", time: this.sim.lapTimeS };

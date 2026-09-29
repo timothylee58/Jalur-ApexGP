@@ -79,7 +79,12 @@ export function DriveTheLap() {
             reducedMotion: reduce,
             lite,
             events: {
-              phase: (p) => setPhase(p),
+              phase: (p) => {
+                setPhase(p);
+                // A new start (first run or a restart): the timing tower
+                // starts blank rather than showing the last run's splits.
+                if (p === "lights") setSplits([null, null, null]);
+              },
               lights: (lit, out) => setLights({ lit, out }),
               sector: (i, _t, colour) =>
                 setSplits((s) => {
@@ -373,8 +378,13 @@ export function DriveTheLap() {
               </p>
               <p className="mt-1 font-mono text-3xl tabular-nums text-paper">{formatLapTime(lapCard.time)}</p>
               <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.2em] text-paper-dim">
-                {lapCard.penalties ? `incl. +${lapCard.penalties} s penalties · ` : ""}
-                {lapCard.delta != null ? `${formatDelta(lapCard.delta)} vs ghost` : "clean lap"}
+                {[
+                  lapCard.penalties ? `incl. +${lapCard.penalties} s penalties` : null,
+                  lapCard.delta != null ? `${formatDelta(lapCard.delta)} vs ghost` : null,
+                  !lapCard.penalties && lapCard.delta == null ? "clean lap" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </p>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 {lapCard.sectors.map((t, i) => (
