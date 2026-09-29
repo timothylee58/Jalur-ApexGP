@@ -103,9 +103,10 @@
   }
 }
 
+/* Applied on a freshly mounted <image> (the car group is re-keyed per
+   state), so it takes effect instantly: the lights go out, nothing eases. */
 .sc-parked {
   filter: saturate(0.3) brightness(0.55);
-  transition: filter 400ms ease;
 }
 
 /* Tyres ----------------------------------------------------------------- */
@@ -178,8 +179,7 @@ button:focus-visible .tyre-idle {
     animation: none;
   }
 
-  .tyre-idle,
-  .sc-parked {
+  .tyre-idle {
     transition: none;
   }
 

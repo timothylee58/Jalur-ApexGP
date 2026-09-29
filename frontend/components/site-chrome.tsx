@@ -173,8 +173,11 @@ function ScrollButton({
       tabIndex={-1}
       aria-label={label}
       onClick={onClick}
-      className={`hidden h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-dim transition-opacity hover:bg-paper/10 hover:text-paper sm:flex ${
-        visible ? "opacity-100" : "pointer-events-none opacity-0"
+      // `invisible` (visibility: hidden) also drops an inactive arrow from the
+      // accessibility tree; visibility is transitioned with opacity so the
+      // fade-out still plays before it flips.
+      className={`hidden h-7 w-7 shrink-0 items-center justify-center rounded-full text-paper-dim transition-[opacity,visibility] duration-200 hover:bg-paper/10 hover:text-paper sm:flex ${
+        visible ? "visible opacity-100" : "pointer-events-none invisible opacity-0"
       }`}
     >
       <Icon aria-hidden="true" className="h-4 w-4" />

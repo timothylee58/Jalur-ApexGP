@@ -19,6 +19,7 @@ export function LanguageSwitcher() {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const menuId = useId();
+  const noteId = useId();
   const current = LANGUAGES.find((option) => option.code === lang) ?? LANGUAGES[0];
 
   useEffect(() => {
@@ -64,7 +65,11 @@ export function LanguageSwitcher() {
         close(true);
         break;
       case "Tab":
-        close(false);
+        // Hand focus back to the button before the menu unmounts, so the
+        // browser's own Tab step starts from there instead of from a
+        // removed node (which can drop focus to <body>).
+        buttonRef.current?.focus();
+        setOpen(false);
         break;
     }
   };
@@ -100,51 +105,58 @@ export function LanguageSwitcher() {
       </button>
 
       {open ? (
-        <div
-          id={menuId}
-          role="menu"
-          aria-label={t.header.language}
-          onKeyDown={onMenuKeyDown}
-          className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-lg border border-paper/15 bg-pit-carbon/95 p-1 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur"
-        >
-          {LANGUAGES.map((option, index) => {
-            const checked = option.code === lang;
-            return (
-              <button
-                key={option.code}
-                ref={(el) => {
-                  itemRefs.current[index] = el;
-                }}
-                type="button"
-                role="menuitemradio"
-                aria-checked={checked}
-                lang={option.code}
-                tabIndex={-1}
-                onClick={() => {
-                  setLang(option.code);
-                  close(true);
-                }}
-                className={`flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors focus:outline-none focus-visible:bg-paper/10 ${
-                  checked ? "text-amber" : "text-paper hover:bg-paper/5"
-                }`}
-              >
-                <span className="w-7 shrink-0 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-                  {option.label}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm leading-tight">{option.native}</span>
-                  {option.native !== option.english ? (
-                    <span lang="en" className="block text-[11px] leading-tight text-paper-dim">
-                      {option.english}
-                    </span>
-                  ) : null}
-                </span>
-                {checked ? <Check aria-hidden="true" className="h-4 w-4 shrink-0" /> : null}
-              </button>
-            );
-          })}
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 origin-top-right rounded-lg border border-paper/15 bg-pit-carbon/95 p-1 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)] backdrop-blur">
+          <div
+            id={menuId}
+            role="menu"
+            aria-label={t.header.language}
+            aria-describedby={t.header.machineTranslated ? noteId : undefined}
+            onKeyDown={onMenuKeyDown}
+          >
+            {LANGUAGES.map((option, index) => {
+              const checked = option.code === lang;
+              return (
+                <button
+                  key={option.code}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={checked}
+                  lang={option.code}
+                  tabIndex={-1}
+                  onClick={() => {
+                    setLang(option.code);
+                    close(true);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors focus:outline-none focus-visible:bg-paper/10 ${
+                    checked ? "text-amber" : "text-paper hover:bg-paper/5"
+                  }`}
+                >
+                  <span className="w-7 shrink-0 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
+                    {option.label}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm leading-tight">{option.native}</span>
+                    {option.native !== option.english ? (
+                      <span lang="en" className="block text-[11px] leading-tight text-paper-dim">
+                        {option.english}
+                      </span>
+                    ) : null}
+                  </span>
+                  {checked ? <Check aria-hidden="true" className="h-4 w-4 shrink-0" /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {/* A menu may only own menu items, so the note sits beside it and
+              is announced through aria-describedby instead. */}
           {t.header.machineTranslated ? (
-            <p className="mt-1 border-t border-paper/10 px-2.5 pb-1.5 pt-2 text-[10px] leading-snug text-paper-dim">
+            <p
+              id={noteId}
+              className="mt-1 border-t border-paper/10 px-2.5 pb-1.5 pt-2 text-[10px] leading-snug text-paper-dim"
+            >
               {t.header.machineTranslated}
             </p>
           ) : null}

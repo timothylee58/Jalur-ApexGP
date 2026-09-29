@@ -29,14 +29,15 @@ def _pyproject_deps() -> set[str]:
     return {_normalise(d) for d in data["project"]["dependencies"]}
 
 
-def _requirements_deps() -> set[str]:
+def _parse_requirements(text: str) -> set[str]:
     # pip allows trailing "  # note" on a requirement line; drop it so an
     # annotated pin still compares equal to the bare one in pyproject.
-    lines = (
-        line.split("#", 1)[0].strip()
-        for line in (BACKEND / "requirements.txt").read_text().splitlines()
-    )
+    lines = (line.split("#", 1)[0].strip() for line in text.splitlines())
     return {_normalise(line) for line in lines if line and not line.startswith("-")}
+
+
+def _requirements_deps() -> set[str]:
+    return _parse_requirements((BACKEND / "requirements.txt").read_text())
 
 
 def test_pyproject_and_requirements_declare_the_same_runtime_dependencies():
@@ -56,3 +57,14 @@ def test_every_runtime_dependency_is_pinned():
     # sets of versions.
     for dep in _pyproject_deps():
         assert "==" in dep, f"{dep} is not pinned to an exact version"
+
+
+def test_requirements_parsing_ignores_comments_options_and_blank_lines():
+    text = (
+        "# runtime\n"
+        "FastAPI==0.115.12  # pinned for the Vercel runtime\n"
+        "\n"
+        "-r other.txt\n"
+        "uvicorn[standard]==0.34.0\n"
+    )
+    assert _parse_requirements(text) == {"fastapi==0.115.12", "uvicorn[standard]==0.34.0"}

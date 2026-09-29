@@ -8,12 +8,12 @@ describe("adjustedLife", () => {
   });
 
   it("shortens life as the track heats, capped at 72%", () => {
-    expect(adjustedLife("Medium", 41)).toBe(Math.round(26 * (1 - 0.11)));
-    expect(adjustedLife("Medium", 80)).toBe(Math.round(26 * 0.72));
+    expect(adjustedLife("Medium", 41)).toBe(23); // 26 × (1 − 0.011 × 10) = 23.14
+    expect(adjustedLife("Medium", 80)).toBe(19); // 26 × 0.72 (floor) = 18.72
   });
 
   it("extends life on a cool track, capped at 118%", () => {
-    expect(adjustedLife("Hard", 0)).toBe(Math.round(38 * 1.18));
+    expect(adjustedLife("Hard", 0)).toBe(45); // 38 × 1.18 (ceiling) = 44.84
   });
 });
 
@@ -29,6 +29,12 @@ describe("tyreFit", () => {
     expect(tyreFit("Soft", 40)).toBe("marginal");
     expect(tyreFit("Wet", 40)).toBe("wrong");
     expect(tyreFit("Intermediate", 40)).toBe("good");
+  });
+
+  it("compares the raw probability, as the backend does, not a rounded one", () => {
+    // 34.6% is still the dry band for the engine; rounding to 35 would not be.
+    expect(tyreFit("Soft", 34.6)).toBe("good");
+    expect(tyreFit("Soft", 35)).toBe("marginal");
   });
 
   it("prefers full wets over inters in heavy rain", () => {

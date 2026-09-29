@@ -49,7 +49,11 @@ const FIT_COPY: Record<TyreFit, { label: string; tone: string }> = {
 };
 
 export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfControlsProps) {
-  const rain = Math.round(whatIf.rainProbability ?? inputs?.rainProbability ?? 40);
+  // The live read is a blended float; the backend's tyre-fit bands compare
+  // the raw value, so the readout must too — rounding 34.6 up to 35 would
+  // flip a slick from "suits" to "marginal" the engine never applied.
+  const rainRaw = whatIf.rainProbability ?? inputs?.rainProbability ?? 40;
+  const rain = Math.round(rainRaw);
   const temp = Math.round(whatIf.tempC ?? inputs?.tempC ?? 32);
   const safetyCar = whatIf.safetyCar ?? inputs?.safetyCar ?? false;
   const tyre: Compound | "Auto" = whatIf.tyreChoice ?? "Auto";
@@ -296,7 +300,7 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
               );
             })}
           </div>
-          <TyreReadout tyre={tyre} rain={rain} temp={temp} />
+          <TyreReadout tyre={tyre} rain={rainRaw} temp={temp} />
         </div>
       </div>
     </section>
