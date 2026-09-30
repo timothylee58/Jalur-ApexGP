@@ -189,3 +189,14 @@ def test_forced_slicks_in_heavy_rain_box_for_inters(wet_weather: WeatherSnapshot
 def test_turn_15_does_not_also_highlight_turn_1() -> None:
     assert _referenced_corners("Don't burn the rears defending into Turn 15.") == ["T15"]
     assert _referenced_corners("Lift into Turn 1, then Turns 5–7.") == ["T1", "T5–T7"]
+
+
+def test_the_long_run_is_always_the_longer_stint(dry_weather: WeatherSnapshot) -> None:
+    for tyre in (None, "Soft", "Medium", "Hard", "Intermediate", "Wet"):
+        for rain in (12.0, 42.0, 78.0):
+            weather = dry_weather.model_copy(update={"rain_probability": rain})
+            for variant in (build_prediction("FP2", weather, tyre_choice=tyre).conservative,):
+                first, second = variant.stints
+                long_stint = first if "long" not in variant.reasoning.split("then")[1] else second
+                assert long_stint.laps >= min(first.laps, second.laps)
+                assert "push" not in variant.reasoning.split("then")[0] or first.laps < second.laps

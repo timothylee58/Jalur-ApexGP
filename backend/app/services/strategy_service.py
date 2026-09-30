@@ -362,10 +362,15 @@ def _practice_reasoning(variant: str, stints: list[Stint], weather: WeatherSnaps
     first, second = stints
     a, b = _plural(first.compound), _plural(second.compound)
     unsettled = weather.rain_probability >= 35 or _weather_shift(stints) != "dry"
+    # The longer stint is the long run, whichever order it comes in: a
+    # short-life opener can leave more laps after it than it runs itself.
+    long_first = first.laps >= second.laps
+    first_for = (_LONG_RUN_FOR if long_first else _PUSH_RUN_FOR)[first.compound]
+    second_for = (_PUSH_RUN_FOR if long_first else _LONG_RUN_FOR)[second.compound]
     if variant == "conservative":
         text = (
-            f"{first.laps}-lap long run on {a} for {_LONG_RUN_FOR[first.compound]}, then {second.laps} laps "
-            f"on {b} for {_PUSH_RUN_FOR[second.compound]}."
+            f"{first.laps} laps on {a} for {first_for}, then {second.laps} laps "
+            f"on {b} for {second_for}."
         )
         if unsettled:
             return (
@@ -374,8 +379,8 @@ def _practice_reasoning(variant: str, stints: list[Stint], weather: WeatherSnaps
             )
         return f"{text} At {weather.temp_c:.0f}°C, heat soak through Turns 5–7 is the main tyre risk."
     text = (
-        f"Open with {first.laps} laps on {a} for {_PUSH_RUN_FOR[first.compound]}, then {second.laps} laps "
-        f"on {b} for {_LONG_RUN_FOR[second.compound]}."
+        f"Open with {first.laps} laps on {a} for {first_for}, then {second.laps} laps "
+        f"on {b} for {second_for}."
     )
     if unsettled:
         return f"{text} Get the push lap in before the weather turns."
@@ -390,8 +395,8 @@ def _quali_reasoning(variant: str, stints: list[Stint], weather: WeatherSnapshot
         b = _plural(stints[1].compound)
         if shift == "rain":
             return (
-                f"{_rain_label(weather)} — bank a Q1 lap on {a} before the shower, then {b} from Q2 "
-                "if it reaches Turn 9."
+                f"{_rain_label(weather)} — bank a Q1 lap on {a} before the shower, switch to {b} "
+                "from Q2 if it reaches Turn 9, and bank again on the first Q3 run."
             )
         return f"Start on {a} for Q1 and Q2, then gamble on {b} for Q3 if a dry line forms through Turn 1."
     if shift == "wet":
@@ -534,6 +539,11 @@ def _key_risk(
             if unsettled
             else "Heat soak through the esses — deg builds lap on lap, so judge the long run on its "
             "last laps."
+        )
+    if _is_wet(stints[-1].compound):
+        return (
+            f"The line drying under the {b} — they overheat on a dry track and the wet data "
+            "stops meaning anything."
         )
     return (
         "Rain on the long run — the race-pace data ends early, with no second chance at it."
