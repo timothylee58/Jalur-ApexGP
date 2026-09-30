@@ -40,15 +40,13 @@ export interface Driver {
   loreId?: string;
   note: string;
   /**
-   * "Last time out" recap — one real, WebSearch-verified sentence about the
-   * 2026 Dutch Grand Prix at Zandvoort (Aug 21–23), the most recently
-   * completed round as of this app's "today" (Sept 2026), a weekend before
-   * this round's Monza date. Only on 2026-grid drivers — a real in-season
-   * result, not a fictional one, same distinction `note` already draws
-   * against career stats. Four drivers (Hadjar, Lindblad, Bortoleto, Pérez)
-   * weren't individually named in the point-scorer or retirement lists any
-   * search surfaced; "finished outside the points" is an inference from
-   * that absence, not a directly sourced classification.
+   * "Last time out" recap — one sentence on the 2026 Azerbaijan Grand Prix
+   * in Baku (24–26 Sep, round 15), the last race before this weekend's
+   * round 16 at Sepang. Only on 2026-grid drivers: a real in-season result,
+   * the same distinction `note` draws against career stats. Written from
+   * the published final classification (GPFans, cross-checked against The
+   * Race); retirement causes aren't given except where a report named one.
+   * Replace after each round.
    */
   recap?: string;
 }
@@ -67,7 +65,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2019–",
     stats: { championships: 1, wins: 13, podiums: 48, poles: 18 },
     note: "2025 champion — enters 2026 as the reference lap the rest of the grid is measured against.",
-    recap: "Won Zandvoort's farewell Grand Prix from pole, a second straight victory, timing the strategy around Verstappen's Lap 1 red flag.",
+    recap: "Taken out at Baku's first safety-car restart in a collision Colapinto caused, leaving the reigning champion and McLaren without a point.",
   },
   {
     id: "piastri",
@@ -80,7 +78,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2023–",
     stats: { championships: 0, wins: 9, podiums: 28, poles: 6 },
     note: "Title runner-up in 2025 off the shortest career in the McLaren pairing.",
-    recap: "Brought the second McLaren home in sixth at Zandvoort after the early red flag reshuffled the whole race.",
+    recap: "Locked up and slid into a run-off with about ten laps to go in Baku, falling to 14th on a pointless day for McLaren.",
   },
   {
     id: "leclerc",
@@ -93,7 +91,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2018–",
     stats: { championships: 0, wins: 9, podiums: 54, poles: 27 },
     note: "More poles than wins by a wide margin — Saturday pace that hasn't always converted on Sunday.",
-    recap: "Set the race's fastest lap at Zandvoort (1:14.230, lap 60) on the way to fifth, just off the podium.",
+    recap: "Fourth in Baku, 14.1s behind the winner and just ahead of Antonelli.",
   },
   {
     id: "hamilton",
@@ -106,7 +104,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2007–",
     stats: { championships: 7, wins: 106, podiums: 206, poles: 104 },
     note: "The all-time pole record. Second season in red after the 2025 move from Mercedes.",
-    recap: "Split the Mercedes and Ferrari pace in fourth at Zandvoort, the team's best finish of the weekend.",
+    recap: "Sixth in Baku, one place behind the recovering Antonelli.",
   },
   {
     id: "verstappen",
@@ -119,7 +117,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2015–",
     stats: { championships: 4, wins: 71, podiums: 131, poles: 48 },
     note: "Won the last Malaysian Grand Prix run at this circuit, back in 2017.",
-    recap: "Zandvoort ended on Lap 1 — a heavy crash that brought out the red flag and reshaped the entire race.",
+    recap: "Hunted Russell for the last 15 laps in Baku and crossed the line 0.196s behind: still chasing a first win of 2026.",
   },
   {
     id: "hadjar",
@@ -132,7 +130,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2025–",
     stats: { championships: 0, wins: 0, podiums: 1, poles: 0 },
     note: "First podium came at the 2025 Dutch GP in mixed conditions — promoted to the senior Red Bull seat for 2026.",
-    recap: "Kept the second Red Bull running after Verstappen's Lap 1 crash at Zandvoort, finishing outside the points.",
+    recap: "Third in Baku on his return from a wrist injury, completing Red Bull's first double podium since the 2024 Chinese Grand Prix.",
   },
   {
     id: "russell",
@@ -145,7 +143,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2019–",
     stats: { championships: 0, wins: 7, podiums: 30, poles: 11 },
     note: "Team's senior driver since Hamilton's 2025 departure to Ferrari.",
-    recap: "Rounded out a genuine Mercedes podium lockout in third at Zandvoort, with teammate Antonelli splitting him and race winner Norris.",
+    recap: "Won in Baku from pole, leading every lap, holding off Verstappen by 0.196s after two safety-car restarts and setting the fastest lap.",
   },
   {
     id: "antonelli",
@@ -158,7 +156,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2025–",
     stats: { championships: 0, wins: 0, podiums: 3, poles: 0 },
     note: "Three podiums as an 18-year-old rookie replacing Hamilton — highest-scoring rookie season on record.",
-    recap: "Took second at Zandvoort's farewell Grand Prix — another podium in a rookie season already full of them.",
+    recap: "Recovered from 16th on the grid to fifth in Baku, adding ten points to his championship lead.",
   },
   {
     id: "alonso",
@@ -171,7 +169,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2001–2018, 2021–",
     stats: { championships: 2, wins: 32, podiums: 106, poles: 22 },
     note: "The only current driver who raced at Sepang before the 2017 farewell.",
-    recap: "Ninth at Zandvoort was Aston Martin's best result of the season.",
+    recap: "Retired from the Azerbaijan Grand Prix, one of two Aston Martin retirements.",
   },
   {
     id: "stroll",
@@ -184,7 +182,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2017–",
     stats: { championships: 0, wins: 0, podiums: 3, poles: 1 },
     note: "A wet-weather pole at Turkey 2020 remains the standout result on an otherwise midfield record.",
-    recap: "Retired from Zandvoort's farewell race — didn't see the chequered flag.",
+    recap: "Retired in Baku, as did teammate Alonso: a pointless weekend for Aston Martin.",
   },
   {
     id: "gasly",
@@ -197,7 +195,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2017–",
     stats: { championships: 0, wins: 1, podiums: 6, poles: 0 },
     note: "That single win came at Monza 2020, from a Red Bull seat he'd already been dropped from mid-season.",
-    recap: "Rounded out the points in tenth at Zandvoort, Alpine's stronger side of the garage that day.",
+    recap: "Put out of the race in Baku by his own teammate's collision at the first safety-car restart.",
   },
   {
     id: "colapinto",
@@ -210,7 +208,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2024–",
     stats: { championships: 0, wins: 0, podiums: 0, poles: 0 },
     note: "Still building a full-season points record after a mid-2024 Williams call-up.",
-    recap: "Two separate penalties for yellow-flag infringements dropped him to 14th at Zandvoort — a tough weekend to build on.",
+    recap: "Caused the restart collision in Baku that took out Norris, teammate Gasly and himself; the ten-second penalty becomes a five-place grid drop at Sepang.",
   },
   {
     id: "ocon",
@@ -223,7 +221,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2016–",
     stats: { championships: 0, wins: 1, podiums: 4, poles: 0 },
     note: "Career win at Hungary 2021, in a Renault-Alpine that had no business being on the top step that day.",
-    recap: "Didn't finish Zandvoort's farewell race — one of two Haas retirements that day.",
+    recap: "Eighth in Baku, leading home a double points finish for Haas.",
   },
   {
     id: "bearman",
@@ -236,7 +234,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2024–",
     stats: { championships: 0, wins: 0, podiums: 0, poles: 0 },
     note: "Debuted as a late Ferrari substitute in 2024 before a full-time Haas seat in 2025.",
-    recap: "The other side of a difficult Haas weekend at Zandvoort — retired without reaching the flag.",
+    recap: "Ninth in Baku, less than a second behind teammate Ocon.",
   },
   {
     id: "lawson",
@@ -249,7 +247,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2023–",
     stats: { championships: 0, wins: 0, podiums: 0, poles: 0 },
     note: "A single 2025 season at Red Bull ended in a swap back to Racing Bulls after two races.",
-    recap: "Brought Racing Bulls' only finisher home in seventh at Zandvoort, weathering a penalty for a yellow-flag infringement.",
+    recap: "Twelfth in Baku, back at Racing Bulls after three races in Hadjar's Red Bull seat.",
   },
   {
     id: "lindblad",
@@ -262,7 +260,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2026–",
     stats: { championships: 0, wins: 0, podiums: 0, poles: 0 },
     note: "The only rookie on the 2026 grid — no prior F1 starts to draw a record from yet.",
-    recap: "Finished outside the points at Zandvoort — still building race craft in a debut season.",
+    recap: "Seventh in Baku, Racing Bulls' best finish of the weekend, after crashing at Turn 8 in second practice.",
   },
   {
     id: "sainz",
@@ -275,7 +273,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2015–",
     stats: { championships: 0, wins: 4, podiums: 29, poles: 6 },
     note: "Beat Verstappen to a win at Australia 2024 while recovering from an appendectomy days earlier.",
-    recap: "Last of the runners at Zandvoort (16th) after a post-race penalty for a first-lap clash with teammate Albon.",
+    recap: "Took the last point in tenth in Baku.",
   },
   {
     id: "albon",
@@ -288,7 +286,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2019–2020, 2022–",
     stats: { championships: 0, wins: 0, podiums: 2, poles: 0 },
     note: "Both podiums came in a two-year Red Bull spell before a 2022 rebuild at Williams.",
-    recap: "Didn't finish Zandvoort's farewell race after contact with teammate Sainz on the first lap.",
+    recap: "Retired from the Azerbaijan Grand Prix.",
   },
   {
     id: "hulkenberg",
@@ -301,7 +299,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2010–2019, 2023–",
     stats: { championships: 0, wins: 0, podiums: 1, poles: 1 },
     note: "Most career starts of any driver without a win — first podium finally arrived in 2025.",
-    recap: "Eighth at Zandvoort was Audi's best result of the season.",
+    recap: "Eleventh in Baku, just outside the points and two places ahead of teammate Bortoleto.",
   },
   {
     id: "bortoleto",
@@ -314,7 +312,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2025–",
     stats: { championships: 0, wins: 0, podiums: 0, poles: 0 },
     note: "Arrived off an F2 title — still working through his first full season's points record.",
-    recap: "Finished outside the points at Zandvoort, on Audi's stronger side of the garage that day.",
+    recap: "Thirteenth in Baku, two places behind Hülkenberg.",
   },
   {
     id: "perez",
@@ -327,7 +325,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2011–",
     stats: { championships: 0, wins: 6, podiums: 39, poles: 4 },
     note: "Returns to the grid in 2026 with Cadillac's debut entry after a year out.",
-    recap: "Finished outside the points at Zandvoort, on Cadillac's side of the garage that reached the flag.",
+    recap: "Fifteenth in Baku, Cadillac's best finisher.",
   },
   {
     id: "bottas",
@@ -340,7 +338,7 @@ export const drivers: Driver[] = [
     seasonsActive: "2013–",
     stats: { championships: 0, wins: 10, podiums: 67, poles: 20 },
     note: "Ten wins and a title runner-up finish, mostly as the second Mercedes seat through their dominant run.",
-    recap: "Didn't finish Zandvoort's farewell race — the other retirement on Cadillac's side of the garage.",
+    recap: "Classified 16th in Baku despite not reaching the flag.",
   },
 
   // ---- Sepang history, each tied to a specific /lore entry ----

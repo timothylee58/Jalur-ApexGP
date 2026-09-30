@@ -3,7 +3,12 @@ from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.picks import LeaderboardResponse, MyPickResponse, PickSubmission, PickSubmitted
 from app.services import picks_service
-from app.services.picks_service import PicksClosed, PicksDeadlineUnknown, PicksStorageUnavailable
+from app.services.picks_service import (
+    PicksClosed,
+    PicksDeadlineUnknown,
+    PicksInvalid,
+    PicksStorageUnavailable,
+)
 
 router = APIRouter()
 
@@ -12,6 +17,8 @@ router = APIRouter()
 async def submit_pick(payload: PickSubmission) -> PickSubmitted:
     try:
         return await picks_service.submit_pick(payload)
+    except PicksInvalid as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PicksClosed as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PicksStorageUnavailable as exc:

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AboutNote } from "@/components/shared/AboutNote";
@@ -12,7 +12,9 @@ import { StandingsStrip } from "@/components/drivers/StandingsStrip";
 import { SiteHeader } from "@/components/site-chrome";
 import { drivers, type DriverEra } from "@/data/drivers";
 import { teams } from "@/data/teams";
+import { useStandings } from "@/hooks/useStandings";
 import { accentForDriver } from "@/lib/driverAccent";
+import { driverStanding } from "@/lib/standings";
 
 const ERA_LABEL: Record<DriverEra, string> = {
   "2026-grid": "2026 grid",
@@ -55,25 +57,47 @@ function DriversView() {
     if (first) setSelectedId(first.id);
   }
 
+  const standings = useStandings();
+  const season = selected ? driverStanding(standings.data, selected.id) : null;
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Below lg the card sits above the team grid and the standings table sits
+  // above both, so a pick made further down the page can change a card
+  // that's scrolled out of view. Bring it back into view; on desktop the
+  // card is pinned beside the grid and never leaves.
+  function selectAndReveal(id: string) {
+    setSelectedId(id);
+    const driver = drivers.find((d) => d.id === id);
+    if (driver && driver.era !== era) setEra(driver.era);
+    if (!window.matchMedia("(max-width: 1023px)").matches) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    requestAnimationFrame(() =>
+      cardRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" }),
+    );
+  }
+
   return (
-      <main className="mx-auto w-full max-w-3xl px-4 py-6">
+      <main className="mx-auto w-full max-w-3xl px-4 py-6 lg:max-w-6xl">
         <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
           Driver grid
         </p>
         <h1 className="mt-2 font-display text-3xl uppercase leading-none tracking-wide text-paper">
           Every seat on the grid
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-paper-dim">
-          Real drivers, real career numbers, each in their constructor&apos;s
-          colours. Stats are career totals through the 2025 season close —
-          the season this grid enters 2026 with — not a live in-season feed.
-          The 3D view lines them up in grid formation <em>by team</em>: that
-          is a layout choice, not a qualifying result, so nothing about who
-          sits on pole there means anything. Unofficial fan project — photos
-          for identification only, not licensed merch.
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-paper-dim">
+          Real drivers in their constructor&apos;s colours. The championship table and each
+          driver&apos;s 2026 line are live from Jolpica; career totals run to the 2025 season
+          close. The 3D view lines them up in grid formation <em>by team</em>, a layout choice
+          rather than a qualifying result, so who sits on pole there means nothing. Unofficial
+          fan project — photos for identification only, not licensed merch.
         </p>
 
-        <StandingsStrip />
+        <StandingsStrip
+          data={standings.data}
+          error={standings.error}
+          selectedId={selectedId}
+          onSelect={selectAndReveal}
+        />
 
         <div className="mt-5 flex gap-2" role="tablist" aria-label="Driver era">
           {(Object.keys(ERA_LABEL) as DriverEra[]).map((key) => (
@@ -106,23 +130,27 @@ function DriversView() {
           </p>
         ) : null}
 
-        <div className="mt-6">
-          <DriverGridScene drivers={filtered} selectedId={selectedId} onSelect={setSelectedId} />
-        </div>
+        {/* Mobile: scene, card, then the grid. Desktop: scene over grid on
+            the left, the card pinned on the right as you browse. */}
+        <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
+          <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
+            <DriverGridScene drivers={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+          </div>
 
-        <div className="mt-5">
-          {era === "2026-grid" ? (
-            <ConstructorGrid selectedId={selectedId} onSelect={setSelectedId} />
-          ) : (
-            <SepangHistoryTimeline selectedId={selectedId} onSelect={setSelectedId} />
-          )}
-        </div>
+          <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2">
+            {era === "2026-grid" ? (
+              <ConstructorGrid selectedId={selectedId} onSelect={selectAndReveal} />
+            ) : (
+              <SepangHistoryTimeline selectedId={selectedId} onSelect={selectAndReveal} />
+            )}
+          </div>
 
         {selected ? (
           <div
+            ref={cardRef}
             role="status"
             aria-live="polite"
-            className="mt-4 rounded-lg border border-paper/10 bg-asphalt px-4 py-4"
+            className="order-2 scroll-mt-4 self-start rounded-lg border border-paper/10 bg-asphalt px-4 py-4 lg:sticky lg:top-6 lg:order-none lg:col-start-2 lg:row-span-2 lg:row-start-1"
           >
             <div className="flex items-center gap-3">
               {(() => {
@@ -155,7 +183,21 @@ function DriversView() {
 
             <p className="mt-3 text-sm leading-relaxed text-paper-dim">{selected.note}</p>
 
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {season ? (
+              <div className="mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md border border-amber/30 bg-amber/5 px-3 py-2">
+                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-amber">
+                  {standings.data?.season} so far
+                </span>
+                <span className="font-mono text-sm text-paper">
+                  P{season.position} · {season.points} pts · {season.wins} {season.wins === 1 ? "win" : "wins"}
+                </span>
+              </div>
+            ) : null}
+
+            <p className="mt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-paper-dim">
+              {selected.era === "2026-grid" ? "Career, to the end of 2025" : "Career"}
+            </p>
+            <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
               {STAT_LABELS.map(({ key, label }) => (
                 <div key={key} className="rounded-md border border-paper/10 px-3 py-2">
                   <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-paper-dim">
@@ -195,6 +237,7 @@ function DriversView() {
             </div>
           </div>
         ) : null}
+        </div>
 
         <AboutNote />
       </main>

@@ -15,7 +15,9 @@ export const DRIVER_PHOTO: Record<string, string> = {
   ocon: "/drivers/ocon.png",
   bearman: "/drivers/bearman.png",
   lawson: "/drivers/lawson.png",
-  lindblad: "/drivers/lindblad.png",
+  // No lindblad entry: the only image on file was a grey stand-in
+  // silhouette, and an initials badge in team colours reads better than a
+  // placeholder face next to 21 real ones.
   sainz: "/drivers/sainz.png",
   albon: "/drivers/albon.png",
   hulkenberg: "/drivers/hulkenberg.png",
