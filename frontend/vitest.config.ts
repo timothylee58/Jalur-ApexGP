@@ -6,6 +6,11 @@ import { defineConfig } from "vitest/config";
 // build tooling (this project has no other test infra yet — see
 // lib/pointCloudAlign.test.ts for what this currently covers).
 export default defineConfig({
+  // tsconfig keeps JSX as-is for Next.js to compile; tests that import a
+  // .tsx module (the /og route's render test) need it compiled here.
+  oxc: {
+    jsx: { runtime: "automatic" },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),

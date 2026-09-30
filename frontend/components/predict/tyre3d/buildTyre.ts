@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Compound } from "@/types";
-import { TYRE_COLOR } from "@/components/predict/TyreArt";
+import { TYRE_COLOR } from "@/lib/tyreColors";
 
 /**
  * Procedural F1 wheel-and-tyre, modelled from photos of the real Pirelli

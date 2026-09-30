@@ -3,7 +3,8 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import dynamic from "next/dynamic";
 import { SafetyCarArt } from "@/components/predict/SafetyCarArt";
-import { TYRE_COLOR, TyreArt, type TyreOption } from "@/components/predict/TyreArt";
+import { TyreArt, type TyreOption } from "@/components/predict/TyreArt";
+import { TYRE_COLOR } from "@/lib/tyreColors";
 import { useTyreThumbnails } from "@/components/predict/tyre3d/useTyreThumbnails";
 import { adjustedLife, tyreFit, type TyreFit } from "@/lib/tyreModel";
 import { COMPOUNDS, type Compound, type SimInputs, type WhatIf } from "@/types";
