@@ -32,7 +32,7 @@ from app.schemas.picks import (
     PickSubmitted,
 )
 from app.services import jolpica_service
-from app.services.picks_scoring import score_submission
+from app.services.picks_scoring import answer_problems, score_submission
 
 logger = logging.getLogger(__name__)
 MYT = ZoneInfo("Asia/Kuala_Lumpur")
@@ -55,6 +55,12 @@ class PicksStorageUnavailable(Exception):
 
 class PicksClosed(Exception):
     """The picks deadline has passed — a real 4xx, not a config problem."""
+
+
+class PicksInvalid(Exception):
+    """The picks can't be scored as sent (see picks_scoring.answer_problems)
+    — a real 4xx. Checked before the deadline lookup, so a bad submission
+    never costs an upstream call."""
 
 
 class PicksDeadlineUnknown(Exception):
@@ -106,6 +112,9 @@ async def get_deadline() -> datetime:
 
 
 async def submit_pick(submission: PickSubmission) -> PickSubmitted:
+    problems = answer_problems(submission.picks)
+    if problems:
+        raise PicksInvalid("; ".join(problems))
     deadline = await get_deadline()
     now = datetime.now(MYT)
     if now >= deadline:

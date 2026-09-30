@@ -1,95 +1,141 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { fetchStandings } from "@/lib/api";
+import { useState } from "react";
+import Link from "next/link";
+import { drivers } from "@/data/drivers";
+import { teams } from "@/data/teams";
+import { appDriverId, appTeamId } from "@/lib/standings";
 import type { StandingsPayload } from "@/types/jolpica";
 
-/**
- * Compact championship table from Jolpica/Ergast — the same open results
- * feed the Sepang weekend schedule now comes from. Tracks the current,
- * still-in-progress season live (refetched every few minutes server-side,
- * see jolpica_service.py's _STANDINGS_CACHE_TTL_SECONDS), not a fixed
- * snapshot. Career totals on each driver card stay as the static
- * through-2025 snapshot in `data/drivers.ts` — a different, deliberately
- * static number this strip's live table sits next to, not a duplicate of
- * it.
- */
-export function StandingsStrip() {
-  const [data, setData] = useState<StandingsPayload | null>(null);
-  const [error, setError] = useState(false);
+interface StandingsStripProps {
+  data: StandingsPayload | null;
+  error: boolean;
+  selectedId: string;
+  onSelect: (driverId: string) => void;
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchStandings()
-      .then((payload) => {
-        if (!cancelled) setData(payload);
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+const COLLAPSED_ROWS = 10;
+const TEAM_COLOUR: Record<string, string> = Object.fromEntries(teams.map((team) => [team.id, team.primary]));
+const TEAM_NAME: Record<string, string> = Object.fromEntries(teams.map((team) => [team.id, team.name]));
+const DRIVER_TEAM: Record<string, string> = Object.fromEntries(
+  teams.flatMap((team) => team.driverIds.map((id) => [id, team.id])),
+);
+const DRIVER_NAME: Record<string, string> = Object.fromEntries(drivers.map((driver) => [driver.id, driver.name]));
+
+/**
+ * The live 2026 championship from Jolpica/Ergast, refetched every few
+ * minutes server-side (see jolpica_service.py's _STANDINGS_CACHE_TTL_SECONDS),
+ * joined to this app's own drivers and teams so names and liveries match
+ * every other page (Jolpica says "RB F1 Team"; this site says Racing
+ * Bulls). A driver row selects that driver's card. Career totals on the
+ * card stay the static through-2025 snapshot in `data/drivers.ts`.
+ */
+export function StandingsStrip({ data, error, selectedId, onSelect }: StandingsStripProps) {
+  const [expanded, setExpanded] = useState(false);
 
   if (error) {
     return (
       <p className="mt-5 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-        Live standings unavailable — Jolpica feed didn&apos;t respond.
+        Live standings unavailable — the Jolpica feed didn&apos;t respond.
       </p>
     );
   }
 
   if (!data) {
     return (
-      <p className="mt-5 font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-        Loading live standings…
-      </p>
+      <div className="mt-5 h-40 animate-pulse rounded-lg bg-paper/5" role="status">
+        <span className="sr-only">Loading live standings…</span>
+      </div>
     );
   }
 
-  const topDrivers = data.drivers.slice(0, 5);
-  const topConstructors = data.constructors.slice(0, 5);
+  const leader = data.drivers[0]?.points ?? 0;
+  const driverRows = expanded ? data.drivers : data.drivers.slice(0, COLLAPSED_ROWS);
 
   return (
-    <section className="mt-5 rounded-lg border border-paper/10 bg-asphalt px-4 py-3">
-      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-        {data.season} championship · round {data.round} · via Jolpica
-      </p>
-      <div className="mt-3 grid gap-4 sm:grid-cols-2">
+    <section className="mt-5 rounded-lg border border-paper/10 bg-asphalt px-4 py-4" aria-labelledby="standings-heading">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id="standings-heading" className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
+          {data.season} championship · after round {data.round} · live via Jolpica
+        </h2>
+        <Link href="/picks" className="font-mono text-[10px] uppercase tracking-[0.2em] text-amber hover:underline">
+          Race-day picks →
+        </Link>
+      </div>
+
+      <div className="mt-3 grid gap-5 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-wide text-amber">Drivers</p>
-          <ol className="mt-2 space-y-1.5">
-            {topDrivers.map((row) => (
-              <li
-                key={row.driverId}
-                className="flex items-baseline justify-between gap-3 font-mono text-xs text-paper"
-              >
-                <span>
-                  <span className="text-paper-dim">{row.position}.</span>{" "}
-                  {row.givenName[0]}. {row.familyName}
-                </span>
-                <span className="text-paper-dim">{row.points} pts</span>
-              </li>
-            ))}
+          <ol className="mt-2 space-y-0.5">
+            {driverRows.map((row) => {
+              const id = appDriverId(row);
+              const teamId = id ? DRIVER_TEAM[id] : undefined;
+              const colour = teamId ? TEAM_COLOUR[teamId] : "#a39b8f";
+              const name = id ? DRIVER_NAME[id] : `${row.givenName} ${row.familyName}`;
+              const gap = row.points - leader;
+              const content = (
+                <>
+                  <span className="w-6 shrink-0 text-right text-paper-dim">{row.position}</span>
+                  <span aria-hidden="true" className="h-3 w-1 shrink-0 rounded-full" style={{ background: colour }} />
+                  <span className="min-w-0 flex-1 truncate">{name}</span>
+                  <span className="w-12 shrink-0 text-right text-paper-dim">{gap === 0 ? "" : gap}</span>
+                  <span className="w-14 shrink-0 text-right">{row.points} pts</span>
+                </>
+              );
+              const rowClass = "flex w-full items-center gap-2 rounded px-1.5 py-1 font-mono text-xs text-paper";
+              return (
+                <li key={row.driverId}>
+                  {id ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelect(id)}
+                      aria-pressed={selectedId === id}
+                      className={`${rowClass} text-left transition-colors hover:bg-paper/5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber ${
+                        selectedId === id ? "bg-paper/10" : ""
+                      }`}
+                    >
+                      {content}
+                    </button>
+                  ) : (
+                    <span className={`${rowClass} text-paper-dim`}>{content}</span>
+                  )}
+                </li>
+              );
+            })}
           </ol>
+          {data.drivers.length > COLLAPSED_ROWS ? (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-paper-dim hover:text-amber"
+            >
+              {expanded ? "Show top 10" : `Show all ${data.drivers.length}`}
+            </button>
+          ) : null}
         </div>
+
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-wide text-amber">
-            Constructors
-          </p>
-          <ol className="mt-2 space-y-1.5">
-            {topConstructors.map((row) => (
-              <li
-                key={row.constructorId}
-                className="flex items-baseline justify-between gap-3 font-mono text-xs text-paper"
-              >
-                <span>
-                  <span className="text-paper-dim">{row.position}.</span> {row.name}
-                </span>
-                <span className="text-paper-dim">{row.points} pts</span>
-              </li>
-            ))}
+          <p className="font-mono text-[10px] uppercase tracking-wide text-amber">Constructors</p>
+          <ol className="mt-2 space-y-0.5">
+            {data.constructors.map((row) => {
+              const id = appTeamId(row);
+              return (
+                <li
+                  key={row.constructorId}
+                  className="flex items-center gap-2 px-1.5 py-1 font-mono text-xs text-paper"
+                >
+                  <span className="w-6 shrink-0 text-right text-paper-dim">{row.position}</span>
+                  <span
+                    aria-hidden="true"
+                    className="h-3 w-1 shrink-0 rounded-full"
+                    style={{ background: id ? TEAM_COLOUR[id] : "#a39b8f" }}
+                  />
+                  <span className="min-w-0 flex-1 truncate">{id ? TEAM_NAME[id] : row.name}</span>
+                  <span className="shrink-0">{row.points} pts</span>
+                </li>
+              );
+            })}
           </ol>
         </div>
       </div>

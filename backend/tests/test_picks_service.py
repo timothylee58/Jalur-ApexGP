@@ -21,7 +21,12 @@ from app.schemas.jolpica import (
 )
 from app.schemas.picks import PickAnswers, PickSubmission
 from app.services import jolpica_service, picks_service
-from app.services.picks_service import PicksClosed, PicksDeadlineUnknown, PicksStorageUnavailable
+from app.services.picks_service import (
+    PicksClosed,
+    PicksDeadlineUnknown,
+    PicksInvalid,
+    PicksStorageUnavailable,
+)
 
 _RealAsyncClient = httpx.AsyncClient
 MYT = ZoneInfo("Asia/Kuala_Lumpur")
@@ -103,6 +108,25 @@ async def test_submit_pick_success(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert result.id == "abc-123"
     assert result.display_name == "Timothy"
+
+
+@pytest.mark.asyncio
+async def test_submit_pick_rejects_a_repeated_podium_driver_before_any_io(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    async def _no_schedule(**_: object) -> WeekendSchedule:
+        raise AssertionError("an invalid ticket must not cost a deadline lookup")
+
+    monkeypatch.setattr(jolpica_service, "get_sepang_schedule", _no_schedule)
+
+    def _fail_if_called(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("an invalid ticket must not reach Supabase")
+
+    _patch_client(monkeypatch, _fail_if_called)
+
+    picks = SAMPLE_PICKS.model_copy(update={"p2": SAMPLE_PICKS.winner})
+    with pytest.raises(PicksInvalid, match="three different drivers"):
+        await picks_service.submit_pick(PickSubmission(displayName="Timothy", picks=picks))
 
 
 @pytest.mark.asyncio

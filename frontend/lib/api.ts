@@ -152,6 +152,11 @@ export class PicksClosedError extends Error {}
  * that isn't their connection's fault. */
 export class PicksUnavailableError extends Error {}
 
+/** Thrown on a 422 — the server couldn't score these picks as sent (the
+ * same driver twice on the podium, say). The form already prevents those,
+ * so this only fires if the two disagree; its message is the server's. */
+export class PicksRejectedError extends Error {}
+
 export async function submitPicks(submission: PickSubmission): Promise<PickSubmitted> {
   const res = await fetch(`${API_URL}/picks`, {
     method: "POST",
@@ -165,6 +170,11 @@ export async function submitPicks(submission: PickSubmission): Promise<PickSubmi
   }
   if (res.status === 503) {
     throw new PicksUnavailableError("Picks aren't open yet — check back soon.");
+  }
+  if (res.status === 422) {
+    const body = await res.json().catch(() => ({}));
+    const detail = typeof body.detail === "string" ? body.detail : null;
+    throw new PicksRejectedError(detail ? `Those picks can't be scored: ${detail}.` : "Those picks can't be scored.");
   }
   if (!res.ok) throw new Error(`Picks submission failed (${res.status})`);
   return res.json() as Promise<PickSubmitted>;

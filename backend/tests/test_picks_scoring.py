@@ -6,7 +6,7 @@ import pytest
 
 from app.schemas.jolpica import ClassifiedDriver, RaceClassification
 from app.schemas.picks import PickAnswers
-from app.services.picks_scoring import POINTS_PER_QUESTION, score_submission
+from app.services.picks_scoring import POINTS_PER_QUESTION, answer_problems, score_submission
 
 CORRECT_PICKS = PickAnswers(
     winner="norris",
@@ -173,3 +173,25 @@ def test_tied_top_constructor_accepts_either_tied_pick() -> None:
         score_submission(base.model_copy(update={"top_constructor": "mclaren"}), classification)
         == 0
     )
+
+
+def test_answer_problems_accepts_a_valid_ticket() -> None:
+    assert answer_problems(CORRECT_PICKS) == []
+
+
+def test_answer_problems_rejects_a_repeated_podium_driver() -> None:
+    picks = CORRECT_PICKS.model_copy(update={"p3": CORRECT_PICKS.winner})
+    assert answer_problems(picks) == ["winner, p2 and p3 must be three different drivers"]
+
+
+def test_answer_problems_rejects_unknown_ids_without_echoing_them() -> None:
+    picks = CORRECT_PICKS.model_copy(update={"pole": "<script>", "top_constructor": "brawn"})
+    problems = answer_problems(picks)
+    assert "pole is not a driver on the 2026 grid" in problems
+    assert "topConstructor is not a 2026 constructor" in problems
+    assert not any("<script>" in problem for problem in problems)
+
+
+def test_answer_problems_rejects_a_teammate_pick_on_the_wrong_team() -> None:
+    picks = CORRECT_PICKS.model_copy(update={"beats_teammate_of": "ferrari", "beats_teammate_pick": "norris"})
+    assert answer_problems(picks) == ["beatsTeammateOf must be the team beatsTeammatePick drives for"]

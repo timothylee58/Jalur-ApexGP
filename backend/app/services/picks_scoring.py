@@ -84,6 +84,35 @@ TEAM_DRIVER_IDS: dict[str, tuple[str, str]] = {
 }
 
 
+def answer_problems(picks: PickAnswers) -> list[str]:
+    """Why a submission can't be scored as sent, or [] if it can.
+
+    Scoring would quietly give 0 for any of these, so they're rejected at
+    submit time instead: an id that isn't on the 2026 grid, the same driver
+    in two podium places (no race result can match that), or a "beats their
+    teammate" pick whose team doesn't match the driver. Messages name the
+    field, never echo the submitted value.
+    """
+    problems: list[str] = []
+    for field, driver_id in (
+        ("winner", picks.winner),
+        ("p2", picks.p2),
+        ("p3", picks.p3),
+        ("pole", picks.pole),
+        ("fastestLap", picks.fastest_lap),
+        ("beatsTeammatePick", picks.beats_teammate_pick),
+    ):
+        if driver_id not in DRIVER_FAMILY_NAME:
+            problems.append(f"{field} is not a driver on the 2026 grid")
+    if picks.top_constructor not in CONSTRUCTOR_NAME:
+        problems.append("topConstructor is not a 2026 constructor")
+    if len({picks.winner, picks.p2, picks.p3}) < 3:
+        problems.append("winner, p2 and p3 must be three different drivers")
+    if picks.beats_teammate_pick not in TEAM_DRIVER_IDS.get(picks.beats_teammate_of, ()):
+        problems.append("beatsTeammateOf must be the team beatsTeammatePick drives for")
+    return problems
+
+
 def _normalize(text: str) -> str:
     stripped = unicodedata.normalize("NFKD", text)
     without_marks = "".join(ch for ch in stripped if not unicodedata.combining(ch))
