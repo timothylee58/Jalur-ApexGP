@@ -45,7 +45,7 @@ export function GlossaryTerm({ entry, children }: GlossaryTermProps) {
         <span
           id={popId}
           role="tooltip"
-          className="absolute bottom-full left-1/2 z-30 mb-2 w-60 -translate-x-1/2 rounded-md border border-amber/40 bg-pit-carbon p-3 text-left text-xs font-normal leading-relaxed text-paper shadow-lg"
+          className="absolute bottom-full left-1/2 z-30 mb-2 w-60 -translate-x-1/2 whitespace-normal rounded-md border border-amber/40 bg-pit-carbon p-3 text-left text-xs font-normal leading-relaxed text-paper shadow-lg"
         >
           <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.2em] text-amber">
             {entry.label}

@@ -64,7 +64,7 @@ function PredictView() {
   }, [data]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-6">
+    <main className="mx-auto w-full max-w-3xl px-4 py-6 lg:max-w-6xl">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
@@ -94,57 +94,61 @@ function PredictView() {
         your own scenario.
       </p>
 
-      <WhatIfControls whatIf={whatIf} inputs={data?.inputs ?? null} onChange={setWhatIf} onReset={resetWhatIf} />
-
-      {loading && !data ? (
-        <p className="py-10 text-center font-mono text-sm text-paper-dim">
-          Reading the weather…
-        </p>
-      ) : null}
-
-      {error ? (
-        <p className="py-10 text-center font-mono text-sm text-brick">
-          Couldn&apos;t load this session. Try again.
-        </p>
-      ) : null}
-
-      {data && session ? (
-        <div className={`mt-3 space-y-3 ${loading ? "opacity-60 transition-opacity" : ""}`}>
-          <ConfidenceDeltaHeadline data={data} />
-          <MonsoonStrip weather={data.weather} />
-
-          <section className="rounded-lg border border-paper/10 bg-asphalt px-4 py-3">
-            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-              Corners in this read
-            </p>
-            <SepangCircuitMap
-              highlighted={highlightedCorners}
-              className="mx-auto mt-2 w-full max-w-[280px]"
-            />
-            <p className="mt-1 text-center font-mono text-[10px] text-paper-dim">
-              {highlightedCorners.length > 0
-                ? `Highlighted: ${highlightedCorners.join(" · ")}`
-                : "Sepang International Circuit"}
-            </p>
-          </section>
-
-          <PredictionCard prediction={data.conservative} session={session} raceLaps={data.raceLaps} />
-          <PredictionCard prediction={data.aggressive} session={session} raceLaps={data.raceLaps} />
-          <ShareReadButton data={data} />
-
-          <a
-            href={MALAYSIA_TOURISM_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block rounded-lg border border-paper/10 bg-asphalt px-4 py-3 text-sm text-paper-dim hover:border-amber hover:text-amber"
-          >
-            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
-              Between sessions
-            </span>
-            <span className="mt-1 block">Planning the trip around the weekend? Tourism Malaysia →</span>
-          </a>
+      {/* Desktop: the controls stay pinned on the left while the read they
+          drive fills the right, so every slider move is visible where it
+          lands. Below lg it's one column, controls first. */}
+      <div className="lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-6">
+        <div className="lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <WhatIfControls whatIf={whatIf} inputs={data?.inputs ?? null} onChange={setWhatIf} onReset={resetWhatIf} />
         </div>
-      ) : null}
+
+        <div className="mt-3 lg:mt-0" aria-live="polite" aria-busy={loading}>
+          {loading && !data ? (
+            <p className="py-10 text-center font-mono text-sm text-paper-dim">Reading the weather…</p>
+          ) : null}
+
+          {error ? (
+            <p className="py-10 text-center font-mono text-sm text-brick">Couldn&apos;t load this session. Try again.</p>
+          ) : null}
+
+          {data && session ? (
+            <div className={`space-y-3 ${loading ? "opacity-60 transition-opacity" : ""}`}>
+              <ConfidenceDeltaHeadline data={data} />
+              <MonsoonStrip weather={data.weather} />
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <PredictionCard prediction={data.conservative} session={session} totalLaps={data.raceLaps ?? 0} />
+                <PredictionCard prediction={data.aggressive} session={session} totalLaps={data.raceLaps ?? 0} />
+              </div>
+              <ShareReadButton data={data} />
+
+              <section className="rounded-lg border border-paper/10 bg-asphalt px-4 py-3">
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
+                  Corners in this read
+                </p>
+                <SepangCircuitMap highlighted={highlightedCorners} className="mx-auto mt-2 w-full max-w-[280px]" />
+                <p className="mt-1 text-center font-mono text-[10px] text-paper-dim">
+                  {highlightedCorners.length > 0
+                    ? `Highlighted: ${highlightedCorners.join(" · ")}`
+                    : "Sepang International Circuit"}
+                </p>
+              </section>
+
+              <a
+                href={MALAYSIA_TOURISM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-lg border border-paper/10 bg-asphalt px-4 py-3 text-sm text-paper-dim hover:border-amber hover:text-amber"
+              >
+                <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-paper-dim">
+                  Between sessions
+                </span>
+                <span className="mt-1 block">Planning the trip around the weekend? Tourism Malaysia →</span>
+              </a>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <AboutNote />
     </main>

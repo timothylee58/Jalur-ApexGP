@@ -170,7 +170,7 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
             }`}
           >
             <span
-              className={`relative block aspect-[2/1] max-h-56 w-full transition-colors duration-500 ${
+              className={`relative block aspect-[2/1] max-h-56 w-full transition-colors duration-500 lg:aspect-[5/2] ${
                 safetyCar
                   ? "bg-[radial-gradient(ellipse_at_45%_20%,rgba(245,166,35,0.16),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]"
                   : "bg-[linear-gradient(#0d1013,#0a0c0e)]"
@@ -221,7 +221,7 @@ export function WhatIfControls({ whatIf, inputs, onChange, onReset }: WhatIfCont
           <span id="whatif-tyre-label" className="font-mono text-[11px] text-paper-dim">
             Starting tyre
           </span>
-          <div className="relative mt-1.5 block aspect-[2/1] max-h-56 w-full overflow-hidden rounded-md border border-paper/15 bg-[radial-gradient(ellipse_at_50%_85%,rgba(125,140,255,0.10),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]">
+          <div className="relative mt-1.5 block aspect-[2/1] max-h-56 w-full overflow-hidden lg:aspect-[5/2] rounded-md border border-paper/15 bg-[radial-gradient(ellipse_at_50%_85%,rgba(125,140,255,0.10),transparent_60%),linear-gradient(#0d1013,#0a0c0e)]">
             {/* The SVG tyre holds the stage while the 3D chunk loads and
                 until its first frame is drawn. */}
             {showcaseReady ? null : tyreFallback}

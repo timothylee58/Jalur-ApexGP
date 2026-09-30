@@ -1,5 +1,29 @@
+import itertools
+import re
+
+import pytest
+
 from app.schemas.prediction import WeatherSnapshot
-from app.services.strategy_service import RACE_LAPS, build_prediction
+from app.services.strategy_service import (
+    RACE_LAPS,
+    SESSION_LAPS,
+    _referenced_corners,
+    build_prediction,
+)
+
+SESSIONS = ("FP1", "FP2", "FP3", "Quali", "Race")
+COMPOUNDS = ("Soft", "Medium", "Hard", "Intermediate", "Wet")
+
+# Every input combination the what-if controls can produce, at the rain
+# levels either side of the engine's 35% and 60% thresholds.
+SCENARIOS = list(
+    itertools.product(SESSIONS, (12.0, 42.0, 78.0), (None, *COMPOUNDS), (False, True))
+)
+
+
+def _read(session: str, rain: float, tyre: str | None, safety_car: bool):
+    weather = WeatherSnapshot(temp_c=32.0, rain_probability=rain, condition="Partly cloudy")
+    return build_prediction(session, weather, safety_car=safety_car, tyre_choice=tyre)
 
 
 def test_race_returns_one_stop_stint_plan(dry_weather: WeatherSnapshot) -> None:
@@ -79,3 +103,89 @@ def test_all_sessions_return_both_cards(dry_weather: WeatherSnapshot) -> None:
         assert prediction.conservative.pit_window.start_lap <= prediction.conservative.pit_window.end_lap
         assert prediction.aggressive.key_risk
         assert prediction.conservative.stints
+
+
+@pytest.mark.parametrize(("session", "rain", "tyre", "safety_car"), SCENARIOS)
+def test_every_plan_covers_the_session_from_lap_one(
+    session: str, rain: float, tyre: str | None, safety_car: bool
+) -> None:
+    prediction = _read(session, rain, tyre, safety_car)
+    total = SESSION_LAPS[session]
+    assert prediction.race_laps == total
+    for variant in (prediction.conservative, prediction.aggressive):
+        stints = variant.stints
+        assert [s.compound for s in stints] == variant.tyre_sequence
+        assert stints[0].start_lap == 1
+        assert stints[-1].end_lap == total
+        for stint in stints:
+            assert stint.laps == stint.end_lap - stint.start_lap + 1
+        for before, after in zip(stints, stints[1:]):
+            assert after.start_lap == before.end_lap + 1
+        assert variant.stop_count == len(stints) - 1
+        assert 1 <= variant.pit_window.start_lap <= variant.pit_window.end_lap <= total
+
+
+@pytest.mark.parametrize(("session", "rain", "tyre", "safety_car"), SCENARIOS)
+def test_card_text_names_only_the_plans_own_tyres(
+    session: str, rain: float, tyre: str | None, safety_car: bool
+) -> None:
+    # The bug this guards: a practice card showing Medium → Intermediate
+    # while its text said "long-run mediums, one timed soft".
+    prediction = _read(session, rain, tyre, safety_car)
+    for variant in (prediction.conservative, prediction.aggressive):
+        for compound in variant.tyre_sequence:
+            assert compound in variant.reasoning, (compound, variant.reasoning)
+        for compound in set(COMPOUNDS) - set(variant.tyre_sequence):
+            pattern = re.compile(rf"\b{compound}")
+            assert not pattern.search(variant.reasoning), (compound, variant.reasoning)
+            assert not pattern.search(variant.key_risk), (compound, variant.key_risk)
+
+
+@pytest.mark.parametrize(("session", "rain", "tyre", "safety_car"), SCENARIOS)
+def test_each_read_has_its_own_key_risk(
+    session: str, rain: float, tyre: str | None, safety_car: bool
+) -> None:
+    prediction = _read(session, rain, tyre, safety_car)
+    assert prediction.conservative.key_risk != prediction.aggressive.key_risk
+
+
+def test_practice_runs_long_and_push_in_opposite_orders(dry_weather: WeatherSnapshot) -> None:
+    prediction = build_prediction("FP2", dry_weather)
+    long_first, push_first = prediction.conservative.stints, prediction.aggressive.stints
+    assert long_first[0].laps > long_first[1].laps
+    assert push_first[0].laps < push_first[1].laps
+    # The change window brackets the lap each read goes back to the garage.
+    for variant in (prediction.conservative, prediction.aggressive):
+        change = variant.stints[0].end_lap
+        assert variant.pit_window.start_lap <= change <= variant.pit_window.end_lap
+
+
+def test_hotter_track_shortens_the_practice_long_run(dry_weather: WeatherSnapshot) -> None:
+    hot = build_prediction("FP2", dry_weather.model_copy(update={"temp_c": 44.0}))
+    cool = build_prediction("FP2", dry_weather.model_copy(update={"temp_c": 26.0}))
+    assert hot.conservative.stints[0].laps < cool.conservative.stints[0].laps
+
+
+def test_quali_stakes_the_lap_on_different_q3_runs(dry_weather: WeatherSnapshot) -> None:
+    prediction = build_prediction("Quali", dry_weather)
+    assert prediction.conservative.tyre_sequence == ["Soft"]
+    assert prediction.conservative.pit_window.end_lap < prediction.aggressive.pit_window.start_lap
+    assert prediction.aggressive.pit_window.end_lap == SESSION_LAPS["Quali"]
+
+
+def test_quali_never_asks_for_slicks_other_than_softs(wet_weather: WeatherSnapshot) -> None:
+    for rain in (12.0, 42.0, 78.0):
+        prediction = build_prediction("Quali", wet_weather.model_copy(update={"rain_probability": rain}))
+        for variant in (prediction.conservative, prediction.aggressive):
+            assert set(variant.tyre_sequence) <= {"Soft", "Intermediate"}
+
+
+def test_forced_slicks_in_heavy_rain_box_for_inters(wet_weather: WeatherSnapshot) -> None:
+    prediction = build_prediction("Race", wet_weather, tyre_choice="Medium")
+    assert prediction.conservative.tyre_sequence == ["Medium", "Intermediate"]
+    assert "wrong tyre" in prediction.conservative.key_risk
+
+
+def test_turn_15_does_not_also_highlight_turn_1() -> None:
+    assert _referenced_corners("Don't burn the rears defending into Turn 15.") == ["T15"]
+    assert _referenced_corners("Lift into Turn 1, then Turns 5–7.") == ["T1", "T5–T7"]

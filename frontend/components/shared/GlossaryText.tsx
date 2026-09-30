@@ -17,6 +17,8 @@ const PATTERN = new RegExp(
   "gi",
 );
 
+const TRAILING_PUNCTUATION = /^[.,;:!?)’'"…]+/;
+
 /** Renders a strategy-copy string, wrapping the first mention of each known
  * jargon term in a tap-to-explain GlossaryTerm. */
 export function GlossaryText({ children }: GlossaryTextProps) {
@@ -39,12 +41,27 @@ export function GlossaryText({ children }: GlossaryTextProps) {
     if (match.index > lastIndex) {
       nodes.push(<Fragment key={key++}>{text.slice(lastIndex, match.index)}</Fragment>);
     }
-    nodes.push(
+    const term = (
       <GlossaryTerm key={key++} entry={entry}>
         {matched}
-      </GlossaryTerm>,
+      </GlossaryTerm>
     );
     lastIndex = match.index + matched.length;
+    // The term renders as a button, and a line may break between a button
+    // and the text after it, stranding a "?" or "." at the start of the
+    // next line. Keep trailing punctuation on the term's line.
+    const punctuation = TRAILING_PUNCTUATION.exec(text.slice(lastIndex))?.[0];
+    if (punctuation) {
+      nodes.push(
+        <span key={key++} className="whitespace-nowrap">
+          {term}
+          {punctuation}
+        </span>,
+      );
+      lastIndex += punctuation.length;
+    } else {
+      nodes.push(term);
+    }
   }
 
   if (lastIndex < text.length) {

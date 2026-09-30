@@ -1,91 +1,70 @@
 import { ConfidenceBar } from "@/components/predict/ConfidenceBar";
-import { PitWindowTimeline } from "@/components/predict/PitWindowTimeline";
+import { LapPlan } from "@/components/predict/LapPlan";
 import { GlossaryText } from "@/components/shared/GlossaryText";
 import { Card } from "@/components/ui/card";
-import { pitWindowStatus } from "@/lib/predictionUtils";
+import { planWindow } from "@/lib/predictionUtils";
 import type { Session, StrategyPrediction, StrategyVariant } from "@/types";
 
 interface PredictionCardProps {
   prediction: StrategyPrediction;
-  session?: Session;
-  raceLaps?: number;
+  session: Session;
+  totalLaps: number;
 }
 
 // Accent per variant is the only non-text cue separating the two cards at a glance.
-const VARIANT_STYLE: Record<StrategyVariant, { title: string; border: string; label: string; pit: string }> = {
-  conservative: {
-    title: "Conservative",
-    border: "border-amber/40",
-    label: "text-amber",
-    pit: "text-amber",
-  },
-  aggressive: {
-    title: "Aggressive",
-    border: "border-teal/40",
-    label: "text-teal",
-    pit: "text-teal",
-  },
+const VARIANT_STYLE: Record<StrategyVariant, { title: string; border: string; text: string; bar: string }> = {
+  conservative: { title: "Conservative", border: "border-amber/40", text: "text-amber", bar: "bg-amber" },
+  aggressive: { title: "Aggressive", border: "border-teal/40", text: "text-teal", bar: "bg-teal" },
 };
 
-export function PredictionCard({ prediction, session, raceLaps }: PredictionCardProps) {
+// What a tyre change is called in each session's plan.
+function changeCount(session: Session, stops: number): string | null {
+  if (stops < 1) return null;
+  if (session === "Race") return `${stops}-stop`;
+  if (session === "Quali") return "Tyre switch";
+  return `${stops + 1} runs`;
+}
+
+export function PredictionCard({ prediction, session, totalLaps }: PredictionCardProps) {
   const style = VARIANT_STYLE[prediction.variant];
-  const pitLine = session ? pitWindowStatus(prediction, session) : null;
   const stints = prediction.stints ?? [];
-  const showStints = stints.length > 1;
+  const window = planWindow(prediction, session);
+  const changes = changeCount(session, prediction.stopCount ?? Math.max(stints.length - 1, 0));
 
   return (
-    <Card className={`${style.border} bg-asphalt text-paper`}>
-      <div className="flex items-baseline justify-between">
-        <p className={`font-mono text-xs uppercase tracking-[0.25em] ${style.label}`}>
-          {style.title}
-        </p>
-        {typeof prediction.stopCount === "number" && prediction.stopCount > 0 ? (
-          <p className="font-mono text-[10px] uppercase tracking-wide text-paper-dim">
-            {prediction.stopCount}-stop
-          </p>
+    <Card className={`flex h-full flex-col ${style.border} bg-asphalt p-5 text-paper sm:p-6`}>
+      <div className="flex items-baseline justify-between gap-3">
+        <p className={`font-mono text-xs uppercase tracking-[0.25em] ${style.text}`}>{style.title}</p>
+        {changes ? (
+          <p className="font-mono text-[10px] uppercase tracking-wide text-paper-dim">{changes}</p>
         ) : null}
       </div>
-      <h2 className="mt-2 font-display text-xl uppercase tracking-wide">
-        {prediction.tyreSequence.join(" → ")}
-      </h2>
+      <h2 className="mt-2 font-display text-xl uppercase tracking-wide">{prediction.tyreSequence.join(" → ")}</h2>
       <p className="mt-2 text-sm leading-relaxed text-paper-dim">
         <GlossaryText>{prediction.reasoning}</GlossaryText>
       </p>
 
-      {showStints ? (
-        <div className="mt-3 flex overflow-hidden rounded-md border border-paper/10 font-mono text-[10px]">
-          {stints.map((stint, index) => {
-            const span = raceLaps && raceLaps > 0 ? (stint.laps / raceLaps) * 100 : 100 / stints.length;
-            return (
-              <div
-                key={`${stint.compound}-${stint.startLap}`}
-                className={`px-2 py-1.5 text-center ${
-                  index === 0 ? "bg-paper/10 text-paper" : "bg-asphalt text-paper-dim"
-                }`}
-                style={{ width: `${Math.max(span, 12)}%` }}
-                title={`${stint.compound}: L${stint.startLap}–L${stint.endLap} (${stint.laps} laps)`}
-              >
-                {stint.compound.slice(0, 4)} · {stint.laps}L
-              </div>
-            );
-          })}
-        </div>
+      {stints.length > 0 ? (
+        <LapPlan
+          stints={stints}
+          window={prediction.pitWindow}
+          totalLaps={totalLaps}
+          windowLabel={window.label}
+          variant={prediction.variant}
+        />
       ) : null}
+      <p className={`mt-3 font-mono text-xs leading-relaxed ${style.text}`}>{window.line}</p>
 
-      {pitLine ? (
-        <p className={`mt-3 font-mono text-xs ${style.pit}`}>{pitLine}</p>
-      ) : null}
-      <PitWindowTimeline
-        startLap={prediction.pitWindow.startLap}
-        endLap={prediction.pitWindow.endLap}
-        variant={prediction.variant}
-      />
-      <p className="mt-3 rounded-md border border-brick/30 bg-brick/5 px-2 py-1.5 text-xs text-paper-dim">
-        <span className="font-mono uppercase text-brick">Key risk · </span>
-        <GlossaryText>{prediction.keyRisk}</GlossaryText>
-      </p>
-      <div className="mt-4">
-        <ConfidenceBar value={prediction.confidence} />
+      {/* mt-auto keeps risk + confidence on one baseline when the two cards
+          sit side by side with different amounts of text. */}
+      <div className="mt-auto pt-4">
+        <p className="rounded-md border border-brick/30 bg-brick/5 px-2 py-1.5 text-xs leading-relaxed text-paper-dim">
+          <span className="font-mono uppercase text-brick">Key risk · </span>
+          <GlossaryText>{prediction.keyRisk}</GlossaryText>
+        </p>
+        <div className="mt-4">
+          <ConfidenceBar value={prediction.confidence} barClassName={style.bar} />
+        </div>
       </div>
     </Card>
   );
