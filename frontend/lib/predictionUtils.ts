@@ -1,4 +1,4 @@
-import type { Compound, PredictionResponse, StrategyPrediction, WhatIf } from "@/types";
+import type { Compound, PredictionResponse, Session, StrategyPrediction, WhatIf } from "@/types";
 import { COMPOUNDS } from "@/types";
 
 export function confidenceDelta(data: PredictionResponse): {
@@ -36,13 +36,52 @@ export function confidenceDelta(data: PredictionResponse): {
   };
 }
 
-export function pitWindowStatus(prediction: StrategyPrediction, session: PredictionResponse["session"]): string {
+const WET_COMPOUNDS = new Set(["Intermediate", "Wet"]);
+
+export interface PlanWindow {
+  /** What the lap window means in this session. */
+  label: string;
+  /** One line on how to use it. */
+  line: string;
+}
+
+/** Session-aware copy for a card's lap window. The backend's plans differ by
+ * session (see strategy_service.py): the race has a pit stop, practice a
+ * trip to the garage between two runs, qualifying a decisive Q3 run. The
+ * target lap is the plan's own change lap, the same one its reasoning names. */
+export function planWindow(prediction: StrategyPrediction, session: Session): PlanWindow {
   const { startLap, endLap } = prediction.pitWindow;
+  // A word joiner after the dash stops "L13–" and "L15" landing on two lines.
+  const range = `L${startLap}–\u2060L${endLap}`;
+  const [first, next] = prediction.tyreSequence;
+  const change = prediction.stints?.[0]?.endLap ?? Math.round((startLap + endLap) / 2);
+  const aggressive = prediction.variant === "aggressive";
+
   if (session === "Quali") {
-    return "Quali window — commit on the last clean lap, abort if rain hits Turn 9.";
+    return aggressive
+      ? { label: "Final Q3 run", line: `Everything on the last run · ${range}. Abort if rain reaches Turn 9.` }
+      : { label: "First Q3 run", line: `Bank a lap on the first run · ${range}, then improve if you can.` };
   }
-  const mid = Math.round((startLap + endLap) / 2);
-  return `Optimal window L${startLap}–L${endLap} · target around L${mid}. Cover any undercut within 2.0s.`;
+
+  if (!next) {
+    return { label: session === "Race" ? "Pit window" : "Tyre change", line: `${first} throughout.` };
+  }
+
+  if (session === "Race") {
+    // A switch between slicks and wet tyres is timed by the weather, not by
+    // tyre wear, so undercut talk doesn't apply to it.
+    if (WET_COMPOUNDS.has(first) !== WET_COMPOUNDS.has(next)) {
+      return { label: "Pit window", line: `Switch to ${next}s when the weather turns · modelled ${range}.` };
+    }
+    return {
+      label: "Pit window",
+      line: aggressive
+        ? `Box ${range}, target L${change}. Undercut the car ahead if you're within 2.0s.`
+        : `Box ${range}, target L${change}. Cover any undercut from cars within 2.0s.`,
+    };
+  }
+
+  return { label: "Tyre change", line: `Back to the garage around L${change} for the ${next} run.` };
 }
 
 export function buildShareUrl(data: PredictionResponse, origin: string): string {

@@ -12,6 +12,7 @@ import type { Dictionary } from "@/lib/i18n/types";
 // (below) — this array only carries what's language-independent (the
 // route + which dictionary key names its label).
 const NAV: { href: string; key: keyof Dictionary["nav"] }[] = [
+  { href: "/product-reveal", key: "reveal" },
   { href: "/predict", key: "predict" },
   { href: "/picks", key: "picks" },
   { href: "/circuit", key: "circuit" },
@@ -22,7 +23,6 @@ const NAV: { href: string; key: keyof Dictionary["nav"] }[] = [
   { href: "/news", key: "news" },
   { href: "/telemetry", key: "telemetry" },
   { href: "/drive", key: "drive" },
-  { href: "/product-reveal", key: "reveal" },
   { href: "/lore", key: "lore" },
   { href: "/guide", key: "guide" },
   { href: "/calendar", key: "calendar" },
