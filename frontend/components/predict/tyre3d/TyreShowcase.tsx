@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { TyreOption } from "@/components/predict/TyreArt";
-import { TYRE_COLOR } from "@/components/predict/TyreArt";
+import { TYRE_COLOR } from "@/lib/tyreColors";
 import { buildGhostTyre, buildTyre, type TyreModel } from "./buildTyre";
 import { createRenderer, createStage } from "./stage";
 

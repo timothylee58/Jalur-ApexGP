@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { TYRE_COLOR } from "@/lib/tyreColors";
 import type { Compound } from "@/types";
 
 /**
@@ -24,14 +25,6 @@ import type { Compound } from "@/types";
  */
 
 export type TyreOption = Compound | "Auto";
-
-export const TYRE_COLOR: Record<Compound, string> = {
-  Hard: "#f4efe6",
-  Medium: "#ffd200",
-  Soft: "#e0301f",
-  Intermediate: "#43b02a",
-  Wet: "#2f6fe0",
-};
 
 type Tread = { count: number; depth: number; width: number; sweep: number };
 
