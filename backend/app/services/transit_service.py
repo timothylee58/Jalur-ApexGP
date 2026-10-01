@@ -7,14 +7,13 @@ official partner" framing as every other data source this app uses.
 IMPORTANT — two honesty gaps, stated plainly rather than papered over
 (same standard as README's "Note on AI" and OpenF1's live-data gap):
 
-1. No official F1 2026 race-weekend shuttle to Sepang exists yet
-   (WebSearch-verified against current reporting: routes, fares, and a
-   schedule are unannounced as of writing). Past years ran RapidKL
-   charter shuttles from KL Sentral / KLCC / Pasar Seni — event charters,
-   never part of the standing GTFS network, so they were never
-   live-trackable even in years they ran. HISTORICAL_SHUTTLE_NOTES below
-   carries that as static, clearly-labeled informational content only —
-   never mixed into the live vehicle list.
+1. The official race-weekend shuttle isn't in these feeds. For 2–4
+   October 2026 Rapid KL and SIC run free buses to the circuit from KLIA 2,
+   Mitsui Outlet Park KLIA and Bandar Baru Enstek (7am–midnight, every
+   10–15 min) — an event charter, never part of the standing GTFS network,
+   so it can't be live-tracked. SHUTTLE_NOTES below carries it as static,
+   clearly-labelled information only, never mixed into the live vehicle
+   list.
 2. The standing RapidKL bus network has no route with a stop *at* the
    circuit — Sepang is fairly isolated near KLIA. This service reports
    live ETA to the nearest real stop it can find serving the corridor
@@ -91,27 +90,27 @@ _MIN_MOVING_SPEED_MPS = 0.8
 # estimate, not a live read.
 ETA_FALLBACK_SPEED_KMH = 25.0
 
-HISTORICAL_SHUTTLE_NOTES: list[HistoricalShuttleNote] = [
+SHUTTLE_NOTES: list[HistoricalShuttleNote] = [
     HistoricalShuttleNote(
-        label="Past F1 weekend shuttle (2026 unconfirmed)",
+        label="Official race-weekend shuttle (free, 2–4 Oct 2026)",
         detail=(
-            "Previous Malaysian GP weekends ran a dedicated RapidKL charter "
-            "shuttle from KL Sentral and KLCC to the circuit — around 35 MYR "
-            "return, roughly every 30-45 minutes. That was always a charter "
-            "service, never a standing GTFS route, so it couldn't be "
-            "live-tracked even in years it ran. RapidKL hadn't announced "
-            "2026 routes, fares, or a schedule as of this writing — check "
-            "RapidKL's own channels closer to race weekend."
+            "Rapid KL and Sepang International Circuit run free shuttle buses "
+            "to the circuit from 7am to midnight on all three days, every "
+            "10–15 minutes subject to traffic. Pick-up points: KLIA 2 (Level 1 "
+            "Bus Hub, Bays B1–B3), Mitsui Outlet Park KLIA (Bus Hub) and "
+            "Bandar Baru Enstek (De-Village, Persiaran Millenia 2). It's an "
+            "event charter, not a standing GTFS route, so it isn't in the live "
+            "vehicle list."
         ),
     ),
     HistoricalShuttleNote(
-        label="Nearest real transit today",
+        label="Nearest real transit outside race weekend",
         detail=(
             "The standing RapidKL network has no route with a stop at the "
-            "circuit itself. 'Live vehicles toward Sepang/KLIA' below shows "
-            "the closest a currently-running scheduled service gets, when "
-            "one is; the final leg from there is taxi/e-hailing/private "
-            "transport, same as this page's parking note already implies."
+            "circuit itself. The live vehicles below show the closest a "
+            "currently-running scheduled service gets, when one is; outside "
+            "the race-weekend shuttle the final leg is taxi, e-hailing or "
+            "private transport."
         ),
     ),
 ]
@@ -326,8 +325,8 @@ def _build_coverage_note(stops: list[TransitStop], vehicles: list[LiveVehicleEta
     if not stops:
         return (
             "No stop in RapidKL's standing network currently matches "
-            "'Sepang' or 'KLIA' by name — see 'Nearest real transit today' "
-            "below for what that means in practice."
+            "'Sepang' or 'KLIA' by name. On race weekend, use the free "
+            "Rapid KL shuttle from KLIA 2 instead."
         )
     if not vehicles:
         return (
@@ -359,6 +358,6 @@ async def get_sepang_access(categories: list[str] | None = None) -> SepangAccess
         coverage_note=_build_coverage_note(stops, live_vehicles),
         matched_stops=stops,
         live_vehicles=live_vehicles,
-        historical_shuttle=HISTORICAL_SHUTTLE_NOTES,
+        historical_shuttle=SHUTTLE_NOTES,
         source="data.gov.my — Prasarana GTFS (RapidKL)",
     )

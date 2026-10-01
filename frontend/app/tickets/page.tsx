@@ -2,11 +2,12 @@ import { AboutNote } from "@/components/shared/AboutNote";
 import { TransitAccessPanel } from "@/components/tickets/TransitAccessPanel";
 import { SiteHeader } from "@/components/site-chrome";
 import { SeatFinder } from "@/components/tickets/SeatFinder";
+import { ShuttleGuide } from "@/components/tickets/ShuttleGuide";
 
 export const metadata = {
   title: "Tickets & seating — Jalur APEXGP",
   description:
-    "Find a Sepang grandstand view for the 2026 Formula 1 Gulf Air Bahrain Grand Prix — pricing and seat picker, tickets sold via the organiser.",
+    "Find a Sepang grandstand view for the 2026 Formula 1 Gulf Air Bahrain Grand Prix — pricing, seat picker, the 2026 general map and the free Rapid KL shuttle to the circuit.",
 };
 
 export default function TicketsPage() {
@@ -27,6 +28,8 @@ export default function TicketsPage() {
         </p>
 
         <SeatFinder />
+
+        <ShuttleGuide />
 
         <TransitAccessPanel />
 

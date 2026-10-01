@@ -31,12 +31,15 @@ class HistoricalShuttleNote(BaseModel):
 class SepangAccessPayload(BaseModel):
     generated_at: str
     # States plainly what this data can and can't show — never omitted,
-    # since the two honesty gaps this module documents (no official 2026
-    # shuttle yet, no standing route reaches the circuit gate itself)
-    # are exactly the kind of thing this app's own standard says to
-    # surface rather than paper over (see README's "Note on AI").
+    # since the two gaps this module documents (the race-weekend shuttle
+    # isn't in the GTFS feeds, no standing route reaches the circuit gate
+    # itself) are exactly the kind of thing this app's own standard says
+    # to surface rather than paper over (see README's "Note on AI").
     coverage_note: str
     matched_stops: list[TransitStop]
     live_vehicles: list[LiveVehicleEta]
+    # Named before the official 2026 shuttle was announced; it now carries
+    # that service's static details. Kept as-is so deployed clients that
+    # read this field don't break.
     historical_shuttle: list[HistoricalShuttleNote]
     source: str

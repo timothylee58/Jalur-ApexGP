@@ -191,9 +191,10 @@ explicit about being a heuristic, not a black box.
   Prasarana — a real government API, not an F1- or circuit-operated
   feed. ETA is a documented heuristic (live GPS distance ÷ live or
   fallback speed), not a trained model — see `transit_service.py`'s
-  module docstring for the two honesty gaps this is built around: no
-  official 2026 race-weekend shuttle exists yet, and no standing route
-  reaches the circuit gate itself.
+  module docstring for the two gaps this is built around: the official
+  2026 race-weekend shuttle is an event charter outside the GTFS feeds
+  (shown on `/tickets` as static, sourced facts instead), and no standing
+  route reaches the circuit gate itself.
 - The landing page's "Orbit Sepang" 3D model (`frontend/public/models/sepang.glb`)
   is built from a real photogrammetry/reference scan of the actual
   circuit — **"Sepang International Circuit 2025 layout"** by Dave Love

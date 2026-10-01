@@ -173,10 +173,12 @@ export function BgmPlayer() {
           <SpotifyGlyph className="h-5 w-5 text-amber" />
         </button>
       ) : null}
+      {/* Narrower than the viewport by the race-engineer launcher's width
+          plus a gap, so the two bottom corners never overlap on a phone. */}
       <div
         hidden={minimized}
         data-floating-widget=""
-        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 w-[min(300px,calc(100vw-2rem))] overflow-hidden rounded-xl shadow-lg shadow-black/40"
+        className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] z-40 w-[min(300px,calc(100vw-5.75rem))] overflow-hidden rounded-xl shadow-lg shadow-black/40"
       >
         <div className="flex items-center justify-between gap-2 bg-asphalt px-2 py-1">
           {/* Always there, so even a player that loads but shows Spotify's

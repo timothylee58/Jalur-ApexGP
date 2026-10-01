@@ -6,21 +6,14 @@ import { circuitPath, startFinish } from "@/data/sepangCircuit";
 /**
  * An original, interactive "general map" for /tickets — the real track
  * centreline (data/sepangCircuit.ts) inset into a wider canvas, surrounded
- * by the circuit grounds' actual facilities (paddock building, driving
- * experience centre, go-kart track, parking bays, etc.), all drawn as this
- * app's own house-style iconography rather than a copy of Sepang
- * International Circuit's own published general-map graphic. The *facts*
- * this draws from (which facilities exist, their rough arrangement around
- * the track, the parking-bay lettering/numbering) are the same kind of
- * organiser-sourced facts SeatFinder.tsx already treats as fair to read
- * off official materials and verify — see docs/BRAND.md's "External
- * content" section; the map's own specific artistic rendering isn't
- * reproduced, only redrawn from scratch here. Grandstand/hillstand
- * positions stay exactly the WebSearch-verified real apex-point
- * coordinates the rest of the app uses (see SeatFinder.tsx); the
- * surrounding facility/parking layout is illustrative, not to survey
- * scale — labelled as such in this page's caption, the same honesty
- * standard other approximated data in this app holds itself to.
+ * by the circuit grounds' 2026 race-weekend layout (paddock building,
+ * parking and shuttle bays, access gates, etc.), drawn as this app's own
+ * house-style iconography. Facility and bay positions are read off the
+ * organiser's published 2026 general map and fitted onto the centreline
+ * (see LANDMARKS below), so they're placed relative to the track as the
+ * organiser draws them — close, though not survey-grade. Grandstand and
+ * hillstand positions stay the WebSearch-verified apex-point coordinates
+ * the rest of the app uses (see SeatFinder.tsx).
  */
 
 export interface StandMapMarker {
@@ -46,6 +39,7 @@ interface Landmark {
   y: number;
   kind: LandmarkKind;
   description: string;
+  labelBelow?: boolean;
 }
 
 type LegendKind = "grandstand" | "hillstand" | LandmarkKind | "parking";
@@ -71,6 +65,7 @@ const LEGEND: { kind: LegendKind; label: string }[] = [
 interface ParkingBay {
   id: string;
   label: string;
+  title?: string;
   x: number;
   y: number;
 }
@@ -100,117 +95,157 @@ function toOuter(x: number, y: number) {
   return { x: TRACK_TX + x * TRACK_SCALE, y: TRACK_TY + y * TRACK_SCALE };
 }
 
+// Positions below are read off the organiser's 2026 general map and
+// carried into this canvas by an affine fit of that map's track onto the
+// real centreline (five corners, residual under ~15 units) — so each bay
+// sits where it really is relative to the track, not merely nearby.
 const LANDMARKS: Landmark[] = [
   {
-    id: "accreditation",
-    label: "Accreditation Centre",
-    x: 665,
-    y: 90,
+    id: "pit-access",
+    label: "Paddock & Pit Access",
+    x: 599,
+    y: 131,
     kind: "facility",
-    description: "Race-weekend pass pickup, and paddock & pit access — the north gate above the pit straight.",
+    description: "North entrance off the perimeter road, for paddock and pit pass holders.",
   },
   {
     id: "motorsport-park",
     label: "SIC Motorsport Park",
-    x: 760,
-    y: 200,
+    x: 528,
+    y: 191,
     kind: "facility",
     description: "Multi-use motorsport facility on the circuit grounds, separate from the Grand Prix track.",
   },
   {
+    id: "info",
+    label: "Info",
+    x: 634,
+    y: 229,
+    kind: "amenity",
+    description: "Visitor information point on the paddock & pit access road.",
+  },
+  {
     id: "driving-experience",
     label: "Driving Experience Centre",
-    x: 480,
-    y: 195,
+    x: 362,
+    y: 241,
     kind: "amenity",
     description: "Guided and self-drive experience circuit for visitors.",
   },
   {
     id: "go-kart",
     label: "Go Kart",
-    x: 355,
-    y: 275,
+    x: 176,
+    y: 321,
     kind: "amenity",
     description: "Public go-kart track on the SIC grounds.",
   },
   {
+    id: "helipads",
+    label: "Helipads",
+    x: 639,
+    y: 334,
+    kind: "transport",
+    description: "Helicopter pads in the infield, north of the paddock.",
+  },
+  {
     id: "paddock-pit",
     label: "Paddock / Pit Building",
-    x: 700,
-    y: 430,
+    x: 627,
+    y: 425,
     kind: "facility",
     description: "Team garages and pit lane — the infield building the main straight runs past.",
   },
   {
     id: "south-paddock",
     label: "South Paddock",
-    x: 745,
-    y: 545,
+    x: 638,
+    y: 544,
     kind: "facility",
-    description: "Secondary paddock area south of the pit building.",
+    description: "Secondary paddock area south of the main grandstand.",
   },
   {
     id: "mall-welcome",
-    label: "Welcome Centre & Mall Area",
-    x: 545,
-    y: 470,
+    label: "Welcome Centre & Mall",
+    x: 455,
+    y: 498,
     kind: "amenity",
-    description: "Visitor welcome centre and retail area behind the Main Grandstand.",
+    description: "Visitor welcome centre and retail area at the west end of the Main Grandstand.",
   },
   {
-    id: "helipad",
-    label: "Helipad",
-    x: 210,
-    y: 480,
-    kind: "transport",
-    description: "Helicopter landing pad on the west side of the circuit grounds.",
-  },
-  {
-    id: "bus",
-    label: "Bus",
-    x: 225,
-    y: 530,
-    kind: "transport",
-    description: "Bus set-down and parking.",
+    id: "concert",
+    label: "Concert Area",
+    x: 228,
+    y: 517,
+    kind: "amenity",
+    description: "Race-weekend concert stage on the west side of the grounds.",
   },
   {
     id: "taxi",
     label: "Taxi",
-    x: 250,
-    y: 400,
+    x: 144,
+    y: 374,
     kind: "transport",
-    description: "Taxi rank.",
+    description: "Taxi rank and drop-off on the west side, near the go-kart track.",
   },
   {
-    id: "petronas",
-    label: "Petronas Station",
-    x: 95,
-    y: 490,
-    kind: "amenity",
-    description: "Fuel station just outside the west gate.",
+    id: "shuttle-1",
+    label: "Shuttle 1",
+    x: 157,
+    y: 462,
+    kind: "transport",
+    description: "Shuttle bus bay by the Welcome Centre & Mall access. In-circuit shuttles link the key areas on race weekend.",
+  },
+  {
+    id: "shuttle-2",
+    label: "Shuttle 2",
+    x: 758,
+    y: 266,
+    kind: "transport",
+    description: "Shuttle bus bay on the north-east side, behind G Hillstand.",
+  },
+  {
+    id: "west-access",
+    label: "Welcome Access",
+    x: 64,
+    y: 472,
+    kind: "transport",
+    labelBelow: true,
+    description: "Welcome Centre & Mall Area access — the west entrance, off the road from KLIA.",
+  },
+  {
+    id: "south-access",
+    label: "South Paddock Access",
+    x: 524,
+    y: 729,
+    kind: "transport",
+    labelBelow: true,
+    description: "South entrance, toward the South Paddock.",
   },
 ];
 
 const PARKING_BAYS: ParkingBay[] = [
-  { id: "bay-1", label: "1", x: 430, y: 330 },
-  { id: "bay-2", label: "2", x: 265, y: 620 },
-  { id: "bay-3", label: "3", x: 335, y: 570 },
-  { id: "bay-4", label: "4", x: 570, y: 655 },
-  { id: "bay-5", label: "5", x: 640, y: 700 },
-  { id: "bay-6", label: "6", x: 705, y: 730 },
-  { id: "bay-7", label: "7", x: 775, y: 720 },
-  { id: "bay-8", label: "8", x: 935, y: 655 },
-  { id: "bay-9", label: "9", x: 985, y: 590 },
-  { id: "bay-12", label: "12", x: 1035, y: 430 },
-  { id: "bay-14", label: "14", x: 1010, y: 290 },
-  { id: "bay-15", label: "15", x: 960, y: 220 },
-  { id: "bay-17", label: "17", x: 900, y: 105 },
-  { id: "bay-o", label: "O", x: 630, y: 150 },
-  { id: "bay-perdana", label: "Perdana", x: 715, y: 125 },
-  { id: "bay-sic", label: "SIC", x: 390, y: 415 },
-  { id: "bay-pa1", label: "PA1", x: 320, y: 490 },
-  { id: "bay-x", label: "X", x: 455, y: 610 },
+  { id: "bay-perdana", label: "Perdana", x: 643, y: 181 },
+  { id: "bay-17", label: "17", x: 748, y: 171 },
+  { id: "bay-15", label: "15", x: 850, y: 260 },
+  { id: "bay-14", label: "14", x: 922, y: 315 },
+  { id: "bay-12", label: "12", x: 994, y: 443 },
+  { id: "bay-9", label: "9", x: 961, y: 584 },
+  { id: "bay-8", label: "8", x: 856, y: 648 },
+  { id: "bay-7", label: "7", x: 753, y: 774 },
+  { id: "bay-6", label: "6", x: 656, y: 775 },
+  { id: "bay-5", label: "5", x: 592, y: 721 },
+  { id: "bay-4", label: "4", x: 536, y: 681 },
+  { id: "bay-support", label: "Support Race", title: "Support Race parking", x: 572, y: 646 },
+  { id: "bay-3", label: "3", x: 351, y: 582 },
+  { id: "bay-2", label: "2", x: 288, y: 619 },
+  { id: "bay-sic2", label: "SIC 2", x: 338, y: 548 },
+  { id: "bay-pa1", label: "PA1", x: 288, y: 526 },
+  { id: "bay-sic1", label: "SIC 1", x: 323, y: 489 },
+  { id: "bay-1", label: "1", x: 335, y: 399 },
 ];
+
+const bayWidth = (bay: ParkingBay) => Math.max(26, bay.label.length * 7 + 12);
 
 function wrapText(text: string, maxChars: number): string[] {
   const words = text.split(" ");
@@ -333,7 +368,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
   } else if (activeLandmark) {
     hover = { title: activeLandmark.label, body: activeLandmark.description, x: activeLandmark.x, y: activeLandmark.y };
   } else if (activeBay) {
-    hover = { title: `Parking Bay ${activeBay.label}`, x: activeBay.x, y: activeBay.y };
+    hover = { title: activeBay.title ?? `Parking Bay ${activeBay.label}`, x: activeBay.x, y: activeBay.y };
   }
 
   const sf = toOuter(startFinish.x, startFinish.y);
@@ -372,7 +407,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
         letterSpacing={2}
         fill="#a39b8f"
       >
-        SEPANG INTERNATIONAL CIRCUIT · 5.543 KM · 15 TURNS
+        SEPANG INTERNATIONAL CIRCUIT · 2026 LAYOUT · 5.543 KM
       </text>
 
       {/* Legend — hover/focus a row to spotlight that layer of the map. */}
@@ -554,7 +589,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
             <LandmarkIcon kind={lm.kind} x={lm.x} y={lm.y} active={isActive} />
             <text
               x={lm.x}
-              y={lm.y - 15}
+              y={lm.labelBelow ? lm.y + 24 : lm.y - 15}
               textAnchor="middle"
               fontSize={12}
               fontFamily="var(--font-geist-mono), monospace"
@@ -578,7 +613,7 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
             key={bay.id}
             role="button"
             tabIndex={0}
-            aria-label={`Parking Bay ${bay.label}`}
+            aria-label={bay.title ?? `Parking Bay ${bay.label}`}
             onClick={() => toggle(bay.id)}
             onMouseEnter={() => activate(bay.id)}
             onMouseLeave={() => deactivate(bay.id)}
@@ -589,9 +624,9 @@ export function GeneralCircuitMap({ stands, onSelectStand, className }: GeneralC
             opacity={layerOpacity("parking", bay.id)}
           >
             <rect
-              x={bay.x - 13}
+              x={bay.x - bayWidth(bay) / 2}
               y={bay.y - 13}
-              width={26}
+              width={bayWidth(bay)}
               height={26}
               rx={4}
               fill={isActive ? "#f5a623" : "#1a1f25"}

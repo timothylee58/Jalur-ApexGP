@@ -111,6 +111,18 @@ async def test_no_matching_route_or_stop_returns_empty_with_note(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_payload_carries_the_official_race_shuttle(monkeypatch):
+    _patch_client(monkeypatch, _static_and_realtime_handler(_build_realtime_feed([])))
+
+    payload = await get_sepang_access()
+
+    shuttle = payload.historical_shuttle[0]
+    assert "free" in shuttle.label.lower()
+    for pickup in ("KLIA 2", "Mitsui Outlet Park", "Bandar Baru Enstek"):
+        assert pickup in shuttle.detail
+
+
+@pytest.mark.asyncio
 async def test_matched_stop_but_no_live_vehicle(monkeypatch):
     empty_feed = _build_realtime_feed([])
     _patch_client(monkeypatch, _static_and_realtime_handler(empty_feed))

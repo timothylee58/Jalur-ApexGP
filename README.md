@@ -119,12 +119,15 @@ logged), and the API echoes the effective `inputs` a read ran on.
   when it's stationary) — not a trained ML model, since no historical
   arrival-time data exists yet for a route that's never been mapped this way
   before; this service's own live reads are the path to a real one later. Two
-  honesty gaps stated plainly rather than hidden: no official F1 2026
-  race-weekend shuttle to the circuit has been announced yet (past years ran
-  RapidKL charter shuttles — event charters, never part of the standing GTFS
-  network), and the standing bus network has no stop at the circuit gate
-  itself, so this reports live ETA to the nearest real stop it can find
-  toward the corridor, not the venue. See
+  gaps stated plainly rather than hidden: the official race-weekend shuttle
+  (free Rapid KL buses from KLIA 2, Mitsui Outlet Park KLIA and Bandar Baru
+  Enstek, 2–4 October) is an event charter outside the standing GTFS
+  network, so it can't be live-tracked; and the standing bus network has no
+  stop at the circuit gate itself, so this reports live ETA to the nearest
+  real stop it can find toward the corridor, not the venue. The shuttle
+  itself is on `/tickets` as static, sourced facts (`lib/raceShuttle.ts`),
+  with pick-up points, hours, a live "running now / first bus" status and
+  the rail route from each line to KLIA 2. See
   `backend/app/services/transit_service.py`'s module docstring for the full
   design and its verification gap (api.data.gov.my is blocked by this
   project's dev sandbox, so it was built and unit-tested against a mocked
@@ -140,13 +143,18 @@ logged), and the API echoes the effective `inputs` a read ran on.
 - **Tickets** (`/tickets`) — reduced to a single outbound link to the official
   [Sepang International Circuit](https://www.sepangcircuit.com/home) site;
   pricing/seating change yearly and belong at the source, not duplicated here.
-- **Driver grid** (`/drivers`) — an interactive 3D layout of the 2026 grid
-  (22 drivers, 11 teams, career stats through the 2025 season close) and a
-  second "Sepang history" set tied to three moments in `/lore`. Initials-only
-  markers, no photos or team liveries — see `docs/BRAND.md`. Each 2026-grid
-  driver also carries a "last time out" recap of the 2026 Dutch Grand
-  Prix at Zandvoort — the most recently completed real round — WebSearch-
-  verified rather than invented; deep-linkable via `/drivers?driver=<id>`.
+- **Driver grid** (`/drivers`) — a 3D start grid of the 2026 field (22
+  drivers, 11 teams, career stats through the 2025 season close): the
+  `/drive` game's procedural 2026-spec car in each team's livery, staggered
+  8 m apart in painted grid boxes on a start straight, with a broadcast-style
+  name plate (headshot, three-letter code, number) over every car. Lined up
+  in live championship order (`lib/driverGridLayout.ts`), labelled as such
+  and never as a qualifying result; picking a driver flies the camera to
+  their car. The "Sepang history" set stands its three drivers on podium
+  plinths (1999: Irvine P1, Schumacher P2; 2009: Button P1) over the real
+  circuit outline, tied to moments in `/lore`. Each 2026-grid driver also
+  carries a "last time out" recap of the latest round; deep-linkable via
+  `/drivers?driver=<id>`, which opens the scene on that car.
   A compact championship standings strip (top five drivers and
   constructors) tracks the current, still-in-progress season live from
   Jolpica/Ergast (refetched every few minutes server-side, not a fixed
@@ -316,6 +324,23 @@ repo — no other platform involved.
   answers 503 with a plain "not configured" message that the panel shows
   as-is, and nothing else in the app is affected. `CHAT_MODEL` optionally
   pins a different model; the default is `claude-opus-5`.
+- **Chat spend guardrails** (`backend/app/services/chat_guard.py`). The
+  route is public, so cheap checks run before any token is spent:
+  - browser requests from other sites' origins are refused (403);
+    `CHAT_EXTRA_ORIGINS` (comma-separated) allows more, e.g. a preview URL;
+  - per-client rate limits by hashed IP: `CHAT_RATE_PER_MINUTE` (default 6)
+    and `CHAT_RATE_PER_DAY` (60), plus a per-instance ceiling
+    `CHAT_GLOBAL_PER_MINUTE` (120), answering 429 with `Retry-After`;
+  - greetings, prompt-injection phrasing and plainly off-topic asks get a
+    canned reply with no model call;
+  - a repeated first question with no live data in it is replayed from a
+    15-minute cache;
+  - answers are capped at 1,024 output tokens at low effort, questions at
+    600 characters, and replayed history at three exchanges.
+
+  The limits are in-memory, so they hold per serverless instance. For a
+  hard ceiling across instances, add a Vercel Firewall rate-limit rule on
+  `/api/chat` and set a monthly spend limit on the Anthropic key.
 - A wedged or misconfigured tracking backend can't stall `/predict` itself —
   `mlflow_client.py` bounds every MLflow call to 4s in a daemon thread.
   Verified this against a genuinely unreachable host: without it,

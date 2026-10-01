@@ -60,6 +60,14 @@ class Settings(BaseSettings):
     # Override only to pin a different model; rag_service defaults to
     # claude-opus-5 when this is empty.
     chat_model: str | None = None
+    # Spend guardrails for the public chat route (see chat_guard.py). Per
+    # client, per serverless instance; a Vercel WAF rule is the durable layer.
+    chat_rate_per_minute: int = 6
+    chat_rate_per_day: int = 60
+    chat_global_per_minute: int = 120
+    # Comma-separated extra browser origins allowed to call /api/chat, e.g.
+    # a preview deployment. FRONTEND_ORIGIN and localhost are always allowed.
+    chat_extra_origins: str = ""
 
 
 settings = Settings()
