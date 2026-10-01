@@ -534,13 +534,20 @@ _TRAVEL: list[Document] = [
         tags=("travel", "transport", "klia", "kuala lumpur", "shuttle", "taxi", "parking"),
         body=(
             "The circuit sits near Kuala Lumpur International Airport, about an hour "
-            "south of central Kuala Lumpur. It is fairly isolated: no scheduled "
-            "RapidKL bus route has a stop at the circuit gate itself, so the last "
-            "leg is taxi, e-hailing or private transport. Past Malaysian Grand Prix "
-            "weekends ran dedicated charter shuttles from KL Sentral and KLCC, but "
-            "those were event charters rather than standing routes, and no 2026 "
-            "service has been announced. The app shows the nearest real scheduled "
-            "service toward the Sepang and KLIA corridor instead."
+            "south of central Kuala Lumpur. For the 2026 race weekend (2-4 October) "
+            "Rapid KL and Sepang International Circuit run a free shuttle bus to the "
+            "circuit from 7am to midnight on all three days, every 10 to 15 minutes "
+            "depending on traffic, with 95 buses on a loop. Pick-up points: KLIA 2 "
+            "(Level 1 Bus Hub, Bays B1, B2 and B3), Mitsui Outlet Park KLIA (Bus Hub) "
+            "and Bandar Baru Enstek (De-Village, Persiaran Millenia 2). By rail, take "
+            "KLIA Ekspres or KLIA Transit to KLIA 2: from KL Sentral (Kelana Jaya "
+            "Line, KL Monorail, or the Kajang Line via Muzium Negara), from Bandar "
+            "Tasik Selatan (Ampang and Sri Petaling Lines) or from Putrajaya Sentral "
+            "(Putrajaya Line). KLIA Ekspres sells a Sepang Race Train Pass with return "
+            "trips on all three days for RM200. KLIA warns that parking at Terminal 1 "
+            "and its Long Term Car Park is extremely limited on race weekend. Outside "
+            "race weekend no scheduled RapidKL bus stops at the circuit gate, so the "
+            "last leg is taxi, e-hailing or private transport."
         ),
     ),
     Document(

@@ -60,6 +60,7 @@ class TestRetrieval:
             ("what is overtake mode", "weekend-drs"),
             ("how does active aero work", "weekend-drs"),
             ("how do I get to the circuit from Kuala Lumpur", "travel-getting-there"),
+            ("is there a free shuttle bus from KLIA 2", "travel-getting-there"),
             ("which grandstand should I sit in", "travel-tickets"),
             ("how many points for a win", "basics-points"),
             ("what changed in the 2026 regulations", "basics-2026-regs"),

@@ -274,10 +274,9 @@ export function SeatFinder() {
           </MapLightbox>
         ) : null}
         <p className="mt-2 text-[11px] leading-relaxed text-paper-dim/70">
-          Original artwork — this app&apos;s own redrawn general map, not a copy of the
-          organiser&apos;s venue-map graphic. Grandstand/hillstand positions and the corners each one
-          overlooks are the same real apex-point centreline used everywhere else in this app,
-          verified against{" "}
+          This app&apos;s own redrawn general map, laid out to the organiser&apos;s 2026 venue map.
+          Grandstand/hillstand positions and the corners each one overlooks are the same real
+          apex-point centreline used everywhere else in this app, verified against{" "}
           <a
             href={ORGANISER_URL}
             target="_blank"
@@ -286,9 +285,9 @@ export function SeatFinder() {
           >
             sepangcircuit.com
           </a>
-          &apos;s own per-stand pages, not guessed. The surrounding facilities and parking bays are
-          an illustrative approximation of their real relative layout, not to survey scale — click a
-          stand to select it, or hover/tap anything else for details.
+          &apos;s own per-stand pages, not guessed. Parking bays, shuttle bays and gates are fitted
+          from the 2026 map onto that same centreline — close, not survey-grade. Click a stand to
+          select it, or hover/tap anything else for details.
         </p>
       </div>
     </div>

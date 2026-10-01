@@ -119,12 +119,15 @@ logged), and the API echoes the effective `inputs` a read ran on.
   when it's stationary) — not a trained ML model, since no historical
   arrival-time data exists yet for a route that's never been mapped this way
   before; this service's own live reads are the path to a real one later. Two
-  honesty gaps stated plainly rather than hidden: no official F1 2026
-  race-weekend shuttle to the circuit has been announced yet (past years ran
-  RapidKL charter shuttles — event charters, never part of the standing GTFS
-  network), and the standing bus network has no stop at the circuit gate
-  itself, so this reports live ETA to the nearest real stop it can find
-  toward the corridor, not the venue. See
+  gaps stated plainly rather than hidden: the official race-weekend shuttle
+  (free Rapid KL buses from KLIA 2, Mitsui Outlet Park KLIA and Bandar Baru
+  Enstek, 2–4 October) is an event charter outside the standing GTFS
+  network, so it can't be live-tracked; and the standing bus network has no
+  stop at the circuit gate itself, so this reports live ETA to the nearest
+  real stop it can find toward the corridor, not the venue. The shuttle
+  itself is on `/tickets` as static, sourced facts (`lib/raceShuttle.ts`),
+  with pick-up points, hours, a live "running now / first bus" status and
+  the rail route from each line to KLIA 2. See
   `backend/app/services/transit_service.py`'s module docstring for the full
   design and its verification gap (api.data.gov.my is blocked by this
   project's dev sandbox, so it was built and unit-tested against a mocked
