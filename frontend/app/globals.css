@@ -203,3 +203,29 @@ button:focus-visible .tyre-idle {
     visibility: hidden;
   }
 }
+
+/* Team radio --------------------------------------------------------------- */
+
+/* The waveform in the race-engineer panel: five bars breathing while an
+   answer is on the way. Still bars under reduced motion. */
+@keyframes radio-bar {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.radio-bar {
+  transform-origin: bottom;
+  animation: radio-bar 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-bar {
+    animation: none;
+    transform: scaleY(0.6);
+  }
+}

@@ -371,13 +371,14 @@ _WEEKEND: list[Document] = [
         section="weekend",
         tags=("schedule", "weekend", "fp1", "fp2", "fp3", "qualifying", "race", "2026"),
         body=(
-            "This app is built around a fictional 2026 Formula 1 race weekend at "
-            "Sepang on 2-4 October 2026, with the usual format: three practice "
-            "sessions, qualifying, and the race. Formula 1 has not announced a "
-            "return to Malaysia — the weekend is the app's premise, not a "
-            "prediction, and everything tied to it should be read that way. Real "
-            "data feeds in the app are labelled as such and point at real sessions "
-            "elsewhere on the calendar."
+            "This app is built around a real race weekend: round 16 of the 2026 "
+            "Formula 1 season, the Gulf Air Bahrain Grand Prix, relocated to Sepang "
+            "International Circuit in Malaysia and run on 2-4 October 2026. It is "
+            "Formula 1's first visit to Sepang since 2017, and the first time a "
+            "cancelled race has been moved to another country. The format is the "
+            "usual one: three practice sessions, qualifying, and the race. The "
+            "app's strategy reads and hot lap are its own simulations of that "
+            "weekend, labelled as such."
         ),
     ),
     Document(
@@ -388,10 +389,10 @@ _WEEKEND: list[Document] = [
         body=(
             "The real Singapore Grand Prix runs 9-11 October 2026 at the Marina Bay "
             "Street Circuit, and it is Singapore's first Formula 1 Sprint weekend. "
-            "It falls five days after this app's fictional Sepang weekend ends, "
-            "which is why the /calendar page pairs them: by road the two circuits "
-            "are roughly 305-341 km apart depending on the route, about three and a "
-            "half to four hours. The Singapore round is real; the Sepang one is not."
+            "It falls five days after the Sepang weekend ends, which is why the "
+            "/calendar page pairs them: by road the two circuits are roughly "
+            "305-341 km apart depending on the route, about three and a half to "
+            "four hours."
         ),
     ),
     Document(
@@ -506,8 +507,8 @@ _APP: list[Document] = [
         tags=("telemetry", "openf1", "live", "historical", "zandvoort"),
         body=(
             "The /telemetry page shows a real, clearly labelled historical session "
-            "rather than pretending the app's fictional Sepang weekend has real "
-            "data. OpenF1's live streaming needs a paid account this project does "
+            "because the Sepang weekend's own sessions haven't been archived yet. "
+            "OpenF1's live streaming needs a paid account this project does "
             "not use, so there is no live telemetry at all. Being explicit about "
             "that gap is deliberate."
         ),

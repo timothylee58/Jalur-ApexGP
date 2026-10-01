@@ -14,6 +14,7 @@ import { drivers, type DriverEra } from "@/data/drivers";
 import { teams } from "@/data/teams";
 import { useStandings } from "@/hooks/useStandings";
 import { accentForDriver } from "@/lib/driverAccent";
+import { championshipOrder } from "@/lib/driverGridLayout";
 import { driverStanding } from "@/lib/standings";
 
 const ERA_LABEL: Record<DriverEra, string> = {
@@ -59,6 +60,16 @@ function DriversView() {
 
   const standings = useStandings();
   const season = selected ? driverStanding(standings.data, selected.id) : null;
+  const gridOrder = useMemo(
+    () => (era === "2026-grid" ? championshipOrder(filtered, standings.data) : { drivers: filtered, ranked: false }),
+    [era, filtered, standings.data],
+  );
+  const sceneCaption =
+    era === "sepang-history"
+      ? "Sepang winners' plinths · 1999 & 2009"
+      : gridOrder.ranked && standings.data
+        ? `Championship order · after R${standings.data.round}`
+        : "Grouped by team";
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Below lg the card sits above the team grid and the standings table sits
@@ -87,8 +98,8 @@ function DriversView() {
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-paper-dim">
           Real drivers in their constructor&apos;s colours. The championship table and each
           driver&apos;s 2026 line are live from Jolpica; career totals run to the 2025 season
-          close. The 3D view lines them up in grid formation <em>by team</em>, a layout choice
-          rather than a qualifying result, so who sits on pole there means nothing. Unofficial
+          close. The 3D grid lines them up in <em>championship order</em> in their team
+          liveries — the points leader on pole — which is not Saturday&apos;s qualifying result. Unofficial
           fan project — photos for identification only, not licensed merch.
         </p>
 
@@ -134,7 +145,13 @@ function DriversView() {
             the left, the card pinned on the right as you browse. */}
         <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-6">
           <div className="order-1 lg:order-none lg:col-start-1 lg:row-start-1">
-            <DriverGridScene drivers={filtered} selectedId={selectedId} onSelect={setSelectedId} />
+            <DriverGridScene
+              drivers={gridOrder.drivers}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              caption={sceneCaption}
+              focusOnOpen={paramDriver?.id === selectedId}
+            />
           </div>
 
           <div className="order-3 lg:order-none lg:col-start-1 lg:row-start-2">

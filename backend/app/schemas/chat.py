@@ -7,13 +7,17 @@ class ChatTurn(BaseModel):
     what the answer is based on."""
 
     role: str = Field(pattern="^(user|assistant)$")
-    content: str = Field(min_length=1, max_length=8000)
+    # Generous enough for any answer the assistant itself gives; the
+    # service trims what it actually replays (see rag_service).
+    content: str = Field(min_length=1, max_length=4000)
 
 
 class ChatRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
-    question: str = Field(min_length=1, max_length=2000)
+    # The UI caps input at 500 characters; the slack covers pasted text
+    # with a few stray characters, not essays.
+    question: str = Field(min_length=1, max_length=600)
     history: list[ChatTurn] = Field(default_factory=list, max_length=20)
 
 
