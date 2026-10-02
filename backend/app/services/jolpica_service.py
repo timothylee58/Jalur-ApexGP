@@ -301,3 +301,29 @@ async def get_race_classification(
         pole_family_name=pole_family_name,
         results=results,
     )
+
+
+async def get_winner_first_stop(
+    season: int = DEFAULT_SEASON, round_: int = DEFAULT_ROUND
+) -> tuple[str, int | None] | None:
+    """The race winner and the lap of their first pit stop — the reference
+    stop the accuracy loop scores a race's pit-window call against. None
+    while the round has no classified result yet; (winner, None) for a
+    winner who never stopped."""
+    async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+        results_payload = await _get(client, f"{season}/{round_}/results/1/")
+        races = results_payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
+        if not races or not races[0].get("Results"):
+            return None
+        winner = str(races[0]["Results"][0]["Driver"]["driverId"])
+        stops_payload = await _get(client, f"{season}/{round_}/drivers/{winner}/pitstops/?limit=100")
+
+    stop_races = stops_payload.get("MRData", {}).get("RaceTable", {}).get("Races", [])
+    stops = stop_races[0].get("PitStops", []) if stop_races else []
+    laps: list[tuple[int, int]] = []
+    for stop in stops:
+        try:
+            laps.append((int(stop["stop"]), int(stop["lap"])))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return winner, (min(laps)[1] if laps else None)

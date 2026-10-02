@@ -1,16 +1,32 @@
-from fastapi import APIRouter
+import logging
+
+from fastapi import APIRouter, BackgroundTasks
 
 from app.core.mlflow_client import get_confidence_trend, log_prediction
 from app.schemas.prediction import PredictionRequest, PredictionResponse, SimInputs
+from app.services import accuracy_service, supabase_rest
 from app.services.strategy_service import build_prediction
 from app.services.weather_service import WeatherService, condition_from_rain
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 weather_service = WeatherService()
 
 
+async def _lock_for_accuracy(prediction: PredictionResponse) -> None:
+    """After the response: store this as the session's pre-session read.
+    Best-effort — the scheduler takes the same snapshot, so a miss here
+    costs nothing but freshness."""
+    if not supabase_rest.configured():
+        return
+    try:
+        await accuracy_service.record_prediction(prediction, source="predict")
+    except Exception as exc:  # noqa: BLE001 - never surfaces to the caller
+        logger.warning("accuracy snapshot skipped: %s", exc)
+
+
 @router.post("/predict", response_model=PredictionResponse)
-async def predict(payload: PredictionRequest) -> PredictionResponse:
+async def predict(payload: PredictionRequest, background: BackgroundTasks) -> PredictionResponse:
     weather = await weather_service.get_snapshot()
 
     rain_overridden = payload.rain_probability is not None
@@ -49,5 +65,6 @@ async def predict(payload: PredictionRequest) -> PredictionResponse:
     if is_live_read:
         log_prediction(prediction)
         trend = get_confidence_trend(payload.session, prediction)
+        background.add_task(_lock_for_accuracy, prediction)
 
     return prediction.model_copy(update={"confidence_trend": trend, "inputs": inputs})

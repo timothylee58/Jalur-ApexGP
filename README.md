@@ -200,6 +200,29 @@ logged), and the API echoes the effective `inputs` a read ran on.
   end (no Blender in this dev environment), documented there as an
   optional path rather than the current source of truth for the shipped
   file.
+- **Prediction accuracy** (`/accuracy`) — a closed loop with no manual
+  input (`backend/app/services/accuracy_service.py`):
+  1. **Lock.** Each session's last unmodified read before the start is
+     stored in Supabase (`accuracy_predictions`), from live `/predict`
+     traffic and from a scheduler that reads every session in the three
+     hours before it. Nothing can overwrite it once the session starts.
+  2. **Resolve.** When the session ends, rain is read from the circuit's own
+     weather station via OpenF1 (`rainfall` samples), falling back to
+     Open-Meteo's modelled hourly rainfall if OpenF1 hasn't published 75
+     minutes after the flag. For the race, the winner's first stop comes
+     from Jolpica's pit-stop table. Stored in `accuracy_outcomes`.
+  3. **Score.** A Brier-based rain-call score and, for the race, a
+     pit-window hit, per strategy variant.
+
+  `.github/workflows/accuracy-loop.yml` runs both steps every 10 minutes
+  (`backend/ml/accuracy_tick.py`), and `GET /api/accuracy/weekend` also
+  resolves on read, so the page updates within a poll of the data landing
+  (it polls every 30s while a session is live or pending). `POST
+  /api/outcomes` is now an operator-only correction behind
+  `OUTCOMES_ADMIN_TOKEN`. Schema: `backend/supabase/migrations/`. This
+  replaced the earlier MLflow-backed version, which failed outright once
+  its remote tracking server stopped answering; MLflow still logs runs and
+  powers the `/predict` confidence trend when it's configured.
 - **Real telemetry** (`/telemetry`, and `/circuit`'s "real lap pacing"
   toggle) — speed, throttle, brake, RPM, gear, and DRS from
   [OpenF1](https://openf1.org) (free, keyless, historical-only; see
@@ -248,8 +271,7 @@ Design tokens, voice/tone rules, and component patterns are documented in
 
 ## Out of scope (v2+)
 
-User accounts, a results-based accuracy/scoring loop against real session
-outcomes, and a full 15-corner interactive circuit map.
+User accounts, and a full 15-corner interactive circuit map.
 
 ## Local dev
 

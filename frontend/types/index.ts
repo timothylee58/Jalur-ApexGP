@@ -78,19 +78,6 @@ export interface WhatIf {
   tyreChoice?: Compound | null;
 }
 
-export interface OutcomeRequest {
-  session: Session;
-  rainOccurred: boolean;
-  actualPitLap?: number | null;
-  notes?: string;
-}
-
-export interface OutcomeLogged {
-  logged: boolean;
-  session: Session;
-  date: string;
-}
-
 export interface VariantScore {
   variant: StrategyVariant;
   predictedConfidence: number;
@@ -114,4 +101,47 @@ export interface AccuracyResponse {
   conservative: AccuracySummary;
   aggressive: AccuracySummary;
   recent: VariantScore[];
+}
+
+/** The read locked in for a session — the last unmodified prediction
+ * stored before it started. */
+export interface PredictionSnapshot {
+  madeAt: string;
+  source: string;
+  rainProbability: number;
+  condition: string;
+  confidenceConservative: number;
+  confidenceAggressive: number;
+  pitWindowConservative: PitWindow;
+  pitWindowAggressive: PitWindow;
+}
+
+export interface SessionOutcome {
+  rainOccurred: boolean;
+  actualPitLap: number | null;
+  rainSource: string;
+  pitSource: string | null;
+  recordedAt: string;
+  detail: Record<string, Record<string, unknown> | string | undefined>;
+}
+
+export type SessionState = "upcoming" | "live" | "awaiting" | "scored" | "unscored";
+
+export interface SessionBoard {
+  session: Session;
+  start: string;
+  end: string;
+  state: SessionState;
+  prediction: PredictionSnapshot | null;
+  outcome: SessionOutcome | null;
+  scores: VariantScore[];
+}
+
+export interface WeekendBoard {
+  season: string;
+  round: string;
+  raceName: string;
+  generatedAt: string;
+  sessions: SessionBoard[];
+  nextCheckSeconds: number;
 }

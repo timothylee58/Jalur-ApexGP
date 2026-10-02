@@ -53,6 +53,10 @@ class Settings(BaseSettings):
     # feature has no local-file fallback the way MLflow does.
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
+    # Outcomes are resolved automatically (accuracy_service); this token
+    # unlocks POST /api/outcomes for an operator's manual correction. Unset
+    # means manual logging is off.
+    outcomes_admin_token: str | None = None
     # Race-engineer assistant (rag_service.py). Unset is a valid state:
     # the chat route answers 503 with a clear "not configured" message
     # rather than failing, and every other feature is unaffected.
