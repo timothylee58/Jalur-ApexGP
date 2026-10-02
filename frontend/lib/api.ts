@@ -1,9 +1,7 @@
 import type {
-  AccuracyResponse,
-  OutcomeLogged,
-  OutcomeRequest,
   PredictionResponse,
   Session,
+  WeekendBoard,
   WhatIf,
 } from "@/types";
 import type { StandingsPayload, WeekendSchedule } from "@/types/jolpica";
@@ -119,26 +117,10 @@ export async function fetchSepangAccess(): Promise<SepangAccessPayload> {
   return res.json() as Promise<SepangAccessPayload>;
 }
 
-export async function submitOutcome(outcome: OutcomeRequest): Promise<OutcomeLogged> {
-  const res = await fetch(`${API_URL}/outcomes`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(outcome),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`Outcome log failed (${res.status})`);
-  return res.json() as Promise<OutcomeLogged>;
-}
-
-export async function fetchAccuracy(session: Session): Promise<AccuracyResponse | null> {
-  const res = await fetch(`${API_URL}/accuracy?session=${session}`, { cache: "no-store" });
-  if (res.status === 404) {
-    // Not an error state — just means nothing has been scored yet for this
-    // session (no outcome logged against a same-day prediction).
-    return null;
-  }
-  if (!res.ok) throw new Error(`Accuracy request failed (${res.status})`);
-  return res.json() as Promise<AccuracyResponse>;
+export async function fetchAccuracyWeekend(): Promise<WeekendBoard> {
+  const res = await fetch(`${API_URL}/accuracy/weekend`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`Accuracy board request failed (${res.status})`);
+  return res.json() as Promise<WeekendBoard>;
 }
 
 /** Thrown on a 409 — the picks deadline has passed. Distinct from a plain
