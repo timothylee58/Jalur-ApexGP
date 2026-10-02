@@ -30,6 +30,8 @@ async def submit_outcome(
         )
     try:
         date = await accuracy_service.record_manual_outcome(payload)
+    except supabase_rest.SupabaseReadOnly as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except (supabase_rest.SupabaseNotConfigured, httpx.HTTPError) as exc:
         logger.error("manual outcome not stored: %s", exc)
         raise HTTPException(status_code=503, detail=_STORAGE_DOWN) from exc

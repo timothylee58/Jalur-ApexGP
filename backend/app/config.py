@@ -53,6 +53,13 @@ class Settings(BaseSettings):
     # feature has no local-file fallback the way MLflow does.
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
+    # Preview deploys share production's Supabase project, so they read it
+    # but must never write to it: a half-finished PR shouldn't be able to
+    # add picks to the real leaderboard or rewrite the accuracy record.
+    # Vercel sets VERCEL_ENV on every deploy; SUPABASE_READ_ONLY overrides
+    # it (false for a preview pointed at its own staging project).
+    vercel_env: str | None = None
+    supabase_read_only: bool | None = None
     # Outcomes are resolved automatically (accuracy_service); this token
     # unlocks POST /api/outcomes for an operator's manual correction. Unset
     # means manual logging is off.

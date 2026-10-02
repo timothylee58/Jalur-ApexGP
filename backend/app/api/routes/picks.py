@@ -2,7 +2,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query
 
 from app.schemas.picks import LeaderboardResponse, MyPickResponse, PickSubmission, PickSubmitted
-from app.services import picks_service
+from app.services import picks_service, supabase_rest
 from app.services.picks_service import (
     PicksClosed,
     PicksDeadlineUnknown,
@@ -21,6 +21,8 @@ async def submit_pick(payload: PickSubmission) -> PickSubmitted:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except PicksClosed as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except supabase_rest.SupabaseReadOnly as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except PicksStorageUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except PicksDeadlineUnknown as exc:

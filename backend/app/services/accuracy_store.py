@@ -49,7 +49,7 @@ async def _upsert(table: str, row: dict[str, Any]) -> None:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         response = await client.post(
             supabase_rest.rest_url(f"{table}?on_conflict={_KEY}"),
-            headers=supabase_rest.headers(prefer="resolution=merge-duplicates,return=minimal"),
+            headers=supabase_rest.write_headers(prefer="resolution=merge-duplicates,return=minimal"),
             json=row,
         )
         response.raise_for_status()

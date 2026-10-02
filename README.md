@@ -341,6 +341,13 @@ repo — no other platform involved.
   `backend/.env.example`).
 - Env: `FRONTEND_ORIGIN` (the frontend project's deployed URL, for CORS),
   plus the MLflow vars above.
+- `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` back picks and the accuracy
+  loop. Enable them for **Preview** as well as Production: preview deploys
+  then read the real leaderboard and accuracy board, but every write
+  (submitting picks, locking predictions, recording outcomes) is refused
+  with a plain 403, because Vercel marks them `VERCEL_ENV=preview`. Set
+  `SUPABASE_READ_ONLY=false` on Preview only if it points at a separate
+  staging project.
 - `ANTHROPIC_API_KEY` powers the race-engineer assistant (the "Ask the
   engineer" sidebar). It is optional: with the key unset the chat route
   answers 503 with a plain "not configured" message that the panel shows
