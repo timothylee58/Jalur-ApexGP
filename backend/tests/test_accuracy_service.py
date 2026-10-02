@@ -67,6 +67,12 @@ def store(monkeypatch):
 
     monkeypatch.setattr(accuracy_service, "weekend", fixed_weekend)
     accuracy_service._last_attempt.clear()
+
+    async def climatology(self):
+        return SEPANG_CLIMATOLOGY.model_copy()
+
+    monkeypatch.setattr(accuracy_service.WeatherService, "get_snapshot", climatology)
+    monkeypatch.setattr(accuracy_service, "_last_snapshot", -1e9)
     return fake
 
 
@@ -120,6 +126,48 @@ class TestLockingPredictions:
         locked = await accuracy_service.snapshot_upcoming(build, now=FP1_START - timedelta(hours=2))
         assert locked == ["FP1"]
         assert store.predictions["FP1"]["source"] == "scheduler"
+
+
+class TestBoardReadsKeepTheLoopMoving:
+    """GitHub delays or drops scheduled runs, so a board read takes the
+    scheduler's lock step itself."""
+
+    @pytest.mark.asyncio
+    async def test_a_board_read_locks_sessions_about_to_start(self, store, sources):
+        await accuracy_service.weekend_board(now=FP1_START - timedelta(hours=2))
+        assert store.predictions["FP1"]["source"] == "scheduler"
+        assert "FP2" not in store.predictions
+
+    @pytest.mark.asyncio
+    async def test_relocks_at_most_once_per_throttle_window(self, store, monkeypatch):
+        first = FP1_START - timedelta(hours=2)
+        assert await accuracy_service.snapshot_on_read(first) == ["FP1"]
+        assert await accuracy_service.snapshot_on_read(first + timedelta(minutes=1)) == []
+        assert store.predictions["FP1"]["made_at"] == first.isoformat()
+
+        monkeypatch.setattr(accuracy_service, "_last_snapshot", -1e9)
+        later = first + timedelta(minutes=11)
+        assert await accuracy_service.snapshot_on_read(later) == ["FP1"]
+        assert store.predictions["FP1"]["made_at"] == later.isoformat()
+
+    @pytest.mark.asyncio
+    async def test_no_weather_fetch_when_nothing_is_about_to_start(self, store, monkeypatch):
+        async def unexpected(self):
+            raise AssertionError("weather fetched with no session in the lead window")
+
+        monkeypatch.setattr(accuracy_service.WeatherService, "get_snapshot", unexpected)
+        assert await accuracy_service.snapshot_on_read(FP2_END + timedelta(hours=1)) == []
+
+    @pytest.mark.asyncio
+    async def test_a_failed_lock_still_resolves(self, store, sources, monkeypatch):
+        async def down(self):
+            raise httpx.ConnectError("open-meteo unreachable")
+
+        monkeypatch.setattr(accuracy_service.WeatherService, "get_snapshot", down)
+        # FP1 finished 90 minutes ago; FP2 starts within the lead window.
+        await accuracy_service.weekend_board(now=FP1_START + timedelta(hours=2, minutes=30))
+        assert store.outcomes["FP1"]["rain_source"] == "openf1-track-weather"
+        assert "FP2" not in store.predictions
 
 
 class TestResolvingOutcomes:

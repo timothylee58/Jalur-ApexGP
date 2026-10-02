@@ -215,9 +215,13 @@ logged), and the API echoes the effective `inputs` a read ran on.
      pit-window hit, per strategy variant.
 
   `.github/workflows/accuracy-loop.yml` runs both steps every 10 minutes
-  (`backend/ml/accuracy_tick.py`), and `GET /api/accuracy/weekend` also
-  resolves on read, so the page updates within a poll of the data landing
-  (it polls every 30s while a session is live or pending). `POST
+  (`backend/ml/accuracy_tick.py`), and `GET /api/accuracy/weekend` runs
+  them too: it re-locks sessions inside the three-hour window at most every
+  10 minutes and resolves on read, so the page updates within a poll of the
+  data landing (it polls every 30s while a session is live or pending).
+  GitHub delays and drops scheduled runs under load, so the loop doesn't
+  depend on the cron: any page view, or an uptime pinger hitting that
+  endpoint, keeps it moving. `POST
   /api/outcomes` is now an operator-only correction behind
   `OUTCOMES_ADMIN_TOKEN`. Schema: `backend/supabase/migrations/`. This
   replaced the earlier MLflow-backed version, which failed outright once

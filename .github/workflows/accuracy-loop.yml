@@ -2,8 +2,9 @@ name: Prediction Accuracy Loop
 
 # Every 10 minutes: lock a pre-session prediction for any session about to
 # start, then record the outcome of any session that has just finished
-# (backend/ml/accuracy_tick.py). Scheduled runs can start a few minutes
-# late; the /accuracy page also resolves on read, so it doesn't wait on this.
+# (backend/ml/accuracy_tick.py). GitHub can delay or drop scheduled runs;
+# GET /api/accuracy/weekend takes both steps on read too, so this is a
+# backstop rather than the only driver.
 on:
   schedule:
     - cron: "*/10 * * * *"

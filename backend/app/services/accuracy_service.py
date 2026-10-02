@@ -2,9 +2,11 @@
 results.
 
 1. LOCK A PREDICTION. Before each session, the latest unmodified read is
-   stored as that session's prediction — from live /predict traffic and
-   from the scheduler (ml/accuracy_tick.py), which reads every session in
-   the hours before it starts. The last write before lights out wins; after
+   stored as that session's prediction — from live /predict traffic, from
+   the scheduler (ml/accuracy_tick.py), which reads every session in the
+   hours before it starts, and from weekend board reads, which take the
+   scheduler's snapshot themselves so a delayed or dropped scheduled run
+   doesn't leave a session unlocked. The last write before lights out wins; after
    the start nothing can overwrite it, so a prediction can never be made
    with hindsight.
 2. RESOLVE THE OUTCOME. Once a session ends, outcome_sources reads what
@@ -42,6 +44,8 @@ from app.services.scoring_service import (
     score_pit_window,
     score_rain_call,
 )
+from app.services.strategy_service import build_prediction
+from app.services.weather_service import WeatherService
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +74,10 @@ PIT_LOOKUP_WINDOW = timedelta(days=3)
 # A page view retries an unresolved session at most this often per instance.
 RESOLVE_THROTTLE_S = 90.0
 RESOLVE_BUDGET_S = 6.0
+# A page view re-locks the sessions inside SCHEDULER_LEAD at most this
+# often per instance: the scheduler's own cadence, without depending on
+# GitHub actually firing it (scheduled runs there get delayed or dropped).
+SNAPSHOT_THROTTLE_S = 600.0
 
 
 class AccuracyUnavailable(Exception):
@@ -153,6 +161,27 @@ async def snapshot_upcoming(build, now: datetime | None = None) -> list[str]:
             if await record_prediction(prediction, source="scheduler", now=now, wk=wk):
                 done.append(window.session)
     return done
+
+
+_last_snapshot = -1e9
+
+
+async def snapshot_on_read(now: datetime) -> list[str]:
+    """The scheduler's lock step, run from a board read: live weather is
+    only fetched when a session is actually inside the lead window."""
+    global _last_snapshot
+    if time.monotonic() - _last_snapshot < SNAPSHOT_THROTTLE_S:
+        return []
+    wk = await weekend()
+    if not any(now < w.start <= now + SCHEDULER_LEAD for w in wk.sessions):
+        return []
+    _last_snapshot = time.monotonic()
+    weather = await WeatherService().get_snapshot()
+
+    async def build(session: Session) -> PredictionResponse:
+        return build_prediction(session, weather)
+
+    return await snapshot_upcoming(build, now)
 
 
 # ---- 2. resolving outcomes ---------------------------------------------------
@@ -306,11 +335,21 @@ def _state(window: SessionWindow, has_prediction: bool, has_outcome: bool, now: 
     return "scored" if has_outcome else "awaiting"
 
 
+async def _advance(now: datetime) -> None:
+    """Both scheduler steps, from a board read. A failed lock never blocks
+    resolving, and neither blocks the board."""
+    try:
+        await snapshot_on_read(now)
+    except Exception as exc:  # noqa: BLE001 - resolving still runs
+        logger.warning("on-read prediction lock skipped: %s", exc)
+    await resolve(now)
+
+
 async def weekend_board(now: datetime | None = None, *, resolve_now: bool = True) -> WeekendBoard:
     now = now or _now()
     if resolve_now and not supabase_rest.read_only():
         try:
-            await asyncio.wait_for(resolve(now), timeout=RESOLVE_BUDGET_S)
+            await asyncio.wait_for(_advance(now), timeout=RESOLVE_BUDGET_S)
         except Exception as exc:  # noqa: BLE001 - the board still renders from what's stored
             logger.warning("on-read outcome resolution skipped: %s", exc)
     wk = await weekend()
