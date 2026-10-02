@@ -17,7 +17,7 @@ async def _lock_for_accuracy(prediction: PredictionResponse) -> None:
     """After the response: store this as the session's pre-session read.
     Best-effort — the scheduler takes the same snapshot, so a miss here
     costs nothing but freshness."""
-    if not supabase_rest.configured():
+    if not supabase_rest.writable():
         return
     try:
         await accuracy_service.record_prediction(prediction, source="predict")

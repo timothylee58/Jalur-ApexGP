@@ -35,7 +35,7 @@ from app.schemas.outcome import (
     WeekendBoard,
 )
 from app.schemas.prediction import PitWindow, PredictionResponse, Session
-from app.services import accuracy_store, jolpica_service, outcome_sources
+from app.services import accuracy_store, jolpica_service, outcome_sources, supabase_rest
 from app.services.scoring_service import (
     aggregate_scores,
     composite_score,
@@ -308,7 +308,7 @@ def _state(window: SessionWindow, has_prediction: bool, has_outcome: bool, now: 
 
 async def weekend_board(now: datetime | None = None, *, resolve_now: bool = True) -> WeekendBoard:
     now = now or _now()
-    if resolve_now:
+    if resolve_now and not supabase_rest.read_only():
         try:
             await asyncio.wait_for(resolve(now), timeout=RESOLVE_BUDGET_S)
         except Exception as exc:  # noqa: BLE001 - the board still renders from what's stored

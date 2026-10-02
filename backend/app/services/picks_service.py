@@ -31,7 +31,7 @@ from app.schemas.picks import (
     PickSubmission,
     PickSubmitted,
 )
-from app.services import jolpica_service
+from app.services import jolpica_service, supabase_rest
 from app.services.picks_scoring import answer_problems, score_submission
 
 logger = logging.getLogger(__name__)
@@ -90,6 +90,12 @@ def _headers(*, prefer: str | None = None) -> dict[str, str]:
     return headers
 
 
+def _write_headers(*, prefer: str | None = None) -> dict[str, str]:
+    if supabase_rest.read_only():
+        raise supabase_rest.SupabaseReadOnly(supabase_rest.READ_ONLY_MESSAGE)
+    return _headers(prefer=prefer)
+
+
 def _rest_url(path: str) -> str:
     base = (settings.supabase_url or "").rstrip("/")
     return f"{base}/rest/v1/{path}"
@@ -137,7 +143,7 @@ async def submit_pick(submission: PickSubmission) -> PickSubmitted:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         response = await client.post(
             _rest_url(_TABLE),
-            headers=_headers(prefer="return=representation"),
+            headers=_write_headers(prefer="return=representation"),
             json=row,
         )
         response.raise_for_status()
@@ -277,7 +283,7 @@ async def score_pending() -> int:
                 score = score_submission(picks, classification)
                 patch_response = await client.patch(
                     _rest_url(_TABLE),
-                    headers=_headers(),
+                    headers=_write_headers(),
                     params={"id": f"eq.{row['id']}"},
                     json={"score": score, "scored_at": datetime.now(MYT).isoformat()},
                 )
@@ -289,7 +295,7 @@ async def score_pending() -> int:
 
         cache_response = await client.post(
             _rest_url(_CACHE_TABLE),
-            headers={**_headers(), "Prefer": "resolution=merge-duplicates"},
+            headers=_write_headers(prefer="resolution=merge-duplicates"),
             json={
                 "round": int(classification.round),
                 "is_final": True,

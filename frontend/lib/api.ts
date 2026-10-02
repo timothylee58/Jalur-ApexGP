@@ -131,7 +131,8 @@ export class PicksClosedError extends Error {}
 /** Thrown on a 503 — picks storage isn't configured server-side yet (a
  * deploy/setup gap, not a network blip). Distinct from a plain Error so
  * the form doesn't tell a fan to "check your connection" for something
- * that isn't their connection's fault. */
+ * that isn't their connection's fault. Also thrown on a 403 from a preview
+ * deploy, which reads live data but never saves. */
 export class PicksUnavailableError extends Error {}
 
 /** Thrown on a 422 — the server couldn't score these picks as sent (the
@@ -152,6 +153,10 @@ export async function submitPicks(submission: PickSubmission): Promise<PickSubmi
   }
   if (res.status === 503) {
     throw new PicksUnavailableError("Picks aren't open yet — check back soon.");
+  }
+  if (res.status === 403) {
+    const body = await res.json().catch(() => ({}));
+    throw new PicksUnavailableError(typeof body.detail === "string" ? body.detail : "Picks can't be saved here.");
   }
   if (res.status === 422) {
     const body = await res.json().catch(() => ({}));
