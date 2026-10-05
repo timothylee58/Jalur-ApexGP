@@ -227,6 +227,8 @@ logged), and the API echoes the effective `inputs` a read ran on.
   replaced the earlier MLflow-backed version, which failed outright once
   its remote tracking server stopped answering; MLflow still logs runs and
   powers the `/predict` confidence trend when it's configured.
+  A Vue 3 port of this board lives in `demos/vue-accuracy-board/`
+  ([open in StackBlitz](https://stackblitz.com/github/timothylee58/Jalur-ApexGP/tree/main/demos/vue-accuracy-board?file=src%2FAccuracyBoard.vue)).
 - **Real telemetry** (`/telemetry`, and `/circuit`'s "real lap pacing"
   toggle) — speed, throttle, brake, RPM, gear, and DRS from
   [OpenF1](https://openf1.org) (free, keyless, historical-only; see
