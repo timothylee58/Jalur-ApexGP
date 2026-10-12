@@ -24,7 +24,8 @@ export default function DrivePage() {
           A 2026-spec car on the real Sepang centreline, hills and all. The car steers itself —
           your lap is made on the pedals: brake at the boards, carry speed to each corner&apos;s
           apex figure, and spend the battery you harvest under braking on Boost. Go more than 10%
-          over a corner&apos;s speed and you&apos;re off: a spin and a three-second penalty. Wait for
+          over a corner&apos;s speed and you&apos;re off: a three-second penalty and a hit of
+          speed, full control back in your hands straight away. Wait for
           the five red lights to go out, then chase the ghost — the simulated lap from{" "}
           <Link href="/circuit" className="underline decoration-paper/30 underline-offset-2 hover:text-paper">
             /circuit
