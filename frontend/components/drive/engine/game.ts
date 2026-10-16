@@ -148,7 +148,6 @@ export class DriveGame {
   private lapTime: number | null = null;
   private penalties = 0;
   private lastPenaltyAt = -99;
-  private spin = 0;
   private shake = 0;
   private sectorStarts: number[] = [0];
   private sectorTimes: number[] = [];
@@ -343,7 +342,6 @@ export class DriveGame {
     this.lap = 0;
     this.lapTime = null;
     this.penalties = 0;
-    this.spin = 0;
     this.jumpStart = false;
     this.reactionFrom = null;
     this.hold = randomHold();
@@ -440,7 +438,7 @@ export class DriveGame {
     const wasS = this.s;
     const stepped = stepCar(
       { v: this.v, battery: this.battery },
-      this.spin > 0 ? { throttle: false, brake: true, boost: false } : this.input,
+      this.input,
       dt,
       here.gradient,
       this.straightMode ? STRAIGHT_MODE_DRAG : 1,
@@ -471,18 +469,20 @@ export class DriveGame {
       }
     }
 
-    // Too fast for the corner: off track, a spin, a penalty.
+    // Too fast for the corner: off track, a penalty — no auto-spin, the
+    // player keeps full control through the moment, just loses speed and
+    // time (see docs/BRAND.md's "heuristic, not a black box" framing: a
+    // penalty the player caused should read as theirs to correct, not a
+    // cutscene taking the wheel away).
     const safe = this.track.safeKmh(this.s);
-    if (this.v * 3.6 > safe * OVERSPEED && this.clock - this.lastPenaltyAt > 1.4 && this.spin <= 0) {
+    if (this.v * 3.6 > safe * OVERSPEED && this.clock - this.lastPenaltyAt > 1.4) {
       this.lastPenaltyAt = this.clock;
       this.penalties += PENALTY_S;
-      this.spin = 1;
       this.shake = 1;
       this.spawnDust();
       this.opts.events.message("off", `Off track · +${PENALTY_S} s`);
       this.v *= 0.45;
     }
-    if (this.spin > 0) this.spin = Math.max(0, this.spin - dt / 0.95);
 
     // Straight Mode: wings flat on the straights, closed again for braking.
     const clearAhead = this.track.safeKmh(this.s + 70) >= 330 && this.track.safeKmh(this.s) >= 330;
@@ -582,9 +582,8 @@ export class DriveGame {
   private placeCar(dt: number) {
     const p = this.track.at(this.s);
     const heading = Math.atan2(p.tx, p.tz);
-    const spinYaw = this.spin > 0 ? (1 - this.spin) * Math.PI * 2 * (1 - this.spin * 0.2) : 0;
     this.car.root.position.set(p.x, p.y, p.z);
-    this.car.root.rotation.set(0, heading + spinYaw, 0);
+    this.car.root.rotation.set(0, heading, 0);
     // Pitch with the gradient, then dive and squat with the load.
     const pitchSlope = -Math.atan(p.gradient);
     this.car.root.rotation.x = pitchSlope;
